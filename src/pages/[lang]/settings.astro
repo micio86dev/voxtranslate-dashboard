@@ -18,7 +18,7 @@ const t = useTranslations(lang);
       <label class="label" for="name">{t('settings.orgName')}</label>
       <input id="name" class="field" />
     </div>
-    <div>
+    <div id="retention-field">
       <label class="label" for="retention">{t('settings.retention')}</label>
       <input id="retention" class="field" type="number" min="1" />
     </div>
@@ -27,7 +27,7 @@ const t = useTranslations(lang);
       <input id="domains" class="field" placeholder={t('settings.domainsPh')} />
       <p class="mt-1 text-xs text-muted">{t('settings.domainsHint')}</p>
     </div>
-    <label class="flex items-center gap-2 text-sm">
+    <label id="compliance-field" class="flex items-center gap-2 text-sm">
       <input id="compliance" type="checkbox" />
       {t('settings.compliance')}
     </label>
@@ -52,6 +52,13 @@ const t = useTranslations(lang);
     if (!ctx) return;
     const t = useTranslations(ctx.lang as Locale);
     const orgId = ctx.activeOrg.id;
+
+    // Compliance mode + configurable retention are Enterprise-only — hide them for
+    // other plans (the API also rejects enabling compliance on a non-Enterprise org).
+    if (ctx.activeOrg.plan !== 'enterprise') {
+      document.getElementById('retention-field')!.classList.add('hidden');
+      document.getElementById('compliance-field')!.classList.add('hidden');
+    }
 
     const name = document.getElementById('name') as HTMLInputElement;
     const retention = document.getElementById('retention') as HTMLInputElement;
