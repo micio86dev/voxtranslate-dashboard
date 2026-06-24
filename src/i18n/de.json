@@ -180,5 +180,9 @@
     "recordingNotice": "Teilnehmer benachrichtigen, wenn ein Anruf aufgezeichnet wird",
     "saved": "Einstellungen gespeichert.",
     "save": "Einstellungen speichern"
+  },
+  "theme": {
+    "toDark": "Zu dunklem Design wechseln",
+    "toLight": "Zu hellem Design wechseln"
   }
 }

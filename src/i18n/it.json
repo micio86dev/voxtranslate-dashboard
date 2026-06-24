@@ -180,5 +180,9 @@
     "recordingNotice": "Avvisa i partecipanti quando una chiamata viene registrata",
     "saved": "Impostazioni salvate.",
     "save": "Salva impostazioni"
+  },
+  "theme": {
+    "toDark": "Passa al tema scuro",
+    "toLight": "Passa al tema chiaro"
   }
 }

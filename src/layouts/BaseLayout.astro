@@ -21,6 +21,18 @@ const { lang, title, description = '', chrome = false } = Astro.props;
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <!-- Authenticated B2B app — keep it out of search indexes. -->
     <meta name="robots" content="noindex, nofollow" />
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0b1220" media="(prefers-color-scheme: dark)" />
+    {/* No-FOUC theme: explicit choice wins, else follow the OS (system default). */}
+    <script is:inline>
+      (function () {
+        try {
+          var t = localStorage.getItem('vox-theme');
+          var dark = t ? t === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+          if (dark) document.documentElement.classList.add('dark');
+        } catch (e) {}
+      })();
+    </script>
     <title>{title}</title>
     {description && <meta name="description" content={description} />}
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />

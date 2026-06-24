@@ -180,5 +180,9 @@
     "recordingNotice": "Avisar a los participantes cuando se graba una llamada",
     "saved": "Ajustes guardados.",
     "save": "Guardar ajustes"
+  },
+  "theme": {
+    "toDark": "Cambiar a modo oscuro",
+    "toLight": "Cambiar a modo claro"
   }
 }

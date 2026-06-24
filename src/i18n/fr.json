@@ -180,5 +180,9 @@
     "recordingNotice": "Avertir les participants lorsqu'un appel est enregistré",
     "saved": "Paramètres enregistrés.",
     "save": "Enregistrer les paramètres"
+  },
+  "theme": {
+    "toDark": "Passer au thème sombre",
+    "toLight": "Passer au thème clair"
   }
 }

@@ -74,3 +74,35 @@ body {
     @apply inline-flex items-center gap-1 rounded-full border border-line bg-base px-2.5 py-0.5 text-xs font-medium text-muted;
   }
 }
+
+/* Dark theme — class-based (.dark on <html>), defaulting to the OS preference via
+   the no-FOUC script in BaseLayout. Overriding the @theme color tokens flips every
+   bg-surface / text-ink / border-line utility automatically; no markup changes. */
+:root {
+  color-scheme: light;
+}
+html.dark {
+  color-scheme: dark;
+  --color-base: #0b1220;
+  --color-surface: #161f30;
+  --color-ink: #e7edf5;
+  --color-muted: #94a3b8;
+  --color-line: #26324a;
+  --color-brand: #4aa8e0;
+  --color-brand-600: #5cb3e8;
+  --color-brand-ink: #08131f;
+  --color-danger: #f87171;
+  --color-ok: #4ade80;
+  --color-warn: #fbbf24;
+}
+
+/* Theme toggle: show the icon for the action the click will perform. */
+.theme-toggle .icon-sun {
+  display: none;
+}
+html.dark .theme-toggle .icon-moon {
+  display: none;
+}
+html.dark .theme-toggle .icon-sun {
+  display: block;
+}
