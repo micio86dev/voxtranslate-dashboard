@@ -1,0 +1,83 @@
+---
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import {
+  localePaths,
+  isLocale,
+  DEFAULT_LOCALE,
+  useTranslations,
+  localizePath,
+} from '../../../lib/i18n';
+
+export function getStaticPaths() {
+  return localePaths();
+}
+
+const lang = isLocale(Astro.params.lang) ? Astro.params.lang : DEFAULT_LOCALE;
+const t = useTranslations(lang);
+const link = (p: string) => localizePath(lang, p);
+---
+
+<BaseLayout lang={lang} title={t('projects.new')} chrome>
+  <a href={link('projects')} class="text-sm text-muted hover:text-ink">← {t('common.back')}</a>
+  <h1 class="mt-2 text-2xl font-bold">{t('projects.new')}</h1>
+
+  <form id="proj-form" class="card mt-6 max-w-lg space-y-4">
+    <div>
+      <label class="label" for="name">{t('projects.name')}</label>
+      <input id="name" class="field" required placeholder={t('projects.namePh')} />
+    </div>
+    <div>
+      <label class="label" for="desc">{t('projects.description')}</label>
+      <textarea id="desc" class="field" rows="2" placeholder={t('projects.descPh')}></textarea>
+    </div>
+    <div>
+      <label class="label" for="langs">{t('projects.languages')}</label>
+      <input id="langs" class="field" placeholder={t('projects.langsPh')} />
+      <p class="mt-1 text-xs text-muted">{t('projects.langsHint')}</p>
+    </div>
+    <p id="err" class="hidden text-sm text-danger"></p>
+    <button id="submit" class="btn-primary" type="submit">{t('projects.submit')}</button>
+  </form>
+</BaseLayout>
+
+<script>
+  import { boot } from '../../../scripts/app-boot';
+  import { createProject } from '../../../lib/api';
+  import { useTranslations, type Locale } from '../../../lib/i18n';
+
+  void (async () => {
+    const ctx = await boot();
+    if (!ctx) return;
+    const t = useTranslations(ctx.lang as Locale);
+    const form = document.getElementById('proj-form') as HTMLFormElement;
+    const submit = document.getElementById('submit') as HTMLButtonElement;
+    const err = document.getElementById('err')!;
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      err.classList.add('hidden');
+      const name = (document.getElementById('name') as HTMLInputElement).value.trim();
+      const description = (document.getElementById('desc') as HTMLTextAreaElement).value.trim();
+      const langs = (document.getElementById('langs') as HTMLInputElement).value
+        .split(',')
+        .map((s) => s.trim().toLowerCase())
+        .filter(Boolean);
+      if (!name) return;
+      submit.disabled = true;
+      submit.textContent = t('common.creating');
+      const res = await createProject(ctx.activeOrg.id, {
+        name,
+        description: description || undefined,
+        default_languages: langs.length ? langs : undefined,
+      });
+      if (res.ok) {
+        location.href = `/${ctx.lang}/projects/`;
+        return;
+      }
+      err.textContent = t('common.error');
+      err.classList.remove('hidden');
+      submit.disabled = false;
+      submit.textContent = t('projects.submit');
+    });
+  })();
+</script>

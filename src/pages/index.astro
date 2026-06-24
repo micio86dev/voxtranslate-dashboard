@@ -1,0 +1,20 @@
+---
+// Root: soft-redirect to the visitor's locale home (static page, no SSR).
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="robots" content="noindex" />
+    <title>VoxTranslate for Business</title>
+    <script is:inline>
+      const locales = ['en', 'it', 'es', 'de', 'fr'];
+      const nav = (navigator.language || 'en').slice(0, 2).toLowerCase();
+      const lang = locales.includes(nav) ? nav : 'en';
+      location.replace('/' + lang + '/');
+    </script>
+    <meta http-equiv="refresh" content="0; url=/en/" />
+  </head>
+  <body></body>
+</html>

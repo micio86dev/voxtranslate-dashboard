@@ -1,0 +1,92 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { localePaths, isLocale, DEFAULT_LOCALE, useTranslations } from '../../lib/i18n';
+
+export function getStaticPaths() {
+  return localePaths();
+}
+
+const lang = isLocale(Astro.params.lang) ? Astro.params.lang : DEFAULT_LOCALE;
+const t = useTranslations(lang);
+---
+
+<BaseLayout lang={lang} title={t('join.title')}>
+  <div class="mx-auto flex min-h-screen max-w-md flex-col justify-center px-4">
+    <div class="card text-center">
+      <div class="mb-4 text-lg font-bold text-brand">VoxTranslate</div>
+      <h1 class="text-2xl font-bold">{t('join.title')}</h1>
+      <p id="msg" class="mt-3 text-muted">{t('common.loading')}</p>
+      <div id="gbtn" class="mt-6 hidden justify-center"></div>
+      <button id="accept" class="btn-primary mt-6 hidden w-full">{t('join.accept')}</button>
+      <a id="go" class="btn-primary mt-6 hidden w-full" href={`/${lang}/dashboard/`}>
+        {t('join.goToDashboard')}
+      </a>
+    </div>
+  </div>
+</BaseLayout>
+
+<script>
+  import { acceptInvite, getInvite, setCurrentOrgId } from '../../lib/api';
+  import { isLoggedIn, renderGoogleButton } from '../../lib/auth';
+  import { useTranslations, type Locale } from '../../lib/i18n';
+
+  void (async () => {
+    const lang = (document.documentElement.lang || 'en') as Locale;
+    const t = useTranslations(lang);
+    const msg = document.getElementById('msg')!;
+    const acceptBtn = document.getElementById('accept') as HTMLButtonElement;
+    const gbtn = document.getElementById('gbtn')!;
+    const go = document.getElementById('go')!;
+    const token = new URLSearchParams(location.search).get('token') ?? '';
+
+    if (!token) {
+      msg.textContent = t('join.invalid');
+      return;
+    }
+    const info = await getInvite(token);
+    if (info.status === 410) {
+      msg.textContent = t('join.expired');
+      return;
+    }
+    if (!info.ok || !info.data) {
+      msg.textContent = t('join.invalid');
+      return;
+    }
+    msg.textContent = t('join.invitedTo', {
+      org: info.data.org_name,
+      role: t(`members.role${info.data.role.charAt(0).toUpperCase()}${info.data.role.slice(1)}`),
+    });
+
+    const doAccept = async () => {
+      acceptBtn.disabled = true;
+      acceptBtn.textContent = t('join.accepting');
+      const res = await acceptInvite(token);
+      if (res.ok && res.data) {
+        setCurrentOrgId(res.data.org_id);
+        msg.textContent = t('join.accepted', { org: info.data!.org_name });
+        acceptBtn.classList.add('hidden');
+        go.classList.remove('hidden');
+      } else {
+        msg.textContent = t('join.error');
+        acceptBtn.disabled = false;
+        acceptBtn.textContent = t('join.accept');
+      }
+    };
+
+    if (isLoggedIn()) {
+      acceptBtn.classList.remove('hidden');
+      acceptBtn.addEventListener('click', doAccept);
+    } else {
+      const hint = document.createElement('p');
+      hint.className = 'mt-3 text-sm text-muted';
+      hint.textContent = t('join.signInFirst');
+      msg.after(hint);
+      gbtn.classList.replace('hidden', 'flex');
+      renderGoogleButton(gbtn, () => {
+        gbtn.classList.add('hidden');
+        acceptBtn.classList.remove('hidden');
+        void doAccept();
+      });
+    }
+  })();
+</script>
