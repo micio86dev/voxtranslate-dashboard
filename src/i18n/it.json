@@ -21,7 +21,8 @@
     "projects": "Progetti",
     "history": "Cronologia",
     "credits": "Crediti",
-    "settings": "Impostazioni"
+    "settings": "Impostazioni",
+    "analytics": "Analitica"
   },
   "login": {
     "title": "Accedi al tuo spazio di lavoro",
@@ -184,5 +185,24 @@
   "theme": {
     "toDark": "Passa al tema scuro",
     "toLight": "Passa al tema chiaro"
+  },
+  "analytics": {
+    "title": "Analitica",
+    "range": "Periodo",
+    "range7": "Ultimi 7 giorni",
+    "range30": "Ultimi 30 giorni",
+    "range90": "Ultimi 90 giorni",
+    "kpiCalls": "Chiamate",
+    "kpiMinutes": "Minuti",
+    "kpiTranscripts": "Trascrizioni",
+    "kpiRecordings": "Registrazioni",
+    "kpiCredits": "Crediti spesi",
+    "callsOverTime": "Chiamate nel tempo",
+    "spendByType": "Crediti per tipo",
+    "topProjects": "Progetti principali",
+    "calls": "chiamate",
+    "minutes": "min",
+    "noData": "Ancora nessuna attività in questo periodo.",
+    "adminOnly": "L'analitica è disponibile per amministratori e proprietari."
   }
 }

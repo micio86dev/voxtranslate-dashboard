@@ -291,6 +291,48 @@ export const subscribe = (orgId: string, plan: string, interval: string) =>
 export const billingPortal = (orgId: string) =>
   request<{ url: string }>('POST', `/api/business/organizations/${orgId}/subscription/portal`);
 
+// --- Analytics ---------------------------------------------------------------
+
+export interface AnalyticsKpis {
+  calls: number;
+  minutes: number;
+  transcripts: number;
+  recordings: number;
+  credits_spent: number;
+}
+
+export interface AnalyticsDay {
+  day: string;
+  calls: number;
+  minutes: number;
+}
+
+export interface AnalyticsTypeSpend {
+  type: string;
+  spent: number;
+}
+
+export interface AnalyticsProject {
+  project_id: string;
+  name: string;
+  calls: number;
+  minutes: number;
+}
+
+export interface AnalyticsSummary {
+  range_days: number;
+  kpis: AnalyticsKpis;
+  credits_by_type: AnalyticsTypeSpend[];
+  calls_by_day: AnalyticsDay[];
+  top_projects: AnalyticsProject[];
+}
+
+export const getAnalytics = (orgId: string, days = 30) =>
+  request<AnalyticsSummary>(
+    'GET',
+    `/api/business/organizations/${orgId}/analytics?days=${days}`,
+  );
+
 // --- Current-org helper (persisted selection) --------------------------------
 
 const ORG_KEY = 'voxb.org';

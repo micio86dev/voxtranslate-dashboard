@@ -21,7 +21,8 @@
     "projects": "Projects",
     "history": "History",
     "credits": "Credits",
-    "settings": "Settings"
+    "settings": "Settings",
+    "analytics": "Analytics"
   },
   "login": {
     "title": "Sign in to your workspace",
@@ -184,5 +185,24 @@
   "theme": {
     "toDark": "Switch to dark mode",
     "toLight": "Switch to light mode"
+  },
+  "analytics": {
+    "title": "Analytics",
+    "range": "Range",
+    "range7": "Last 7 days",
+    "range30": "Last 30 days",
+    "range90": "Last 90 days",
+    "kpiCalls": "Calls",
+    "kpiMinutes": "Minutes",
+    "kpiTranscripts": "Transcripts",
+    "kpiRecordings": "Recordings",
+    "kpiCredits": "Credits spent",
+    "callsOverTime": "Calls over time",
+    "spendByType": "Credits by type",
+    "topProjects": "Top projects",
+    "calls": "calls",
+    "minutes": "min",
+    "noData": "No activity in this period yet.",
+    "adminOnly": "Analytics are available to admins and owners."
   }
 }

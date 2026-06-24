@@ -21,7 +21,8 @@
     "projects": "Projekte",
     "history": "Verlauf",
     "credits": "Guthaben",
-    "settings": "Einstellungen"
+    "settings": "Einstellungen",
+    "analytics": "Analytik"
   },
   "login": {
     "title": "Bei deinem Workspace anmelden",
@@ -184,5 +185,24 @@
   "theme": {
     "toDark": "Zu dunklem Design wechseln",
     "toLight": "Zu hellem Design wechseln"
+  },
+  "analytics": {
+    "title": "Analytik",
+    "range": "Zeitraum",
+    "range7": "Letzte 7 Tage",
+    "range30": "Letzte 30 Tage",
+    "range90": "Letzte 90 Tage",
+    "kpiCalls": "Anrufe",
+    "kpiMinutes": "Minuten",
+    "kpiTranscripts": "Transkripte",
+    "kpiRecordings": "Aufzeichnungen",
+    "kpiCredits": "Verbrauchte Credits",
+    "callsOverTime": "Anrufe im Zeitverlauf",
+    "spendByType": "Credits nach Typ",
+    "topProjects": "Top-Projekte",
+    "calls": "Anrufe",
+    "minutes": "Min",
+    "noData": "Noch keine Aktivität in diesem Zeitraum.",
+    "adminOnly": "Analytik ist für Administratoren und Eigentümer verfügbar."
   }
 }
