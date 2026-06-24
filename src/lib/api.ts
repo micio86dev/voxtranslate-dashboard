@@ -328,10 +328,7 @@ export interface AnalyticsSummary {
 }
 
 export const getAnalytics = (orgId: string, days = 30) =>
-  request<AnalyticsSummary>(
-    'GET',
-    `/api/business/organizations/${orgId}/analytics?days=${days}`,
-  );
+  request<AnalyticsSummary>('GET', `/api/business/organizations/${orgId}/analytics?days=${days}`);
 
 // --- Current-org helper (persisted selection) --------------------------------
 

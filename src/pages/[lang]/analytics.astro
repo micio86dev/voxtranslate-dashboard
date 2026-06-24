@@ -90,7 +90,10 @@ const t = useTranslations(lang);
   ];
 
   /** Vertical bar chart of a daily series, as inline SVG (no chart dependency). */
-  function barChart(points: { day: string; calls: number; minutes: number }[], unit: string): string {
+  function barChart(
+    points: { day: string; calls: number; minutes: number }[],
+    unit: string,
+  ): string {
     if (points.length === 0) return '';
     const W = 560;
     const H = 180;
@@ -154,8 +157,7 @@ const t = useTranslations(lang);
     }
 
     const render = (a: AnalyticsSummary) => {
-      const set = (id: string, v: number) =>
-        (document.getElementById(id)!.textContent = String(v));
+      const set = (id: string, v: number) => (document.getElementById(id)!.textContent = String(v));
       set('kpi-calls', a.kpis.calls);
       set('kpi-minutes', a.kpis.minutes);
       set('kpi-transcripts', a.kpis.transcripts);
@@ -172,7 +174,10 @@ const t = useTranslations(lang);
 
       const tp = a.top_projects;
       document.getElementById('top-projects')!.innerHTML = tp.length
-        ? hbars(tp.map((p) => ({ label: p.name, value: p.calls })), ` ${t('analytics.calls')}`)
+        ? hbars(
+            tp.map((p) => ({ label: p.name, value: p.calls })),
+            ` ${t('analytics.calls')}`,
+          )
         : `<p class="text-sm text-muted">${esc(t('analytics.noData'))}</p>`;
     };
 
