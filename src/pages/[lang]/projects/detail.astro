@@ -1,0 +1,74 @@
+---
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import {
+  localePaths,
+  isLocale,
+  DEFAULT_LOCALE,
+  useTranslations,
+  localizePath,
+} from '../../../lib/i18n';
+
+export function getStaticPaths() {
+  return localePaths();
+}
+
+const lang = isLocale(Astro.params.lang) ? Astro.params.lang : DEFAULT_LOCALE;
+const t = useTranslations(lang);
+const link = (p: string) => localizePath(lang, p);
+---
+
+<BaseLayout lang={lang} title={t('projects.detailTitle')} chrome>
+  <a href={link('projects')} class="text-sm text-muted hover:text-ink">← {t('projects.title')}</a>
+  <div class="mt-2 flex items-start justify-between gap-2">
+    <h1 id="proj-name" class="text-2xl font-bold">{t('common.loading')}</h1>
+    <button id="archive" class="btn-danger hidden text-sm">{t('projects.archive')}</button>
+  </div>
+  <p id="proj-desc" class="mt-1 text-muted"></p>
+  <div id="proj-langs" class="mt-3 flex flex-wrap gap-1"></div>
+
+  <h2 class="mt-8 text-lg font-semibold">{t('projects.callsInProject')}</h2>
+  <p class="card mt-3 text-sm text-muted">—</p>
+</BaseLayout>
+
+<script>
+  import { boot } from '../../../scripts/app-boot';
+  import { deleteProject, getProject } from '../../../lib/api';
+  import { useTranslations, type Locale } from '../../../lib/i18n';
+
+  function esc(s: string): string {
+    return s.replace(
+      /[&<>"]/g,
+      (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c] || c,
+    );
+  }
+
+  void (async () => {
+    const ctx = await boot();
+    if (!ctx) return;
+    const t = useTranslations(ctx.lang as Locale);
+    const id = new URLSearchParams(location.search).get('id');
+    if (!id) {
+      location.href = `/${ctx.lang}/projects/`;
+      return;
+    }
+    const res = await getProject(ctx.activeOrg.id, id);
+    if (!res.ok || !res.data) {
+      location.href = `/${ctx.lang}/projects/`;
+      return;
+    }
+    const p = res.data;
+    document.getElementById('proj-name')!.textContent = p.name;
+    document.getElementById('proj-desc')!.textContent = p.description ?? '';
+    document.getElementById('proj-langs')!.innerHTML = (p.default_languages ?? [])
+      .map((l) => `<span class="badge">${esc(l)}</span>`)
+      .join(' ');
+
+    const archive = document.getElementById('archive') as HTMLButtonElement;
+    archive.classList.remove('hidden');
+    archive.addEventListener('click', async () => {
+      if (!confirm(t('projects.archiveConfirm', { name: p.name }))) return;
+      await deleteProject(ctx.activeOrg.id, p.id);
+      location.href = `/${ctx.lang}/projects/`;
+    });
+  })();
+</script>

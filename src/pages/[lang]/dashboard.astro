@@ -1,0 +1,77 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import {
+  localePaths,
+  isLocale,
+  DEFAULT_LOCALE,
+  useTranslations,
+  localizePath,
+} from '../../lib/i18n';
+
+export function getStaticPaths() {
+  return localePaths();
+}
+
+const lang = isLocale(Astro.params.lang) ? Astro.params.lang : DEFAULT_LOCALE;
+const t = useTranslations(lang);
+const link = (p: string) => localizePath(lang, p);
+---
+
+<BaseLayout lang={lang} title={t('dashboard.title')} chrome>
+  <h1 class="text-2xl font-bold">{t('dashboard.title')}</h1>
+  <p id="welcome" class="mt-1 text-muted"></p>
+
+  <div class="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
+    <div class="card">
+      <div class="text-sm text-muted">{t('dashboard.membersCard')}</div>
+      <div id="members-count" class="mt-1 text-2xl font-bold">…</div>
+    </div>
+    <div class="card">
+      <div class="text-sm text-muted">{t('dashboard.projectsCard')}</div>
+      <div id="projects-count" class="mt-1 text-2xl font-bold">…</div>
+    </div>
+    <div class="card">
+      <div class="text-sm text-muted">{t('dashboard.creditsCard')}</div>
+      <div id="credits" class="mt-1 text-2xl font-bold">…</div>
+    </div>
+    <div class="card">
+      <div class="text-sm text-muted">{t('dashboard.planCard')}</div>
+      <div id="plan" class="mt-1 text-2xl font-bold capitalize">…</div>
+      <div class="mt-1 text-xs text-muted">
+        {t('dashboard.yourRole')}: <span id="role" class="capitalize"></span>
+      </div>
+    </div>
+  </div>
+
+  <h2 class="mt-8 text-lg font-semibold">{t('dashboard.quickActions')}</h2>
+  <div class="mt-3 flex flex-wrap gap-2">
+    <a href={link('members')} class="btn-ghost">{t('dashboard.inviteMember')}</a>
+    <a href={link('projects/new')} class="btn-ghost">{t('dashboard.newProject')}</a>
+  </div>
+</BaseLayout>
+
+<script>
+  import { boot } from '../../scripts/app-boot';
+  import { listMembers, listProjects } from '../../lib/api';
+  import { useTranslations } from '../../lib/i18n';
+
+  void (async () => {
+    const ctx = await boot();
+    if (!ctx) return;
+    const t = useTranslations(ctx.lang);
+    const set = (id: string, v: string) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = v;
+    };
+    set('welcome', t('dashboard.welcome', { name: ctx.user?.name ?? '' }));
+    set('credits', String(ctx.activeOrg.credits_balance));
+    set('plan', ctx.activeOrg.plan);
+    set('role', ctx.activeOrg.role);
+    const [m, p] = await Promise.all([
+      listMembers(ctx.activeOrg.id),
+      listProjects(ctx.activeOrg.id),
+    ]);
+    set('members-count', String((m.data ?? []).length));
+    set('projects-count', String((p.data ?? []).length));
+  })();
+</script>

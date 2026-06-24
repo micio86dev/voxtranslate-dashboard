@@ -1,0 +1,184 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { localePaths, isLocale, DEFAULT_LOCALE, useTranslations } from '../../lib/i18n';
+
+export function getStaticPaths() {
+  return localePaths();
+}
+
+const lang = isLocale(Astro.params.lang) ? Astro.params.lang : DEFAULT_LOCALE;
+const t = useTranslations(lang);
+---
+
+<BaseLayout lang={lang} title={t('members.title')} chrome>
+  <div class="flex items-center justify-between">
+    <h1 class="text-2xl font-bold">{t('members.title')}</h1>
+    <button id="invite-btn" class="btn-primary">{t('members.invite')}</button>
+  </div>
+
+  <div class="card mt-6 overflow-x-auto p-0">
+    <table class="w-full text-sm">
+      <thead class="border-b border-line text-left text-muted">
+        <tr>
+          <th class="px-4 py-3">{t('members.name')}</th>
+          <th class="px-4 py-3">{t('members.email')}</th>
+          <th class="px-4 py-3">{t('members.role')}</th>
+          <th class="px-4 py-3"></th>
+        </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <p id="empty" class="hidden px-4 py-6 text-center text-muted">{t('members.empty')}</p>
+  </div>
+
+  <!-- Invite modal -->
+  <div
+    id="invite-modal"
+    class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40 px-4"
+  >
+    <div class="card w-full max-w-md">
+      <h2 class="text-lg font-bold">{t('invite.title')}</h2>
+      <div class="mt-4 space-y-3">
+        <div>
+          <label class="label" for="inv-email">{t('invite.email')}</label>
+          <input id="inv-email" class="field" type="email" placeholder={t('invite.emailPh')} />
+        </div>
+        <div>
+          <label class="label" for="inv-role">{t('invite.role')}</label>
+          <select id="inv-role" class="field">
+            <option value="member">{t('members.roleMember')}</option>
+            <option value="admin">{t('members.roleAdmin')}</option>
+            <option value="guest">{t('members.roleGuest')}</option>
+          </select>
+        </div>
+        <p id="inv-err" class="hidden text-sm text-danger"></p>
+        <div id="inv-sent" class="hidden rounded-lg border border-line bg-base p-3 text-sm">
+          <p class="font-medium text-ok">{t('invite.sent')}</p>
+          <p class="mt-2 text-muted">{t('invite.linkLabel')}</p>
+          <div class="mt-1 flex gap-2">
+            <input id="inv-link" class="field text-xs" readonly />
+            <button id="inv-copy" class="btn-ghost text-xs">{t('common.copy')}</button>
+          </div>
+        </div>
+      </div>
+      <div class="mt-5 flex justify-end gap-2">
+        <button id="inv-cancel" class="btn-ghost">{t('common.cancel')}</button>
+        <button id="inv-send" class="btn-primary">{t('invite.send')}</button>
+      </div>
+    </div>
+  </div>
+</BaseLayout>
+
+<script>
+  import { boot } from '../../scripts/app-boot';
+  import { changeMemberRole, createInvite, listMembers, removeMember } from '../../lib/api';
+  import { useTranslations, type Locale } from '../../lib/i18n';
+
+  function esc(s: string): string {
+    return s.replace(
+      /[&<>"]/g,
+      (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c] || c,
+    );
+  }
+
+  void (async () => {
+    const ctx = await boot();
+    if (!ctx) return;
+    const t = useTranslations(ctx.lang as Locale);
+    const orgId = ctx.activeOrg.id;
+    const myRole = ctx.activeOrg.role;
+    const isOwner = myRole === 'owner';
+    const myId = ctx.user?.id;
+    const roleLabel = (r: string) => t(`members.role${r.charAt(0).toUpperCase()}${r.slice(1)}`);
+
+    const rows = document.getElementById('rows')!;
+    const empty = document.getElementById('empty')!;
+
+    async function render() {
+      const res = await listMembers(orgId);
+      const members = res.data ?? [];
+      empty.classList.toggle('hidden', members.length > 0);
+      rows.innerHTML = members
+        .map((m) => {
+          const isSelf = m.user_id === myId;
+          const canEditRole = isOwner && m.role !== 'owner';
+          const canRemove = m.role !== 'owner' && (isOwner || myRole === 'admin' || isSelf);
+          const roleCell = canEditRole
+            ? `<select data-uid="${m.user_id}" class="role-sel field max-w-32 text-xs">
+                 ${['member', 'admin', 'guest']
+                   .map(
+                     (r) =>
+                       `<option value="${r}" ${r === m.role ? 'selected' : ''}>${esc(roleLabel(r))}</option>`,
+                   )
+                   .join('')}
+               </select>`
+            : `<span class="badge capitalize">${esc(roleLabel(m.role))}</span>`;
+          return `<tr class="border-b border-line last:border-0">
+            <td class="px-4 py-3 font-medium">${esc(m.name)}${isSelf ? ` <span class="badge">${esc(t('members.you'))}</span>` : ''}</td>
+            <td class="px-4 py-3 text-muted">${esc(m.email)}</td>
+            <td class="px-4 py-3">${roleCell}</td>
+            <td class="px-4 py-3 text-right">${
+              canRemove
+                ? `<button data-remove="${m.user_id}" data-name="${esc(m.name)}" class="btn-danger text-xs">${esc(t('members.remove'))}</button>`
+                : ''
+            }</td>
+          </tr>`;
+        })
+        .join('');
+
+      rows.querySelectorAll<HTMLSelectElement>('.role-sel').forEach((sel) =>
+        sel.addEventListener('change', async () => {
+          await changeMemberRole(orgId, sel.dataset.uid!, sel.value);
+          void render();
+        }),
+      );
+      rows.querySelectorAll<HTMLButtonElement>('[data-remove]').forEach((btn) =>
+        btn.addEventListener('click', async () => {
+          if (!confirm(t('members.removeConfirm', { name: btn.dataset.name ?? '' }))) return;
+          await removeMember(orgId, btn.dataset.remove!);
+          void render();
+        }),
+      );
+    }
+
+    // --- Invite modal ---
+    const modal = document.getElementById('invite-modal')!;
+    const open = () => modal.classList.replace('hidden', 'flex');
+    const close = () => {
+      modal.classList.replace('flex', 'hidden');
+      document.getElementById('inv-sent')!.classList.add('hidden');
+      document.getElementById('inv-err')!.classList.add('hidden');
+      (document.getElementById('inv-email') as HTMLInputElement).value = '';
+    };
+    document.getElementById('invite-btn')!.addEventListener('click', open);
+    document.getElementById('inv-cancel')!.addEventListener('click', close);
+
+    document.getElementById('inv-send')!.addEventListener('click', async () => {
+      const email = (document.getElementById('inv-email') as HTMLInputElement).value.trim();
+      const role = (document.getElementById('inv-role') as HTMLSelectElement).value;
+      const err = document.getElementById('inv-err')!;
+      err.classList.add('hidden');
+      if (!email || !email.includes('@')) {
+        err.textContent = t('invite.invalidEmail');
+        err.classList.remove('hidden');
+        return;
+      }
+      const res = await createInvite(orgId, { email, role });
+      if (res.ok && res.data) {
+        const sent = document.getElementById('inv-sent')!;
+        (document.getElementById('inv-link') as HTMLInputElement).value = res.data.join_url;
+        sent.classList.remove('hidden');
+        void render();
+      } else {
+        err.textContent = t('invite.error');
+        err.classList.remove('hidden');
+      }
+    });
+    document.getElementById('inv-copy')!.addEventListener('click', () => {
+      const link = (document.getElementById('inv-link') as HTMLInputElement).value;
+      void navigator.clipboard?.writeText(link);
+    });
+
+    void render();
+  })();
+</script>

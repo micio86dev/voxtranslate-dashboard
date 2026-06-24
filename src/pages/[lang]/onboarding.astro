@@ -1,0 +1,97 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { localePaths, isLocale, DEFAULT_LOCALE, useTranslations } from '../../lib/i18n';
+
+export function getStaticPaths() {
+  return localePaths();
+}
+
+const lang = isLocale(Astro.params.lang) ? Astro.params.lang : DEFAULT_LOCALE;
+const t = useTranslations(lang);
+---
+
+<BaseLayout lang={lang} title={t('onboarding.title')}>
+  <div class="mx-auto flex min-h-screen max-w-lg flex-col justify-center px-4">
+    <div class="card">
+      <h1 class="text-2xl font-bold">{t('onboarding.title')}</h1>
+      <p class="mt-1 text-muted">{t('onboarding.subtitle')}</p>
+
+      <form id="org-form" class="mt-6 space-y-4">
+        <div>
+          <label class="label" for="name">{t('onboarding.orgName')}</label>
+          <input id="name" class="field" required placeholder={t('onboarding.orgNamePh')} />
+        </div>
+        <div>
+          <label class="label" for="slug">{t('onboarding.slug')}</label>
+          <input id="slug" class="field" required placeholder={t('onboarding.slugPh')} />
+          <p class="mt-1 text-xs text-muted">{t('onboarding.slugHint')}</p>
+        </div>
+        <div>
+          <label class="label" for="plan">{t('onboarding.plan')}</label>
+          <select id="plan" class="field">
+            <option value="business">{t('onboarding.planBusiness')}</option>
+            <option value="enterprise">{t('onboarding.planEnterprise')}</option>
+          </select>
+        </div>
+        <p id="err" class="hidden text-sm text-danger"></p>
+        <button id="submit" class="btn-primary w-full" type="submit">
+          {t('onboarding.submit')}
+        </button>
+      </form>
+    </div>
+  </div>
+</BaseLayout>
+
+<script>
+  import { requireAuth } from '../../lib/auth';
+  import { createOrg, listOrgs, setCurrentOrgId } from '../../lib/api';
+  import { useTranslations, type Locale } from '../../lib/i18n';
+
+  const lang = (document.documentElement.lang || 'en') as Locale;
+  const t = useTranslations(lang);
+  if (requireAuth(lang)) {
+    // Already has an org → straight to the dashboard.
+    void listOrgs().then((r) => {
+      if ((r.data ?? []).length > 0) location.replace(`/${lang}/dashboard/`);
+    });
+
+    const form = document.getElementById('org-form') as HTMLFormElement;
+    const err = document.getElementById('err')!;
+    const submit = document.getElementById('submit') as HTMLButtonElement;
+    const slugify = (s: string) =>
+      s
+        .toLowerCase()
+        .replace(/[^a-z0-9-]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 40);
+
+    const nameEl = document.getElementById('name') as HTMLInputElement;
+    const slugEl = document.getElementById('slug') as HTMLInputElement;
+    let slugEdited = false;
+    slugEl.addEventListener('input', () => (slugEdited = true));
+    nameEl.addEventListener('input', () => {
+      if (!slugEdited) slugEl.value = slugify(nameEl.value);
+    });
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      err.classList.add('hidden');
+      submit.disabled = true;
+      submit.textContent = t('common.creating');
+      const res = await createOrg({
+        name: nameEl.value.trim(),
+        slug: slugify(slugEl.value),
+        plan: (document.getElementById('plan') as HTMLSelectElement).value,
+      });
+      if (res.ok && res.data) {
+        setCurrentOrgId(res.data.id);
+        location.replace(`/${lang}/dashboard/`);
+        return;
+      }
+      err.textContent = res.status === 409 ? t('onboarding.slugTaken') : t('onboarding.invalid');
+      err.classList.remove('hidden');
+      submit.disabled = false;
+      submit.textContent = t('onboarding.submit');
+    });
+  }
+</script>
