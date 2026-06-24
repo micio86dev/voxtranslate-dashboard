@@ -38,6 +38,8 @@ export interface OrgSummary {
   name: string;
   slug: string;
   plan: string;
+  /** 'none' | 'active' | 'past_due' | 'canceled'. */
+  subscription_status: string;
   credits_balance: number;
   role: string;
 }

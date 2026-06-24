@@ -22,7 +22,7 @@ const t = useTranslations(lang);
         <button id="manage" class="btn-ghost text-sm">{t('credits.manage')}</button>
       </div>
     </div>
-    <div class="card">
+    <div id="subscribe-card" class="card">
       <div class="text-sm font-semibold">{t('credits.subscribe')}</div>
       <div class="mt-3 flex flex-wrap items-center gap-2">
         <select id="plan" class="field max-w-40 text-sm">
@@ -73,6 +73,14 @@ const t = useTranslations(lang);
     const t = useTranslations(ctx.lang as Locale);
     const orgId = ctx.activeOrg.id;
     const fmt = (iso: string) => new Date(iso).toLocaleDateString(ctx.lang);
+
+    // Gate the billing actions on the org's subscription state. The Stripe Billing
+    // Portal only exists once there's a customer, so "Manage subscription" is hidden
+    // until then (otherwise it 409s and surfaces as a generic error); "Subscribe" is
+    // hidden once the subscription is active.
+    const subStatus = ctx.activeOrg.subscription_status;
+    document.getElementById('manage')!.classList.toggle('hidden', subStatus === 'none');
+    document.getElementById('subscribe-card')!.classList.toggle('hidden', subStatus === 'active');
 
     const res = await getCredits(orgId);
     if (res.ok && res.data) {
