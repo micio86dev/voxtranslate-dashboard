@@ -1,0 +1,94 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { localePaths, isLocale, DEFAULT_LOCALE, useTranslations } from '../../lib/i18n';
+
+export function getStaticPaths() {
+  return localePaths();
+}
+
+const lang = isLocale(Astro.params.lang) ? Astro.params.lang : DEFAULT_LOCALE;
+const t = useTranslations(lang);
+---
+
+<BaseLayout lang={lang} title={t('settings.title')} chrome>
+  <h1 class="text-2xl font-bold">{t('settings.title')}</h1>
+
+  <form id="settings-form" class="card mt-6 max-w-xl space-y-5">
+    <div>
+      <label class="label" for="name">{t('settings.orgName')}</label>
+      <input id="name" class="field" />
+    </div>
+    <div>
+      <label class="label" for="retention">{t('settings.retention')}</label>
+      <input id="retention" class="field" type="number" min="1" />
+    </div>
+    <div>
+      <label class="label" for="domains">{t('settings.domains')}</label>
+      <input id="domains" class="field" placeholder={t('settings.domainsPh')} />
+      <p class="mt-1 text-xs text-muted">{t('settings.domainsHint')}</p>
+    </div>
+    <label class="flex items-center gap-2 text-sm">
+      <input id="compliance" type="checkbox" />
+      {t('settings.compliance')}
+    </label>
+    <label class="flex items-center gap-2 text-sm">
+      <input id="recnotice" type="checkbox" />
+      {t('settings.recordingNotice')}
+    </label>
+    <div class="flex items-center gap-3">
+      <button id="save" class="btn-primary" type="submit">{t('settings.save')}</button>
+      <span id="saved" class="hidden text-sm text-ok">{t('settings.saved')}</span>
+    </div>
+  </form>
+</BaseLayout>
+
+<script>
+  import { boot } from '../../scripts/app-boot';
+  import { getOrg, patchOrg } from '../../lib/api';
+  import { useTranslations, type Locale } from '../../lib/i18n';
+
+  void (async () => {
+    const ctx = await boot();
+    if (!ctx) return;
+    const t = useTranslations(ctx.lang as Locale);
+    const orgId = ctx.activeOrg.id;
+
+    const name = document.getElementById('name') as HTMLInputElement;
+    const retention = document.getElementById('retention') as HTMLInputElement;
+    const domains = document.getElementById('domains') as HTMLInputElement;
+    const compliance = document.getElementById('compliance') as HTMLInputElement;
+    const recnotice = document.getElementById('recnotice') as HTMLInputElement;
+    const saved = document.getElementById('saved')!;
+
+    const res = await getOrg(orgId);
+    if (res.ok && res.data) {
+      const s = res.data.settings ?? {};
+      name.value = res.data.name;
+      retention.value = String(s.retention_days ?? 90);
+      domains.value = (s.allowed_domains ?? []).join(', ');
+      compliance.checked = !!s.compliance_mode;
+      recnotice.checked = s.recording_notify_participants !== false;
+    }
+
+    document.getElementById('settings-form')!.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      saved.classList.add('hidden');
+      const settings = {
+        retention_days: parseInt(retention.value, 10) || 90,
+        compliance_mode: compliance.checked,
+        allowed_domains: domains.value
+          .split(',')
+          .map((d) => d.trim().toLowerCase())
+          .filter(Boolean),
+        recording_notify_participants: recnotice.checked,
+      };
+      const r = await patchOrg(orgId, { name: name.value.trim() || undefined, settings });
+      if (r.ok) {
+        saved.classList.remove('hidden');
+        setTimeout(() => saved.classList.add('hidden'), 2500);
+      } else {
+        alert(t('common.error'));
+      }
+    });
+  })();
+</script>

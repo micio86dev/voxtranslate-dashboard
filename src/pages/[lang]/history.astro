@@ -1,0 +1,96 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { localePaths, isLocale, DEFAULT_LOCALE, useTranslations } from '../../lib/i18n';
+
+export function getStaticPaths() {
+  return localePaths();
+}
+
+const lang = isLocale(Astro.params.lang) ? Astro.params.lang : DEFAULT_LOCALE;
+const t = useTranslations(lang);
+---
+
+<BaseLayout lang={lang} title={t('history.title')} chrome>
+  <h1 class="text-2xl font-bold">{t('history.title')}</h1>
+
+  <div class="card mt-6 overflow-x-auto p-0">
+    <table class="w-full text-sm">
+      <thead class="border-b border-line text-left text-muted">
+        <tr>
+          <th class="px-4 py-3">{t('history.room')}</th>
+          <th class="px-4 py-3">{t('history.started')}</th>
+          <th class="px-4 py-3">{t('history.status')}</th>
+          <th class="px-4 py-3">{t('history.recording')}</th>
+          <th class="px-4 py-3"></th>
+        </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <p id="empty" class="hidden px-4 py-6 text-center text-muted">{t('history.empty')}</p>
+  </div>
+
+  <div class="mt-4 flex justify-between">
+    <button id="prev" class="btn-ghost text-sm" disabled>{t('history.prev')}</button>
+    <button id="next" class="btn-ghost text-sm">{t('history.next')}</button>
+  </div>
+</BaseLayout>
+
+<script>
+  import { boot } from '../../scripts/app-boot';
+  import { listOrgRooms } from '../../lib/api';
+  import { useTranslations, type Locale } from '../../lib/i18n';
+
+  function esc(s: string): string {
+    return s.replace(
+      /[&<>"]/g,
+      (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c] || c,
+    );
+  }
+
+  void (async () => {
+    const ctx = await boot();
+    if (!ctx) return;
+    const t = useTranslations(ctx.lang as Locale);
+    const limit = 20;
+    let page = 1;
+
+    const rows = document.getElementById('rows')!;
+    const empty = document.getElementById('empty')!;
+    const prev = document.getElementById('prev') as HTMLButtonElement;
+    const next = document.getElementById('next') as HTMLButtonElement;
+    const fmt = (iso: string) => new Date(iso).toLocaleString(ctx.lang);
+    const statusLabel = (s: string) => t(`history.status${s.charAt(0).toUpperCase()}${s.slice(1)}`);
+    const detail = (id: string) => `/${ctx.lang}/history/detail/?session=${encodeURIComponent(id)}`;
+
+    async function render() {
+      const res = await listOrgRooms(ctx!.activeOrg.id, { page, limit });
+      const list = res.data?.rooms ?? [];
+      empty.classList.toggle('hidden', list.length > 0 || page > 1);
+      rows.innerHTML = list
+        .map(
+          (r) => `<tr class="border-b border-line last:border-0">
+            <td class="px-4 py-3 font-medium">${esc(r.room)}</td>
+            <td class="px-4 py-3 text-muted">${esc(fmt(r.started_at))}</td>
+            <td class="px-4 py-3"><span class="badge">${esc(statusLabel(r.transcript_status))}</span></td>
+            <td class="px-4 py-3">${r.has_recording ? '☁️' : '—'}</td>
+            <td class="px-4 py-3 text-right"><a href="${detail(r.id)}" class="btn-ghost text-xs">${esc(t('history.open'))}</a></td>
+          </tr>`,
+        )
+        .join('');
+      prev.disabled = page <= 1;
+      next.disabled = list.length < limit;
+    }
+
+    prev.addEventListener('click', () => {
+      if (page > 1) {
+        page--;
+        void render();
+      }
+    });
+    next.addEventListener('click', () => {
+      page++;
+      void render();
+    });
+    void render();
+  })();
+</script>

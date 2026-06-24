@@ -151,6 +151,144 @@ export const patchProject = (
 export const deleteProject = (orgId: string, projectId: string) =>
   request<null>('DELETE', `/api/business/organizations/${orgId}/projects/${projectId}`);
 
+// --- Call history ------------------------------------------------------------
+
+export interface RoomRow {
+  id: string;
+  room: string;
+  started_at: string;
+  ended_at: string | null;
+  project_id: string | null;
+  transcript_status: string;
+  has_recording: boolean;
+}
+
+export interface HistoryPage {
+  rooms: RoomRow[];
+  page: number;
+  limit: number;
+}
+
+export interface HistoryQuery {
+  project_id?: string;
+  page?: number;
+  limit?: number;
+  from?: string;
+  to?: string;
+}
+
+export const listOrgRooms = (orgId: string, q: HistoryQuery = {}) => {
+  const params = new URLSearchParams();
+  if (q.project_id) params.set('project_id', q.project_id);
+  if (q.page) params.set('page', String(q.page));
+  if (q.limit) params.set('limit', String(q.limit));
+  if (q.from) params.set('from', q.from);
+  if (q.to) params.set('to', q.to);
+  const qs = params.toString();
+  return request<HistoryPage>(
+    'GET',
+    `/api/business/organizations/${orgId}/rooms${qs ? `?${qs}` : ''}`,
+  );
+};
+
+// --- Transcripts -------------------------------------------------------------
+
+export interface Segment {
+  speaker_id: string;
+  speaker_name: string;
+  text: string;
+  start_ms: number;
+  end_ms: number;
+}
+
+export interface TranscriptDoc {
+  status: string;
+  source_language?: string;
+  segments: Segment[];
+  duration_seconds?: number | null;
+  word_count?: number | null;
+  translated_languages?: string[];
+}
+
+export interface TranslateResult {
+  language: string;
+  text: string;
+  cached: boolean;
+  credits_deducted: number;
+}
+
+export const getTranscript = (sessionId: string) =>
+  request<TranscriptDoc>('GET', `/api/business/rooms/${sessionId}/transcript`);
+
+export const translateTranscript = (sessionId: string, target_language: string) =>
+  request<TranslateResult>('POST', `/api/business/rooms/${sessionId}/transcript/translate`, {
+    target_language,
+  });
+
+export const recordingUrl = (sessionId: string) =>
+  request<{ url: string; expires_in: number }>(
+    'GET',
+    `/api/business/rooms/${sessionId}/recording/url`,
+  );
+
+/** Fetch the transcript export (auth header needed) and trigger a download. */
+export async function downloadTranscript(
+  sessionId: string,
+  format: 'txt' | 'pdf',
+  language?: string,
+): Promise<boolean> {
+  const params = new URLSearchParams({ format });
+  if (language) params.set('language', language);
+  try {
+    const res = await fetch(
+      `${API_BASE}/api/business/rooms/${sessionId}/transcript/export?${params}`,
+      { headers: authHeaders() },
+    );
+    if (!res.ok) return false;
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `transcript-${sessionId}.${format}`;
+    a.click();
+    URL.revokeObjectURL(url);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// --- Org billing -------------------------------------------------------------
+
+export interface LedgerTxn {
+  amount: number;
+  type: string;
+  description: string | null;
+  created_at: string;
+}
+
+export interface CreditsView {
+  balance: number;
+  transactions: LedgerTxn[];
+}
+
+export const getCredits = (orgId: string) =>
+  request<CreditsView>('GET', `/api/business/organizations/${orgId}/credits`);
+
+export const purchaseCredits = (orgId: string, credits_amount: number) =>
+  request<{ url: string }>('POST', `/api/business/organizations/${orgId}/credits/purchase`, {
+    credits_amount,
+  });
+
+export const subscribe = (orgId: string, plan: string, interval: string) =>
+  request<{ url: string }>('POST', `/api/business/organizations/${orgId}/subscription`, {
+    plan,
+    interval,
+  });
+
+export const billingPortal = (orgId: string) =>
+  request<{ url: string }>('POST', `/api/business/organizations/${orgId}/subscription/portal`);
+
 // --- Current-org helper (persisted selection) --------------------------------
 
 const ORG_KEY = 'voxb.org';
