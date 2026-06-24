@@ -35,7 +35,8 @@ const TRANSLATE_LANGS = ['it', 'en', 'es', 'de', 'fr', 'pt', 'ja', 'zh', 'ar', '
   </div>
 
   <p id="msg" class="mt-4 text-muted">{t('common.loading')}</p>
-  <audio id="player" class="mt-4 hidden w-full" controls></audio>
+  <video id="player" class="mt-4 hidden max-h-[70vh] w-full rounded-lg bg-black" controls playsinline
+  ></video>
   <div id="body" class="mt-4 space-y-3"></div>
 </BaseLayout>
 
@@ -131,7 +132,7 @@ const TRANSLATE_LANGS = ['it', 'en', 'es', 'de', 'fr', 'pt', 'ja', 'zh', 'ar', '
     // Recording playback (1h signed URL).
     document.getElementById('rec-load')!.addEventListener('click', async () => {
       const r = await recordingUrl(sessionId);
-      const player = document.getElementById('player') as HTMLAudioElement;
+      const player = document.getElementById('player') as HTMLVideoElement;
       if (r.ok && r.data?.url) {
         player.src = r.data.url;
         player.classList.remove('hidden');
