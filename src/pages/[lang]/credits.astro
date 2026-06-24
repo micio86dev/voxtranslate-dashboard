@@ -1,0 +1,116 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { localePaths, isLocale, DEFAULT_LOCALE, useTranslations } from '../../lib/i18n';
+
+export function getStaticPaths() {
+  return localePaths();
+}
+
+const lang = isLocale(Astro.params.lang) ? Astro.params.lang : DEFAULT_LOCALE;
+const t = useTranslations(lang);
+---
+
+<BaseLayout lang={lang} title={t('credits.title')} chrome>
+  <h1 class="text-2xl font-bold">{t('credits.title')}</h1>
+
+  <div class="mt-6 grid gap-4 sm:grid-cols-2">
+    <div class="card">
+      <div class="text-sm text-muted">{t('credits.balance')}</div>
+      <div id="balance" class="mt-1 text-3xl font-bold">…</div>
+      <div class="mt-4 flex flex-wrap gap-2">
+        <button id="buy" class="btn-primary text-sm">{t('credits.buy')}</button>
+        <button id="manage" class="btn-ghost text-sm">{t('credits.manage')}</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="text-sm font-semibold">{t('credits.subscribe')}</div>
+      <div class="mt-3 flex flex-wrap items-center gap-2">
+        <select id="plan" class="field max-w-40 text-sm">
+          <option value="business">Business</option>
+          <option value="enterprise">Enterprise</option>
+        </select>
+        <select id="interval" class="field max-w-40 text-sm">
+          <option value="month">{t('credits.monthly')}</option>
+          <option value="year">{t('credits.annual')}</option>
+        </select>
+        <button id="subscribe" class="btn-primary text-sm">{t('credits.subscribe')}</button>
+      </div>
+      <p class="mt-3 text-xs text-muted">{t('credits.subscribeHint')}</p>
+    </div>
+  </div>
+
+  <h2 class="mt-8 text-lg font-semibold">{t('credits.transactions')}</h2>
+  <div class="card mt-3 overflow-x-auto p-0">
+    <table class="w-full text-sm">
+      <thead class="border-b border-line text-left text-muted">
+        <tr>
+          <th class="px-4 py-3">{t('credits.date')}</th>
+          <th class="px-4 py-3">{t('credits.type')}</th>
+          <th class="px-4 py-3 text-right">{t('credits.amount')}</th>
+        </tr>
+      </thead>
+      <tbody id="txns"></tbody>
+    </table>
+    <p id="no-txns" class="hidden px-4 py-6 text-center text-muted">{t('credits.noTxns')}</p>
+  </div>
+</BaseLayout>
+
+<script>
+  import { boot } from '../../scripts/app-boot';
+  import { billingPortal, getCredits, purchaseCredits, subscribe } from '../../lib/api';
+  import { useTranslations, type Locale } from '../../lib/i18n';
+
+  function esc(s: string): string {
+    return s.replace(
+      /[&<>"]/g,
+      (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c] || c,
+    );
+  }
+
+  void (async () => {
+    const ctx = await boot();
+    if (!ctx) return;
+    const t = useTranslations(ctx.lang as Locale);
+    const orgId = ctx.activeOrg.id;
+    const fmt = (iso: string) => new Date(iso).toLocaleDateString(ctx.lang);
+
+    const res = await getCredits(orgId);
+    if (res.ok && res.data) {
+      document.getElementById('balance')!.textContent = String(res.data.balance);
+      const txns = res.data.transactions ?? [];
+      document.getElementById('no-txns')!.classList.toggle('hidden', txns.length > 0);
+      document.getElementById('txns')!.innerHTML = txns
+        .map(
+          (x) => `<tr class="border-b border-line last:border-0">
+            <td class="px-4 py-3 text-muted">${esc(fmt(x.created_at))}</td>
+            <td class="px-4 py-3">${esc(x.type)}</td>
+            <td class="px-4 py-3 text-right ${x.amount < 0 ? 'text-danger' : 'text-ok'}">${x.amount > 0 ? '+' : ''}${x.amount}</td>
+          </tr>`,
+        )
+        .join('');
+    }
+
+    const go = (url?: string | null) => {
+      if (url) window.location.href = url;
+      else alert(t('common.error'));
+    };
+
+    document.getElementById('buy')!.addEventListener('click', async () => {
+      const raw = prompt(t('credits.buyAmount'), '1000');
+      const amount = raw ? parseInt(raw, 10) : NaN;
+      if (!amount || amount <= 0) return;
+      const r = await purchaseCredits(orgId, amount);
+      go(r.data?.url);
+    });
+    document.getElementById('subscribe')!.addEventListener('click', async () => {
+      const plan = (document.getElementById('plan') as HTMLSelectElement).value;
+      const interval = (document.getElementById('interval') as HTMLSelectElement).value;
+      const r = await subscribe(orgId, plan, interval);
+      go(r.data?.url);
+    });
+    document.getElementById('manage')!.addEventListener('click', async () => {
+      const r = await billingPortal(orgId);
+      go(r.data?.url);
+    });
+  })();
+</script>
