@@ -42,6 +42,34 @@
     "connectCalendar": "Accedi di nuovo per collegare Google Calendar.",
     "cancelConfirm": "Annullare questa riunione? I partecipanti verranno avvisati."
   },
+  "notif": {
+    "title": "Notifiche",
+    "markAll": "Segna tutte come lette",
+    "enable": "Attiva push",
+    "settings": "Impostazioni",
+    "empty": "Nessuna notifica",
+    "prefsTitle": "Preferenze notifiche",
+    "event": "Evento",
+    "type": {
+      "meeting_invited": "Invito a riunione",
+      "meeting_reminder": "Promemoria riunione",
+      "meeting_updated": "Riunione aggiornata",
+      "meeting_cancelled": "Riunione annullata"
+    },
+    "channel": { "push": "Push", "email": "Email", "in_app": "In-app" },
+    "quiet": "Ore di silenzio",
+    "quietHint": "In queste ore le notifiche push sono silenziate (email e in-app arrivano comunque).",
+    "quietFrom": "Da (ora)",
+    "quietTo": "A (ora)",
+    "timezone": "Fuso orario",
+    "pushSection": "Push del browser",
+    "pushOn": "Le notifiche push sono attive su questo dispositivo.",
+    "pushOff": "Le notifiche push sono disattivate su questo dispositivo.",
+    "pushEnable": "Attiva",
+    "pushDisable": "Disattiva",
+    "pushUnsupported": "Questo browser non supporta le notifiche push.",
+    "saved": "Salvato"
+  },
   "nav": {
     "meetings": "Riunioni",
     "dashboard": "Dashboard",

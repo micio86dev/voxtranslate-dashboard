@@ -1,0 +1,149 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { localePaths, isLocale, DEFAULT_LOCALE, useTranslations } from '../../lib/i18n';
+
+export function getStaticPaths() {
+  return localePaths();
+}
+
+const lang = isLocale(Astro.params.lang) ? Astro.params.lang : DEFAULT_LOCALE;
+const t = useTranslations(lang);
+
+const TYPES = ['meeting_invited', 'meeting_reminder', 'meeting_updated', 'meeting_cancelled'];
+const CHANNELS = ['push', 'email', 'in_app'];
+---
+
+<BaseLayout lang={lang} title={t('notif.prefsTitle')} chrome>
+  <h1 class="text-2xl font-bold">{t('notif.prefsTitle')}</h1>
+
+  <div class="card mt-6 overflow-x-auto p-0">
+    <table class="w-full text-sm">
+      <thead class="border-b border-line text-left text-muted">
+        <tr>
+          <th class="px-4 py-3">{t('notif.event')}</th>
+          {CHANNELS.map((c) => <th class="px-4 py-3 text-center">{t(`notif.channel.${c}`)}</th>)}
+        </tr>
+      </thead>
+      <tbody>
+        {
+          TYPES.map((ty) => (
+            <tr class="border-b border-line last:border-0">
+              <td class="px-4 py-3 font-medium">{t(`notif.type.${ty}`)}</td>
+              {CHANNELS.map((c) => (
+                <td class="px-4 py-3 text-center">
+                  <input type="checkbox" class="pref" data-type={ty} data-channel={c} checked />
+                </td>
+              ))}
+            </tr>
+          ))
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card mt-6">
+    <h2 class="font-semibold">{t('notif.quiet')}</h2>
+    <p class="mt-1 text-sm text-muted">{t('notif.quietHint')}</p>
+    <div class="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+      <div>
+        <label class="label" for="q-from">{t('notif.quietFrom')}</label>
+        <input id="q-from" class="field" type="number" min="0" max="23" placeholder="22" />
+      </div>
+      <div>
+        <label class="label" for="q-to">{t('notif.quietTo')}</label>
+        <input id="q-to" class="field" type="number" min="0" max="23" placeholder="7" />
+      </div>
+      <div>
+        <label class="label" for="q-tz">{t('notif.timezone')}</label>
+        <input id="q-tz" class="field" readonly />
+      </div>
+    </div>
+  </div>
+
+  <div class="card mt-6 flex items-center justify-between">
+    <div>
+      <h2 class="font-semibold">{t('notif.pushSection')}</h2>
+      <p id="push-status" class="mt-1 text-sm text-muted"></p>
+    </div>
+    <button id="push-toggle" class="btn-ghost text-sm"></button>
+  </div>
+
+  <div class="mt-6 flex items-center gap-3">
+    <button id="save" class="btn-primary">{t('common.save')}</button>
+    <span id="saved" class="hidden text-sm text-ok">{t('notif.saved')}</span>
+  </div>
+</BaseLayout>
+
+<script>
+  import { boot } from '../../scripts/app-boot';
+  import { getNotifPreferences, patchNotifPreferences } from '../../lib/api';
+  import { enablePush, disablePush, isPushSubscribed, pushPermission } from '../../lib/push';
+  import { useTranslations, type Locale } from '../../lib/i18n';
+
+  void (async () => {
+    const ctx = await boot();
+    if (!ctx) return;
+    const t = useTranslations(ctx.lang as Locale);
+
+    const tzInput = document.getElementById('q-tz') as HTMLInputElement;
+    tzInput.value = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+
+    // Load current preferences and reflect them in the toggles.
+    const res = await getNotifPreferences();
+    if (res.ok && res.data) {
+      const enabled = new Map(
+        res.data.preferences.map((p) => [`${p.type}:${p.channel}`, p.enabled]),
+      );
+      document.querySelectorAll<HTMLInputElement>('.pref').forEach((cb) => {
+        const key = `${cb.dataset.type}:${cb.dataset.channel}`;
+        cb.checked = enabled.get(key) ?? true;
+      });
+      (document.getElementById('q-from') as HTMLInputElement).value =
+        res.data.quiet_hours_start == null ? '' : String(res.data.quiet_hours_start);
+      (document.getElementById('q-to') as HTMLInputElement).value =
+        res.data.quiet_hours_end == null ? '' : String(res.data.quiet_hours_end);
+      if (res.data.timezone) tzInput.value = res.data.timezone;
+    }
+
+    // Push status + toggle.
+    const statusEl = document.getElementById('push-status')!;
+    const toggleBtn = document.getElementById('push-toggle') as HTMLButtonElement;
+    async function refreshPush() {
+      const perm = pushPermission();
+      if (perm === 'unsupported') {
+        statusEl.textContent = t('notif.pushUnsupported');
+        toggleBtn.classList.add('hidden');
+        return;
+      }
+      const subbed = await isPushSubscribed();
+      statusEl.textContent = subbed ? t('notif.pushOn') : t('notif.pushOff');
+      toggleBtn.textContent = subbed ? t('notif.pushDisable') : t('notif.pushEnable');
+      toggleBtn.classList.remove('hidden');
+      toggleBtn.dataset.subbed = String(subbed);
+    }
+    toggleBtn.addEventListener('click', async () => {
+      if (toggleBtn.dataset.subbed === 'true') await disablePush();
+      else await enablePush();
+      await refreshPush();
+    });
+    await refreshPush();
+
+    // Save.
+    document.getElementById('save')!.addEventListener('click', async () => {
+      const preferences = Array.from(document.querySelectorAll<HTMLInputElement>('.pref')).map(
+        (cb) => ({ type: cb.dataset.type!, channel: cb.dataset.channel!, enabled: cb.checked }),
+      );
+      const fromVal = (document.getElementById('q-from') as HTMLInputElement).value;
+      const toVal = (document.getElementById('q-to') as HTMLInputElement).value;
+      await patchNotifPreferences({
+        preferences,
+        quiet_hours_start: fromVal === '' ? null : Number(fromVal),
+        quiet_hours_end: toVal === '' ? null : Number(toVal),
+        timezone: tzInput.value,
+      });
+      const saved = document.getElementById('saved')!;
+      saved.classList.remove('hidden');
+      window.setTimeout(() => saved.classList.add('hidden'), 2000);
+    });
+  })();
+</script>

@@ -42,6 +42,34 @@
     "connectCalendar": "Melde dich erneut an, um Google Calendar zu verbinden.",
     "cancelConfirm": "Dieses Meeting absagen? Teilnehmer werden benachrichtigt."
   },
+  "notif": {
+    "title": "Benachrichtigungen",
+    "markAll": "Alle als gelesen markieren",
+    "enable": "Push aktivieren",
+    "settings": "Einstellungen",
+    "empty": "Keine Benachrichtigungen",
+    "prefsTitle": "Benachrichtigungseinstellungen",
+    "event": "Ereignis",
+    "type": {
+      "meeting_invited": "Meeting-Einladung",
+      "meeting_reminder": "Meeting-Erinnerung",
+      "meeting_updated": "Meeting aktualisiert",
+      "meeting_cancelled": "Meeting abgesagt"
+    },
+    "channel": { "push": "Push", "email": "E-Mail", "in_app": "In-App" },
+    "quiet": "Ruhezeiten",
+    "quietHint": "In diesen Stunden werden Push-Benachrichtigungen stummgeschaltet (E-Mail und In-App kommen weiterhin an).",
+    "quietFrom": "Von (Stunde)",
+    "quietTo": "Bis (Stunde)",
+    "timezone": "Zeitzone",
+    "pushSection": "Browser-Push",
+    "pushOn": "Push-Benachrichtigungen sind auf diesem Gerät aktiviert.",
+    "pushOff": "Push-Benachrichtigungen sind auf diesem Gerät deaktiviert.",
+    "pushEnable": "Aktivieren",
+    "pushDisable": "Deaktivieren",
+    "pushUnsupported": "Dieser Browser unterstützt keine Push-Benachrichtigungen.",
+    "saved": "Gespeichert"
+  },
   "nav": {
     "meetings": "Meetings",
     "dashboard": "Dashboard",

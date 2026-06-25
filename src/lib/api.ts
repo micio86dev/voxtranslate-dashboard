@@ -463,6 +463,66 @@ export const updateMeeting = (orgId: string, meetingId: string, body: MeetingCre
 export const cancelMeeting = (orgId: string, meetingId: string) =>
   request<null>('POST', `/api/business/organizations/${orgId}/meetings/${meetingId}/cancel`);
 
+// --- Notifications -----------------------------------------------------------
+
+export interface NotificationItem {
+  id: string;
+  type: string;
+  title: string;
+  body: string;
+  data: Record<string, unknown>;
+  read_at: string | null;
+  created_at: string;
+}
+
+export interface NotificationsPage {
+  notifications: NotificationItem[];
+  unread: number;
+}
+
+export interface NotifPref {
+  type: string;
+  channel: string;
+  enabled: boolean;
+}
+
+export interface NotifPreferences {
+  preferences: NotifPref[];
+  quiet_hours_start: number | null;
+  quiet_hours_end: number | null;
+  timezone: string;
+}
+
+export const getVapidKey = () => request<{ key: string }>('GET', '/api/push/vapid-public-key');
+
+export const subscribePush = (body: {
+  endpoint: string;
+  keys: { p256dh: string; auth: string };
+  user_agent?: string;
+}) => request<null>('POST', '/api/push/subscribe', body);
+
+export const unsubscribePush = (endpoint: string) =>
+  request<null>('DELETE', '/api/push/subscribe', { endpoint });
+
+export const listNotifications = (q: { unread?: boolean; limit?: number } = {}) => {
+  const params = new URLSearchParams();
+  if (q.unread) params.set('unread', 'true');
+  if (q.limit) params.set('limit', String(q.limit));
+  const qs = params.toString();
+  return request<NotificationsPage>('GET', `/api/notifications${qs ? `?${qs}` : ''}`);
+};
+
+export const markNotificationRead = (id: string) =>
+  request<null>('POST', `/api/notifications/${id}/read`);
+
+export const markAllNotificationsRead = () => request<null>('POST', '/api/notifications/read-all');
+
+export const getNotifPreferences = () =>
+  request<NotifPreferences>('GET', '/api/notifications/preferences');
+
+export const patchNotifPreferences = (body: Partial<NotifPreferences>) =>
+  request<null>('PATCH', '/api/notifications/preferences', body);
+
 // --- Project storyboard ------------------------------------------------------
 
 export interface ProjectStoryboard {
