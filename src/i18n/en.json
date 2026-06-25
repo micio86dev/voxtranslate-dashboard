@@ -57,7 +57,11 @@
       "meeting_updated": "Meeting updated",
       "meeting_cancelled": "Meeting cancelled"
     },
-    "channel": { "push": "Push", "email": "Email", "in_app": "In-app" },
+    "channel": {
+      "push": "Push",
+      "email": "Email",
+      "in_app": "In-app"
+    },
     "quiet": "Quiet hours",
     "quietHint": "During these hours push notifications are muted (email and in-app still arrive).",
     "quietFrom": "From (hour)",
@@ -115,7 +119,12 @@
     "quickActions": "Quick actions",
     "inviteMember": "Invite a member",
     "newProject": "New project",
-    "viewHistory": "View call history"
+    "viewHistory": "View call history",
+    "last30": "Last 30 days",
+    "upcomingMeetings": "Upcoming meetings",
+    "viewAll": "View all",
+    "noUpcoming": "No upcoming meetings.",
+    "newMeeting": "Schedule a meeting"
   },
   "org": {
     "switch": "Workspace",

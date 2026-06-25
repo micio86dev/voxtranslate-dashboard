@@ -21,44 +21,95 @@ const link = (p: string) => localizePath(lang, p);
   <h1 class="text-2xl font-bold">{t('dashboard.title')}</h1>
   <p id="welcome" class="mt-1 text-muted"></p>
 
+  <!-- Stat cards (each links to its section). -->
   <div class="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
-    <div class="card">
+    <a href={link('members')} class="card transition hover:border-brand">
       <div class="text-sm text-muted">{t('dashboard.membersCard')}</div>
       <div id="members-count" class="mt-1 text-2xl font-bold">…</div>
-    </div>
-    <div class="card">
+    </a>
+    <a href={link('projects')} class="card transition hover:border-brand">
       <div class="text-sm text-muted">{t('dashboard.projectsCard')}</div>
       <div id="projects-count" class="mt-1 text-2xl font-bold">…</div>
-    </div>
-    <div class="card">
+    </a>
+    <a href={link('credits')} class="card transition hover:border-brand">
       <div class="text-sm text-muted">{t('dashboard.creditsCard')}</div>
       <div id="credits" class="mt-1 text-2xl font-bold">…</div>
-    </div>
-    <div class="card">
+    </a>
+    <a href={link('settings')} class="card transition hover:border-brand">
       <div class="text-sm text-muted">{t('dashboard.planCard')}</div>
       <div id="plan" class="mt-1 text-2xl font-bold capitalize">…</div>
       <div class="mt-1 text-xs text-muted">
         {t('dashboard.yourRole')}: <span id="role" class="capitalize"></span>
       </div>
-    </div>
+    </a>
   </div>
+
+  <!-- Analytics snapshot (admin/owner only; revealed by the script). -->
+  <section id="analytics-section" class="hidden">
+    <div class="mt-8 flex items-center justify-between">
+      <h2 class="text-lg font-semibold">{t('dashboard.last30')}</h2>
+      <a href={link('analytics')} class="btn-ghost text-sm">{t('dashboard.viewAll')}</a>
+    </div>
+    <div class="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+      <div class="card">
+        <div class="text-xs text-muted">{t('analytics.kpiCalls')}</div>
+        <div id="kpi-calls" class="mt-1 text-2xl font-bold">—</div>
+      </div>
+      <div class="card">
+        <div class="text-xs text-muted">{t('analytics.kpiMinutes')}</div>
+        <div id="kpi-minutes" class="mt-1 text-2xl font-bold">—</div>
+      </div>
+      <div class="card">
+        <div class="text-xs text-muted">{t('analytics.kpiTranscripts')}</div>
+        <div id="kpi-transcripts" class="mt-1 text-2xl font-bold">—</div>
+      </div>
+      <div class="card">
+        <div class="text-xs text-muted">{t('analytics.kpiRecordings')}</div>
+        <div id="kpi-recordings" class="mt-1 text-2xl font-bold">—</div>
+      </div>
+      <div class="card">
+        <div class="text-xs text-muted">{t('analytics.kpiCredits')}</div>
+        <div id="kpi-credits" class="mt-1 text-2xl font-bold">—</div>
+      </div>
+    </div>
+    <div class="mt-4 grid gap-4 lg:grid-cols-2">
+      <div class="card">
+        <div class="text-sm font-semibold">{t('analytics.callsOverTime')}</div>
+        <div id="chart-calls" class="mt-3"></div>
+      </div>
+      <div class="card">
+        <div class="text-sm font-semibold">{t('analytics.topProjects')}</div>
+        <div id="top-projects" class="mt-3"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Upcoming meetings (all roles). -->
+  <div class="mt-8 flex items-center justify-between">
+    <h2 class="text-lg font-semibold">{t('dashboard.upcomingMeetings')}</h2>
+    <a href={link('meetings')} class="btn-ghost text-sm">{t('dashboard.viewAll')}</a>
+  </div>
+  <div id="upcoming" class="mt-3"></div>
 
   <h2 class="mt-8 text-lg font-semibold">{t('dashboard.quickActions')}</h2>
   <div class="mt-3 flex flex-wrap gap-2">
     <a href={link('members')} class="btn-ghost">{t('dashboard.inviteMember')}</a>
     <a href={link('projects/new')} class="btn-ghost">{t('dashboard.newProject')}</a>
+    <a href={link('meetings')} class="btn-ghost">{t('dashboard.newMeeting')}</a>
   </div>
 </BaseLayout>
 
 <script>
   import { boot } from '../../scripts/app-boot';
-  import { listMembers, listProjects } from '../../lib/api';
-  import { useTranslations } from '../../lib/i18n';
+  import { listMembers, listProjects, getAnalytics, listMeetings } from '../../lib/api';
+  import { useTranslations, type Locale } from '../../lib/i18n';
+  import { barChart, esc, hbars } from '../../lib/charts';
 
   void (async () => {
     const ctx = await boot();
     if (!ctx) return;
-    const t = useTranslations(ctx.lang);
+    const t = useTranslations(ctx.lang as Locale);
+    const orgId = ctx.activeOrg.id;
     const set = (id: string, v: string) => {
       const el = document.getElementById(id);
       if (el) el.textContent = v;
@@ -67,11 +118,57 @@ const link = (p: string) => localizePath(lang, p);
     set('credits', String(ctx.activeOrg.credits_balance));
     set('plan', ctx.activeOrg.plan);
     set('role', ctx.activeOrg.role);
-    const [m, p] = await Promise.all([
-      listMembers(ctx.activeOrg.id),
-      listProjects(ctx.activeOrg.id),
-    ]);
+
+    // Counts.
+    const [m, p] = await Promise.all([listMembers(orgId), listProjects(orgId)]);
     set('members-count', String((m.data ?? []).length));
     set('projects-count', String((p.data ?? []).length));
+
+    // Upcoming meetings (next 30 days, soonest 5).
+    const now = new Date();
+    const to = new Date(now.getTime() + 30 * 864e5);
+    const meetings =
+      (await listMeetings(orgId, { from: now.toISOString(), to: to.toISOString() })).data ?? [];
+    const upcoming = meetings
+      .filter((mt) => mt.status !== 'cancelled' && new Date(mt.scheduled_at) >= now)
+      .sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at))
+      .slice(0, 5);
+    const upEl = document.getElementById('upcoming')!;
+    upEl.innerHTML = upcoming.length
+      ? '<div class="flex flex-col gap-2">' +
+        upcoming
+          .map((mt) => {
+            const when = new Date(mt.scheduled_at).toLocaleString(ctx.lang);
+            return `<a href="${esc(mt.join_url)}" target="_blank" rel="noopener" class="flex items-center justify-between gap-3 rounded-lg border border-line px-3 py-2 transition hover:border-brand">
+              <span class="truncate font-medium">${esc(mt.title)}</span>
+              <span class="shrink-0 text-sm text-muted">${esc(when)}</span>
+            </a>`;
+          })
+          .join('') +
+        '</div>'
+      : `<p class="text-sm text-muted">${esc(t('dashboard.noUpcoming'))}</p>`;
+
+    // Analytics snapshot — admin/owner only (matches the API gate).
+    if (ctx.activeOrg.role === 'admin' || ctx.activeOrg.role === 'owner') {
+      const a = await getAnalytics(orgId, 30);
+      if (a.ok && a.data) {
+        const d = a.data;
+        set('kpi-calls', String(d.kpis.calls));
+        set('kpi-minutes', String(d.kpis.minutes));
+        set('kpi-transcripts', String(d.kpis.transcripts));
+        set('kpi-recordings', String(d.kpis.recordings));
+        set('kpi-credits', String(d.kpis.credits_spent));
+        const noData = `<p class="text-sm text-muted">${esc(t('analytics.noData'))}</p>`;
+        document.getElementById('chart-calls')!.innerHTML =
+          barChart(d.calls_by_day, t('analytics.calls')) || noData;
+        document.getElementById('top-projects')!.innerHTML = d.top_projects.length
+          ? hbars(
+              d.top_projects.map((pr) => ({ label: pr.name, value: pr.calls })),
+              ` ${t('analytics.calls')}`,
+            )
+          : noData;
+        document.getElementById('analytics-section')!.classList.remove('hidden');
+      }
+    }
   })();
 </script>

@@ -156,6 +156,7 @@ const link = (p: string) => localizePath(lang, p);
 
     const showStoryboard = (sb: ProjectStoryboard | null) => {
       current = sb;
+      sbMsg.className = 'mt-3 text-sm text-muted';
       if (sb) {
         sbDoc.innerHTML = renderMarkdown(sb.markdown);
         sbDoc.classList.remove('hidden');
@@ -184,6 +185,7 @@ const link = (p: string) => localizePath(lang, p);
     document.getElementById('sb-run')!.addEventListener('click', async () => {
       sbForm.classList.add('hidden');
       sbMsg.textContent = t('storyboard.generating');
+      sbMsg.className = 'mt-3 text-sm text-muted';
       sbGenerate.disabled = true;
       const r = await generateStoryboard(ctx.activeOrg.id, p.id, {
         target_workflow: sbTarget.value.trim() || undefined,
@@ -193,9 +195,11 @@ const link = (p: string) => localizePath(lang, p);
       if (r.ok && r.data) {
         showStoryboard(r.data);
       } else if (r.status === 402) {
-        sbMsg.textContent = t('storyboard.noCredits');
+        sbMsg.innerHTML = `${t('storyboard.noCredits')} <a href="/${ctx.lang}/credits/" class="font-medium text-brand underline">${t('credits.buy')}</a>`;
+        sbMsg.className = 'mt-3 text-sm text-danger';
       } else {
         sbMsg.textContent = t('storyboard.error');
+        sbMsg.className = 'mt-3 text-sm text-danger';
       }
     });
 
