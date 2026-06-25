@@ -1,0 +1,338 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { localePaths, isLocale, DEFAULT_LOCALE, useTranslations } from '../../lib/i18n';
+
+export function getStaticPaths() {
+  return localePaths();
+}
+
+const lang = isLocale(Astro.params.lang) ? Astro.params.lang : DEFAULT_LOCALE;
+const t = useTranslations(lang);
+---
+
+<BaseLayout lang={lang} title={t('meetings.title')} chrome>
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <h1 class="text-2xl font-bold">{t('meetings.title')}</h1>
+    <button id="new-btn" class="btn-primary">{t('meetings.new')}</button>
+  </div>
+
+  <div class="mt-4 flex items-center gap-3">
+    <button id="prev" class="btn-ghost px-3" aria-label={t('meetings.prev')}>‹</button>
+    <div id="month-label" class="min-w-44 text-center font-semibold"></div>
+    <button id="next" class="btn-ghost px-3" aria-label={t('meetings.next')}>›</button>
+    <button id="today" class="btn-ghost text-sm">{t('meetings.today')}</button>
+  </div>
+
+  <div class="card mt-4 p-2">
+    <div id="weekdays" class="grid grid-cols-7 gap-1 px-1 pb-1 text-center text-xs text-muted">
+    </div>
+    <div id="grid" class="grid grid-cols-7 gap-1"></div>
+  </div>
+  <p id="empty" class="mt-3 hidden text-center text-sm text-muted">{t('meetings.empty')}</p>
+
+  <!-- Create / edit modal -->
+  <div id="modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40 px-4">
+    <div class="card max-h-[90vh] w-full max-w-lg overflow-y-auto">
+      <h2 id="modal-title" class="text-lg font-bold">{t('meetings.new')}</h2>
+      <div class="mt-4 space-y-3">
+        <div>
+          <label class="label" for="m-title">{t('meetings.fTitle')}</label>
+          <input id="m-title" class="field" placeholder={t('meetings.fTitlePh')} />
+        </div>
+        <div>
+          <label class="label" for="m-desc">{t('meetings.fDesc')}</label>
+          <textarea id="m-desc" class="field" rows="2"></textarea>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="label" for="m-start">{t('meetings.fStart')}</label>
+            <input id="m-start" class="field" type="datetime-local" />
+          </div>
+          <div>
+            <label class="label" for="m-duration">{t('meetings.fDuration')}</label>
+            <input id="m-duration" class="field" type="number" min="5" step="5" value="30" />
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="label" for="m-project">{t('meetings.fProject')}</label>
+            <select id="m-project" class="field">
+              <option value="">{t('meetings.fNoProject')}</option>
+            </select>
+          </div>
+          <div>
+            <label class="label" for="m-reminder">{t('meetings.fReminder')}</label>
+            <input id="m-reminder" class="field" type="number" min="0" step="5" value="10" />
+          </div>
+        </div>
+        <div>
+          <label class="label">{t('meetings.fMembers')}</label>
+          <div
+            id="m-members"
+            class="max-h-36 overflow-y-auto rounded-lg border border-line p-2 text-sm"
+          >
+          </div>
+        </div>
+        <div>
+          <label class="label" for="m-emails">{t('meetings.fEmails')}</label>
+          <input id="m-emails" class="field" placeholder={t('meetings.fEmailsPh')} />
+        </div>
+        <p id="m-err" class="hidden text-sm text-danger"></p>
+      </div>
+      <div class="mt-5 flex items-center justify-between gap-2">
+        <button id="m-delete" class="btn-danger hidden text-sm"
+          >{t('meetings.cancelMeeting')}</button
+        >
+        <div class="ml-auto flex gap-2">
+          <button id="m-cancel" class="btn-ghost">{t('common.cancel')}</button>
+          <button id="m-save" class="btn-primary">{t('common.save')}</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</BaseLayout>
+
+<script>
+  import { boot } from '../../scripts/app-boot';
+  import {
+    listMeetings,
+    createMeeting,
+    updateMeeting,
+    cancelMeeting,
+    listProjects,
+    listMembers,
+    type ScheduledMeeting,
+    type MeetingCreate,
+  } from '../../lib/api';
+  import { useTranslations, type Locale } from '../../lib/i18n';
+
+  function esc(s: string): string {
+    return s.replace(
+      /[&<>"]/g,
+      (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c] || c,
+    );
+  }
+  const pad = (n: number) => String(n).padStart(2, '0');
+  /** Local-time `YYYY-MM-DD` key for a Date. */
+  const dayKey = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+
+  void (async () => {
+    const ctx = await boot();
+    if (!ctx) return;
+    const lang = ctx.lang as Locale;
+    const t = useTranslations(lang);
+    const orgId = ctx.activeOrg.id;
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+
+    const projects = (await listProjects(orgId)).data ?? [];
+    const members = (await listMembers(orgId)).data ?? [];
+
+    // Populate the project select + member checkboxes once.
+    const projectSel = document.getElementById('m-project') as HTMLSelectElement;
+    for (const p of projects) {
+      const o = document.createElement('option');
+      o.value = p.id;
+      o.textContent = p.name;
+      projectSel.appendChild(o);
+    }
+    const membersBox = document.getElementById('m-members')!;
+    membersBox.innerHTML = members.length
+      ? members
+          .map(
+            (m) =>
+              `<label class="flex items-center gap-2 py-0.5"><input type="checkbox" class="m-mem" value="${m.user_id}" /> ${esc(m.name)} <span class="text-muted">${esc(m.email)}</span></label>`,
+          )
+          .join('')
+      : `<p class="text-muted">${esc(t('meetings.noMembers'))}</p>`;
+
+    const grid = document.getElementById('grid')!;
+    const empty = document.getElementById('empty')!;
+    const monthLabel = document.getElementById('month-label')!;
+    const wd = document.getElementById('weekdays')!;
+
+    // Weekday headers (locale-aware, starting Sunday to match getDay()).
+    const wdFmt = new Intl.DateTimeFormat(lang, { weekday: 'short' });
+    wd.innerHTML = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(2023, 0, 1 + i); // 2023-01-01 was a Sunday
+      return `<div>${esc(wdFmt.format(d))}</div>`;
+    }).join('');
+
+    let view = new Date();
+    view.setDate(1);
+    let meetings: ScheduledMeeting[] = [];
+
+    async function load() {
+      const from = new Date(view.getFullYear(), view.getMonth(), 1);
+      const to = new Date(view.getFullYear(), view.getMonth() + 1, 0, 23, 59, 59);
+      const res = await listMeetings(orgId, { from: from.toISOString(), to: to.toISOString() });
+      meetings = (res.data ?? []).filter((m) => m.status !== 'cancelled');
+      render();
+    }
+
+    function render() {
+      monthLabel.textContent = new Intl.DateTimeFormat(lang, {
+        month: 'long',
+        year: 'numeric',
+      }).format(view);
+      empty.classList.toggle('hidden', meetings.length > 0);
+
+      const byDay = new Map<string, ScheduledMeeting[]>();
+      for (const m of meetings) {
+        const k = dayKey(new Date(m.scheduled_at));
+        (byDay.get(k) ?? byDay.set(k, []).get(k)!).push(m);
+      }
+
+      const first = new Date(view.getFullYear(), view.getMonth(), 1);
+      const startOffset = first.getDay();
+      const daysInMonth = new Date(view.getFullYear(), view.getMonth() + 1, 0).getDate();
+      const todayKey = dayKey(new Date());
+      const tFmt = new Intl.DateTimeFormat(lang, { hour: '2-digit', minute: '2-digit' });
+
+      const cells: string[] = [];
+      for (let i = 0; i < startOffset; i++) cells.push('<div></div>');
+      for (let d = 1; d <= daysInMonth; d++) {
+        const date = new Date(view.getFullYear(), view.getMonth(), d);
+        const k = dayKey(date);
+        const isToday = k === todayKey;
+        const dayMeets = (byDay.get(k) ?? []).sort((a, b) =>
+          a.scheduled_at.localeCompare(b.scheduled_at),
+        );
+        const chips = dayMeets
+          .map(
+            (m) =>
+              `<button data-id="${m.id}" class="chip block w-full truncate rounded bg-base px-1 py-0.5 text-left text-xs hover:bg-line" title="${esc(m.title)}">${esc(tFmt.format(new Date(m.scheduled_at)))} ${esc(m.title)}</button>`,
+          )
+          .join('');
+        cells.push(
+          `<div data-day="${k}" class="newday min-h-20 rounded border border-line p-1 ${isToday ? 'ring-1 ring-brand' : ''}">
+             <div class="mb-1 text-right text-xs ${isToday ? 'font-bold text-brand' : 'text-muted'}">${d}</div>
+             <div class="space-y-0.5">${chips}</div>
+           </div>`,
+        );
+      }
+      grid.innerHTML = cells.join('');
+
+      grid.querySelectorAll<HTMLButtonElement>('.chip').forEach((b) =>
+        b.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const m = meetings.find((x) => x.id === b.dataset.id);
+          if (m) openEdit(m);
+        }),
+      );
+      grid
+        .querySelectorAll<HTMLElement>('.newday')
+        .forEach((cell) => cell.addEventListener('click', () => openNew(cell.dataset.day!)));
+    }
+
+    // --- Modal ---
+    const modal = document.getElementById('modal')!;
+    const $ = (id: string) => document.getElementById(id) as HTMLInputElement;
+    const errEl = document.getElementById('m-err')!;
+    const delBtn = document.getElementById('m-delete')!;
+    let editingId: string | null = null;
+
+    function setForm(m?: Partial<ScheduledMeeting> & { startLocal?: string }) {
+      $('m-title').value = m?.title ?? '';
+      ($('m-desc') as unknown as HTMLTextAreaElement).value = m?.description ?? '';
+      $('m-start').value = m?.startLocal ?? '';
+      $('m-duration').value = '30';
+      $('m-reminder').value = String(m?.reminder_minutes_before ?? 10);
+      projectSel.value = m?.project_id ?? '';
+      $('m-emails').value = '';
+      modal.querySelectorAll<HTMLInputElement>('.m-mem').forEach((c) => (c.checked = false));
+      errEl.classList.add('hidden');
+    }
+
+    function openNew(dayK?: string) {
+      editingId = null;
+      document.getElementById('modal-title')!.textContent = t('meetings.new');
+      delBtn.classList.add('hidden');
+      const start = dayK ? `${dayK}T09:00` : '';
+      setForm({ startLocal: start });
+      modal.classList.replace('hidden', 'flex');
+    }
+
+    function openEdit(m: ScheduledMeeting) {
+      editingId = m.id;
+      document.getElementById('modal-title')!.textContent = m.title;
+      delBtn.classList.remove('hidden');
+      const d = new Date(m.scheduled_at);
+      const local = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      setForm({ ...m, startLocal: local });
+      const dur = Math.round((new Date(m.end_at).getTime() - d.getTime()) / 60000);
+      $('m-duration').value = String(dur > 0 ? dur : 30);
+      modal.classList.replace('hidden', 'flex');
+    }
+
+    const close = () => modal.classList.replace('flex', 'hidden');
+    document.getElementById('new-btn')!.addEventListener('click', () => openNew());
+    document.getElementById('m-cancel')!.addEventListener('click', close);
+
+    document.getElementById('m-save')!.addEventListener('click', async () => {
+      errEl.classList.add('hidden');
+      const title = $('m-title').value.trim();
+      const startVal = $('m-start').value;
+      if (!title || !startVal) {
+        errEl.textContent = t('meetings.errRequired');
+        errEl.classList.remove('hidden');
+        return;
+      }
+      const scheduled_at = new Date(startVal).toISOString();
+      const invitee_user_ids = Array.from(
+        modal.querySelectorAll<HTMLInputElement>('.m-mem:checked'),
+      ).map((c) => c.value);
+      const invitee_emails = $('m-emails')
+        .value.split(',')
+        .map((e) => e.trim())
+        .filter(Boolean);
+      const body: MeetingCreate = {
+        title,
+        description: ($('m-desc') as unknown as HTMLTextAreaElement).value.trim() || undefined,
+        scheduled_at,
+        duration_minutes: Number($('m-duration').value) || 30,
+        timezone: tz,
+        project_id: projectSel.value || undefined,
+        reminder_minutes_before: Number($('m-reminder').value) || 0,
+        invitee_user_ids,
+        invitee_emails,
+      };
+      const res = editingId
+        ? await updateMeeting(orgId, editingId, body)
+        : await createMeeting(orgId, body);
+      if (res.ok) {
+        close();
+        void load();
+      } else {
+        errEl.textContent =
+          res.status === 409 ? t('meetings.connectCalendar') : t('meetings.errSave');
+        errEl.classList.remove('hidden');
+      }
+    });
+
+    delBtn.addEventListener('click', async () => {
+      if (!editingId) return;
+      if (!confirm(t('meetings.cancelConfirm'))) return;
+      const res = await cancelMeeting(orgId, editingId);
+      if (res.ok) {
+        close();
+        void load();
+      }
+    });
+
+    document.getElementById('prev')!.addEventListener('click', () => {
+      view.setMonth(view.getMonth() - 1);
+      void load();
+    });
+    document.getElementById('next')!.addEventListener('click', () => {
+      view.setMonth(view.getMonth() + 1);
+      void load();
+    });
+    document.getElementById('today')!.addEventListener('click', () => {
+      view = new Date();
+      view.setDate(1);
+      void load();
+    });
+
+    void load();
+  })();
+</script>
