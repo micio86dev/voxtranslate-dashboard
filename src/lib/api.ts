@@ -386,6 +386,83 @@ export const getMemberAnalytics = (orgId: string, userId: string, days = 30) =>
     `/api/business/organizations/${orgId}/members/${userId}/analytics?days=${days}`,
   );
 
+// --- Scheduled meetings (Google Calendar) ------------------------------------
+
+export interface ScheduledMeeting {
+  id: string;
+  org_id: string | null;
+  project_id: string | null;
+  title: string;
+  description: string | null;
+  scheduled_at: string;
+  end_at: string;
+  timezone: string;
+  room_code: string;
+  join_url: string;
+  status: string;
+  reminder_minutes_before: number;
+  created_at: string;
+}
+
+export interface MeetingInvitee {
+  user_id: string | null;
+  email: string;
+  role: string;
+  rsvp_status: string;
+}
+
+export interface MeetingDetail extends ScheduledMeeting {
+  invitees: MeetingInvitee[];
+}
+
+export interface MeetingCreate {
+  title: string;
+  description?: string;
+  /** ISO-8601 start. */
+  scheduled_at: string;
+  end_at?: string;
+  duration_minutes?: number;
+  timezone?: string;
+  project_id?: string;
+  reminder_minutes_before?: number;
+  /** Org members invited (by user id) — resolved to their account email. */
+  invitee_user_ids?: string[];
+  /** External invitees by email. */
+  invitee_emails?: string[];
+}
+
+export interface MeetingsQuery {
+  from?: string;
+  to?: string;
+}
+
+export const listMeetings = (orgId: string, q: MeetingsQuery = {}) => {
+  const params = new URLSearchParams();
+  if (q.from) params.set('from', q.from);
+  if (q.to) params.set('to', q.to);
+  const qs = params.toString();
+  return request<ScheduledMeeting[]>(
+    'GET',
+    `/api/business/organizations/${orgId}/meetings${qs ? `?${qs}` : ''}`,
+  );
+};
+
+export const createMeeting = (orgId: string, body: MeetingCreate) =>
+  request<MeetingDetail>('POST', `/api/business/organizations/${orgId}/meetings`, body);
+
+export const getMeeting = (orgId: string, meetingId: string) =>
+  request<MeetingDetail>('GET', `/api/business/organizations/${orgId}/meetings/${meetingId}`);
+
+export const updateMeeting = (orgId: string, meetingId: string, body: MeetingCreate) =>
+  request<MeetingDetail>(
+    'PATCH',
+    `/api/business/organizations/${orgId}/meetings/${meetingId}`,
+    body,
+  );
+
+export const cancelMeeting = (orgId: string, meetingId: string) =>
+  request<null>('POST', `/api/business/organizations/${orgId}/meetings/${meetingId}/cancel`);
+
 // --- Project storyboard ------------------------------------------------------
 
 export interface ProjectStoryboard {
