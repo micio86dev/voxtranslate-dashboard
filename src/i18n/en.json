@@ -79,7 +79,8 @@
     "roleAdmin": "Admin",
     "roleMember": "Member",
     "roleGuest": "Guest",
-    "changeRole": "Change role"
+    "changeRole": "Change role",
+    "insights": "Insights"
   },
   "invite": {
     "title": "Invite a member",
@@ -223,5 +224,12 @@
     "allAdded": "All members are already on this team.",
     "confirmDelete": "Delete this team? Members stay in the organization.",
     "adminOnly": "Only admins and owners can manage teams."
+  },
+  "memberAnalytics": {
+    "title": "Member insights",
+    "calls": "Calls joined",
+    "minutes": "Minutes in calls",
+    "collaborators": "Most-frequent collaborators",
+    "notFound": "This member could not be found."
   }
 }

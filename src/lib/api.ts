@@ -370,6 +370,22 @@ export interface AnalyticsSummary {
 export const getAnalytics = (orgId: string, days = 30) =>
   request<AnalyticsSummary>('GET', `/api/business/organizations/${orgId}/analytics?days=${days}`);
 
+export interface MemberAnalytics {
+  range_days: number;
+  user: { id: string; name: string; email: string };
+  calls: number;
+  minutes_in_calls: number;
+  credits_spent: number;
+  credits_by_type: AnalyticsTypeSpend[];
+  collaborators: { name: string; calls: number }[];
+}
+
+export const getMemberAnalytics = (orgId: string, userId: string, days = 30) =>
+  request<MemberAnalytics>(
+    'GET',
+    `/api/business/organizations/${orgId}/members/${userId}/analytics?days=${days}`,
+  );
+
 // --- Current-org helper (persisted selection) --------------------------------
 
 const ORG_KEY = 'voxb.org';

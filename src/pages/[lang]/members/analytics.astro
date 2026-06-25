@@ -1,0 +1,154 @@
+---
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import {
+  localePaths,
+  isLocale,
+  DEFAULT_LOCALE,
+  useTranslations,
+  localizePath,
+} from '../../../lib/i18n';
+
+export function getStaticPaths() {
+  return localePaths();
+}
+
+const lang = isLocale(Astro.params.lang) ? Astro.params.lang : DEFAULT_LOCALE;
+const t = useTranslations(lang);
+const link = (p: string) => localizePath(lang, p);
+---
+
+<BaseLayout lang={lang} title={t('memberAnalytics.title')} chrome>
+  <a href={link('members')} class="text-sm text-muted hover:text-ink">← {t('nav.members')}</a>
+  <div class="mt-2 flex flex-wrap items-center justify-between gap-3">
+    <h1 id="title" class="text-2xl font-bold">{t('memberAnalytics.title')}</h1>
+    <select id="range" class="field max-w-44 text-sm">
+      <option value="7">{t('analytics.range7')}</option>
+      <option value="30" selected>{t('analytics.range30')}</option>
+      <option value="90">{t('analytics.range90')}</option>
+    </select>
+  </div>
+
+  <p id="msg" class="mt-6 text-muted">{t('common.loading')}</p>
+
+  <div id="content" class="mt-6 hidden">
+    <div class="grid gap-3 sm:grid-cols-3">
+      <div class="card">
+        <div class="text-xs text-muted">{t('memberAnalytics.calls')}</div>
+        <div id="kpi-calls" class="mt-1 text-2xl font-bold">—</div>
+      </div>
+      <div class="card">
+        <div class="text-xs text-muted">{t('memberAnalytics.minutes')}</div>
+        <div id="kpi-minutes" class="mt-1 text-2xl font-bold">—</div>
+      </div>
+      <div class="card">
+        <div class="text-xs text-muted">{t('analytics.kpiCredits')}</div>
+        <div id="kpi-credits" class="mt-1 text-2xl font-bold">—</div>
+      </div>
+    </div>
+
+    <div class="mt-4 grid gap-4 lg:grid-cols-2">
+      <div class="card">
+        <div class="text-sm font-semibold">{t('analytics.spendByType')}</div>
+        <div id="chart-spend" class="mt-3"></div>
+      </div>
+      <div class="card">
+        <div class="text-sm font-semibold">{t('memberAnalytics.collaborators')}</div>
+        <div id="collaborators" class="mt-3"></div>
+      </div>
+    </div>
+  </div>
+</BaseLayout>
+
+<script>
+  import { boot } from '../../../scripts/app-boot';
+  import { getMemberAnalytics, type MemberAnalytics } from '../../../lib/api';
+  import { useTranslations, type Locale } from '../../../lib/i18n';
+
+  function esc(s: string): string {
+    return s.replace(
+      /[&<>"]/g,
+      (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c] || c,
+    );
+  }
+
+  const PALETTE = [
+    'var(--color-brand)',
+    'var(--color-ok)',
+    'var(--color-warn)',
+    'var(--color-danger)',
+    'var(--color-muted)',
+  ];
+
+  function hbars(items: { label: string; value: number }[], suffix = ''): string {
+    if (items.length === 0) return '';
+    const max = Math.max(1, ...items.map((i) => i.value));
+    return (
+      '<div class="flex flex-col gap-2">' +
+      items
+        .map((it, i) => {
+          const pct = (it.value / max) * 100;
+          const color = PALETTE[i % PALETTE.length];
+          return `<div class="flex items-center gap-2 text-sm">
+            <span class="w-28 shrink-0 truncate text-muted" title="${esc(it.label)}">${esc(it.label)}</span>
+            <span class="h-3 rounded" style="width:${pct.toFixed(1)}%;min-width:2px;background:${color}"></span>
+            <span class="ml-auto tabular-nums">${it.value}${esc(suffix)}</span>
+          </div>`;
+        })
+        .join('') +
+      '</div>'
+    );
+  }
+
+  void (async () => {
+    const ctx = await boot();
+    if (!ctx) return;
+    const t = useTranslations(ctx.lang as Locale);
+    const orgId = ctx.activeOrg.id;
+    const userId = new URLSearchParams(location.search).get('user') ?? '';
+    const msg = document.getElementById('msg')!;
+    const content = document.getElementById('content')!;
+
+    if (ctx.activeOrg.role !== 'admin' && ctx.activeOrg.role !== 'owner') {
+      msg.textContent = t('analytics.adminOnly');
+      return;
+    }
+    if (!userId) {
+      location.href = `/${ctx.lang}/members/`;
+      return;
+    }
+
+    const render = (a: MemberAnalytics) => {
+      document.getElementById('title')!.textContent = a.user.name || a.user.email;
+      document.getElementById('kpi-calls')!.textContent = String(a.calls);
+      document.getElementById('kpi-minutes')!.textContent = String(a.minutes_in_calls);
+      document.getElementById('kpi-credits')!.textContent = String(a.credits_spent);
+      document.getElementById('chart-spend')!.innerHTML =
+        hbars(a.credits_by_type.map((x) => ({ label: x.type, value: x.spent }))) ||
+        `<p class="text-sm text-muted">${esc(t('analytics.noData'))}</p>`;
+      document.getElementById('collaborators')!.innerHTML = a.collaborators.length
+        ? hbars(
+            a.collaborators.map((c) => ({ label: c.name, value: c.calls })),
+            ` ${t('analytics.calls')}`,
+          )
+        : `<p class="text-sm text-muted">${esc(t('analytics.noData'))}</p>`;
+    };
+
+    const load = async (days: number) => {
+      msg.textContent = t('common.loading');
+      msg.classList.remove('hidden');
+      content.classList.add('hidden');
+      const r = await getMemberAnalytics(orgId, userId, days);
+      if (!r.ok || !r.data) {
+        msg.textContent = r.status === 404 ? t('memberAnalytics.notFound') : t('common.error');
+        return;
+      }
+      render(r.data);
+      msg.classList.add('hidden');
+      content.classList.remove('hidden');
+    };
+
+    const range = document.getElementById('range') as HTMLSelectElement;
+    range.addEventListener('change', () => void load(parseInt(range.value, 10) || 30));
+    await load(30);
+  })();
+</script>

@@ -79,7 +79,8 @@
     "roleAdmin": "Amministratore",
     "roleMember": "Membro",
     "roleGuest": "Ospite",
-    "changeRole": "Cambia ruolo"
+    "changeRole": "Cambia ruolo",
+    "insights": "Statistiche"
   },
   "invite": {
     "title": "Invita un membro",
@@ -223,5 +224,12 @@
     "allAdded": "Tutti i membri sono già in questo team.",
     "confirmDelete": "Eliminare questo team? I membri restano nell’organizzazione.",
     "adminOnly": "Solo amministratori e proprietari possono gestire i team."
+  },
+  "memberAnalytics": {
+    "title": "Statistiche membro",
+    "calls": "Chiamate",
+    "minutes": "Minuti in chiamata",
+    "collaborators": "Collaboratori più frequenti",
+    "notFound": "Questo membro non è stato trovato."
   }
 }

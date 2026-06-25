@@ -88,8 +88,11 @@ const t = useTranslations(lang);
     const orgId = ctx.activeOrg.id;
     const myRole = ctx.activeOrg.role;
     const isOwner = myRole === 'owner';
+    const isAdmin = myRole === 'admin' || isOwner;
     const myId = ctx.user?.id;
     const roleLabel = (r: string) => t(`members.role${r.charAt(0).toUpperCase()}${r.slice(1)}`);
+    const insightsHref = (uid: string) =>
+      `/${ctx.lang}/members/analytics/?user=${encodeURIComponent(uid)}`;
 
     const rows = document.getElementById('rows')!;
     const empty = document.getElementById('empty')!;
@@ -117,11 +120,16 @@ const t = useTranslations(lang);
             <td class="px-4 py-3 font-medium">${esc(m.name)}${isSelf ? ` <span class="badge">${esc(t('members.you'))}</span>` : ''}</td>
             <td class="px-4 py-3 text-muted">${esc(m.email)}</td>
             <td class="px-4 py-3">${roleCell}</td>
-            <td class="px-4 py-3 text-right">${
-              canRemove
-                ? `<button data-remove="${m.user_id}" data-name="${esc(m.name)}" class="btn-danger text-xs">${esc(t('members.remove'))}</button>`
-                : ''
-            }</td>
+            <td class="px-4 py-3 text-right">
+              ${
+                isAdmin
+                  ? `<a href="${insightsHref(m.user_id)}" class="btn-ghost text-xs">${esc(t('members.insights'))}</a> `
+                  : ''
+              }${
+                canRemove
+                  ? `<button data-remove="${m.user_id}" data-name="${esc(m.name)}" class="btn-danger text-xs">${esc(t('members.remove'))}</button>`
+                  : ''
+              }</td>
           </tr>`;
         })
         .join('');
