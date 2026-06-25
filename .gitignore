@@ -10,7 +10,10 @@ node_modules/
 
 # env
 .env
-.env.production
+.env.*.local
+# .env.production IS committed: it holds only PUBLIC_ build values, which Astro
+# bakes into the client JS anyway (not secret). Keeps prod builds correct without
+# depending on the hosting provider's env (which can't store these as plain text).
 
 # os / editor
 .DS_Store
