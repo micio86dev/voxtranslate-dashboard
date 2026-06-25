@@ -22,7 +22,8 @@
     "history": "Verlauf",
     "credits": "Guthaben",
     "settings": "Einstellungen",
-    "analytics": "Analytik"
+    "analytics": "Analytik",
+    "teams": "Teams"
   },
   "login": {
     "title": "Bei deinem Workspace anmelden",
@@ -204,5 +205,23 @@
     "minutes": "Min",
     "noData": "Noch keine Aktivität in diesem Zeitraum.",
     "adminOnly": "Analytik ist für Administratoren und Eigentümer verfügbar."
+  },
+  "teams": {
+    "title": "Teams",
+    "subtitle": "Gruppiere Mitglieder in Teams. Ein Mitglied kann in mehreren Teams sein; das Verschieben ändert den Anrufverlauf nicht.",
+    "create": "Team erstellen",
+    "namePh": "Teamname",
+    "members": "Mitglieder",
+    "manage": "Verwalten",
+    "rename": "Umbenennen",
+    "delete": "Löschen",
+    "add": "Mitglied hinzufügen",
+    "addPlaceholder": "Mitglied wählen…",
+    "remove": "Entfernen",
+    "empty": "Noch keine Teams. Erstelle oben dein erstes.",
+    "noMembers": "Noch keine Mitglieder in diesem Team.",
+    "allAdded": "Alle Mitglieder sind bereits in diesem Team.",
+    "confirmDelete": "Dieses Team löschen? Mitglieder bleiben in der Organisation.",
+    "adminOnly": "Nur Administratoren und Eigentümer können Teams verwalten."
   }
 }

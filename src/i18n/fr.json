@@ -22,7 +22,8 @@
     "history": "Historique",
     "credits": "Crédits",
     "settings": "Paramètres",
-    "analytics": "Analytique"
+    "analytics": "Analytique",
+    "teams": "Équipes"
   },
   "login": {
     "title": "Connectez-vous à votre espace de travail",
@@ -204,5 +205,23 @@
     "minutes": "min",
     "noData": "Aucune activité sur cette période pour l'instant.",
     "adminOnly": "L'analytique est réservée aux administrateurs et propriétaires."
+  },
+  "teams": {
+    "title": "Équipes",
+    "subtitle": "Regroupez les membres en équipes. Un membre peut être dans plusieurs équipes ; le déplacer n’affecte pas l’historique des appels.",
+    "create": "Créer une équipe",
+    "namePh": "Nom de l’équipe",
+    "members": "membres",
+    "manage": "Gérer",
+    "rename": "Renommer",
+    "delete": "Supprimer",
+    "add": "Ajouter un membre",
+    "addPlaceholder": "Choisir un membre…",
+    "remove": "Retirer",
+    "empty": "Aucune équipe pour l’instant. Créez la première ci-dessus.",
+    "noMembers": "Aucun membre dans cette équipe pour l’instant.",
+    "allAdded": "Tous les membres sont déjà dans cette équipe.",
+    "confirmDelete": "Supprimer cette équipe ? Les membres restent dans l’organisation.",
+    "adminOnly": "Seuls les administrateurs et propriétaires peuvent gérer les équipes."
   }
 }

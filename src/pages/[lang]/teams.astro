@@ -1,0 +1,213 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { localePaths, isLocale, DEFAULT_LOCALE, useTranslations } from '../../lib/i18n';
+
+export function getStaticPaths() {
+  return localePaths();
+}
+
+const lang = isLocale(Astro.params.lang) ? Astro.params.lang : DEFAULT_LOCALE;
+const t = useTranslations(lang);
+---
+
+<BaseLayout lang={lang} title={t('teams.title')} chrome>
+  <h1 class="text-2xl font-bold">{t('teams.title')}</h1>
+  <p class="mt-1 max-w-2xl text-sm text-muted">{t('teams.subtitle')}</p>
+
+  <div id="create-row" class="mt-5 hidden gap-2">
+    <input id="team-name" class="field max-w-xs text-sm" placeholder={t('teams.namePh')} />
+    <button id="team-create" class="btn-primary text-sm">{t('teams.create')}</button>
+  </div>
+
+  <p id="msg" class="mt-6 text-muted">{t('common.loading')}</p>
+  <div id="teams" class="mt-6 hidden flex-col gap-3"></div>
+  <p id="empty" class="mt-6 hidden text-muted">{t('teams.empty')}</p>
+</BaseLayout>
+
+<script>
+  import { boot } from '../../scripts/app-boot';
+  import {
+    addTeamMember,
+    createTeam,
+    deleteTeam,
+    listMembers,
+    listTeams,
+    listTeamMembers,
+    removeTeamMember,
+    renameTeam,
+    type Member,
+    type Team,
+    type TeamMember,
+  } from '../../lib/api';
+  import { useTranslations, type Locale } from '../../lib/i18n';
+
+  function esc(s: string): string {
+    return s.replace(
+      /[&<>"]/g,
+      (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c] || c,
+    );
+  }
+
+  void (async () => {
+    const ctx = await boot();
+    if (!ctx) return;
+    const t = useTranslations(ctx.lang as Locale);
+    const orgId = ctx.activeOrg.id;
+    const isAdmin = ctx.activeOrg.role === 'admin' || ctx.activeOrg.role === 'owner';
+
+    const msg = document.getElementById('msg')!;
+    const teamsEl = document.getElementById('teams')!;
+    const emptyEl = document.getElementById('empty')!;
+
+    if (isAdmin) document.getElementById('create-row')!.classList.replace('hidden', 'flex');
+
+    let orgMembers: Member[] = [];
+
+    /** Build the "add member" <select> with the org members not already on the team. */
+    const addControl = (teamId: string, current: Set<string>): string => {
+      const opts = orgMembers
+        .filter((m) => !current.has(m.user_id))
+        .map((m) => `<option value="${m.user_id}">${esc(m.name || m.email)}</option>`)
+        .join('');
+      if (!opts) return `<p class="text-xs text-muted">${esc(t('teams.allAdded'))}</p>`;
+      return `<div class="flex gap-2">
+        <select class="field max-w-xs text-sm" data-add-select="${teamId}">
+          <option value="">${esc(t('teams.addPlaceholder'))}</option>${opts}
+        </select>
+        <button class="btn-ghost text-sm" data-add-btn="${teamId}">${esc(t('teams.add'))}</button>
+      </div>`;
+    };
+
+    const renderTeamMembers = async (teamId: string, panel: HTMLElement) => {
+      const r = await listTeamMembers(orgId, teamId);
+      const members: TeamMember[] = r.data ?? [];
+      const current = new Set(members.map((m) => m.user_id));
+      const chips = members.length
+        ? members
+            .map(
+              (
+                m,
+              ) => `<span class="inline-flex items-center gap-1 rounded-full border border-line bg-base px-2 py-1 text-xs">
+                ${esc(m.name || m.email)}
+                ${isAdmin ? `<button class="text-muted hover:text-danger" data-rm="${teamId}:${m.user_id}" title="${esc(t('teams.remove'))}">×</button>` : ''}
+              </span>`,
+            )
+            .join('')
+        : `<p class="text-xs text-muted">${esc(t('teams.noMembers'))}</p>`;
+      panel.innerHTML =
+        `<div class="flex flex-wrap gap-2">${chips}</div>` +
+        (isAdmin ? `<div class="mt-3">${addControl(teamId, current)}</div>` : '');
+    };
+
+    const render = (teams: Team[]) => {
+      if (teams.length === 0) {
+        emptyEl.classList.remove('hidden');
+        teamsEl.classList.add('hidden');
+        return;
+      }
+      emptyEl.classList.add('hidden');
+      teamsEl.innerHTML = teams
+        .map(
+          (tm) => `<div class="card" data-team="${tm.id}">
+            <div class="flex flex-wrap items-center gap-3">
+              <span class="font-semibold" data-name="${tm.id}">${esc(tm.name)}</span>
+              <span class="text-xs text-muted">${tm.member_count} ${esc(t('teams.members'))}</span>
+              <div class="ml-auto flex gap-2">
+                <button class="btn-ghost text-xs" data-manage="${tm.id}">${esc(t('teams.manage'))}</button>
+                ${isAdmin ? `<button class="btn-ghost text-xs" data-rename="${tm.id}">${esc(t('teams.rename'))}</button>` : ''}
+                ${isAdmin ? `<button class="btn-ghost text-xs text-danger" data-del="${tm.id}">${esc(t('teams.delete'))}</button>` : ''}
+              </div>
+            </div>
+            <div class="mt-3 hidden border-t border-line pt-3" data-panel="${tm.id}"></div>
+          </div>`,
+        )
+        .join('');
+      teamsEl.classList.remove('hidden');
+    };
+
+    const reload = async () => {
+      const r = await listTeams(orgId);
+      if (!r.ok) {
+        msg.textContent = t('common.error');
+        return;
+      }
+      render(r.data ?? []);
+      msg.classList.add('hidden');
+    };
+
+    // Initial load: org members (for the add dropdown) + teams.
+    const mres = await listMembers(orgId);
+    orgMembers = mres.data ?? [];
+    await reload();
+
+    // Create.
+    document.getElementById('team-create')?.addEventListener('click', async () => {
+      const input = document.getElementById('team-name') as HTMLInputElement;
+      const name = input.value.trim();
+      if (!name) return;
+      const r = await createTeam(orgId, name);
+      if (r.ok) {
+        input.value = '';
+        await reload();
+      } else {
+        alert(t('common.error'));
+      }
+    });
+
+    // Delegated actions on the team list.
+    teamsEl.addEventListener('click', async (e) => {
+      const el = e.target as HTMLElement;
+      const manage = el.getAttribute('data-manage');
+      if (manage) {
+        const panel = teamsEl.querySelector<HTMLElement>(`[data-panel="${manage}"]`)!;
+        const hidden = panel.classList.toggle('hidden');
+        if (!hidden) await renderTeamMembers(manage, panel);
+        return;
+      }
+      const rename = el.getAttribute('data-rename');
+      if (rename) {
+        const cur = teamsEl.querySelector(`[data-name="${rename}"]`)?.textContent ?? '';
+        const name = prompt(t('teams.rename'), cur);
+        if (name && name.trim()) {
+          await renameTeam(orgId, rename, name.trim());
+          await reload();
+        }
+        return;
+      }
+      const del = el.getAttribute('data-del');
+      if (del) {
+        if (!confirm(t('teams.confirmDelete'))) return;
+        await deleteTeam(orgId, del);
+        await reload();
+        return;
+      }
+      const addBtn = el.getAttribute('data-add-btn');
+      if (addBtn) {
+        const sel = teamsEl.querySelector<HTMLSelectElement>(`[data-add-select="${addBtn}"]`);
+        const uid = sel?.value;
+        if (!uid) return;
+        await addTeamMember(orgId, addBtn, uid);
+        const panel = teamsEl.querySelector<HTMLElement>(`[data-panel="${addBtn}"]`)!;
+        await renderTeamMembers(addBtn, panel);
+        await refreshCount(addBtn);
+        return;
+      }
+      const rm = el.getAttribute('data-rm');
+      if (rm) {
+        const [teamId, userId] = rm.split(':');
+        await removeTeamMember(orgId, teamId, userId);
+        const panel = teamsEl.querySelector<HTMLElement>(`[data-panel="${teamId}"]`)!;
+        await renderTeamMembers(teamId, panel);
+        await refreshCount(teamId);
+      }
+    });
+
+    // Keep a team card's member count in sync after add/remove without a full reload.
+    const refreshCount = async (teamId: string) => {
+      const r = await listTeamMembers(orgId, teamId);
+      const n = (r.data ?? []).length;
+      const card = teamsEl.querySelector(`[data-team="${teamId}"] .text-muted`);
+      if (card) card.textContent = `${n} ${t('teams.members')}`;
+    };
+  })();
+</script>

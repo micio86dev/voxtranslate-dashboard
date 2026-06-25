@@ -22,7 +22,8 @@
     "history": "History",
     "credits": "Credits",
     "settings": "Settings",
-    "analytics": "Analytics"
+    "analytics": "Analytics",
+    "teams": "Teams"
   },
   "login": {
     "title": "Sign in to your workspace",
@@ -204,5 +205,23 @@
     "minutes": "min",
     "noData": "No activity in this period yet.",
     "adminOnly": "Analytics are available to admins and owners."
+  },
+  "teams": {
+    "title": "Teams",
+    "subtitle": "Group members into teams. A member can be in several teams; moving them never affects call history.",
+    "create": "Create team",
+    "namePh": "Team name",
+    "members": "members",
+    "manage": "Manage",
+    "rename": "Rename",
+    "delete": "Delete",
+    "add": "Add member",
+    "addPlaceholder": "Choose a member…",
+    "remove": "Remove",
+    "empty": "No teams yet. Create your first one above.",
+    "noMembers": "No members in this team yet.",
+    "allAdded": "All members are already on this team.",
+    "confirmDelete": "Delete this team? Members stay in the organization.",
+    "adminOnly": "Only admins and owners can manage teams."
   }
 }

@@ -291,6 +291,46 @@ export const subscribe = (orgId: string, plan: string, interval: string) =>
 export const billingPortal = (orgId: string) =>
   request<{ url: string }>('POST', `/api/business/organizations/${orgId}/subscription/portal`);
 
+// --- Teams -------------------------------------------------------------------
+
+export interface Team {
+  id: string;
+  name: string;
+  member_count: number;
+  created_at: string;
+}
+
+export interface TeamMember {
+  user_id: string;
+  name: string;
+  email: string;
+  avatar_url: string | null;
+  joined_at: string;
+}
+
+export const listTeams = (orgId: string) =>
+  request<Team[]>('GET', `/api/business/organizations/${orgId}/teams`);
+
+export const createTeam = (orgId: string, name: string) =>
+  request<Team>('POST', `/api/business/organizations/${orgId}/teams`, { name });
+
+export const renameTeam = (orgId: string, teamId: string, name: string) =>
+  request<Team>('PATCH', `/api/business/organizations/${orgId}/teams/${teamId}`, { name });
+
+export const deleteTeam = (orgId: string, teamId: string) =>
+  request<null>('DELETE', `/api/business/organizations/${orgId}/teams/${teamId}`);
+
+export const listTeamMembers = (orgId: string, teamId: string) =>
+  request<TeamMember[]>('GET', `/api/business/organizations/${orgId}/teams/${teamId}/members`);
+
+export const addTeamMember = (orgId: string, teamId: string, user_id: string) =>
+  request<null>('POST', `/api/business/organizations/${orgId}/teams/${teamId}/members`, {
+    user_id,
+  });
+
+export const removeTeamMember = (orgId: string, teamId: string, userId: string) =>
+  request<null>('DELETE', `/api/business/organizations/${orgId}/teams/${teamId}/members/${userId}`);
+
 // --- Analytics ---------------------------------------------------------------
 
 export interface AnalyticsKpis {

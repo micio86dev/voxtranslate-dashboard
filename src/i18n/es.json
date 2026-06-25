@@ -22,7 +22,8 @@
     "history": "Historial",
     "credits": "Créditos",
     "settings": "Ajustes",
-    "analytics": "Analítica"
+    "analytics": "Analítica",
+    "teams": "Equipos"
   },
   "login": {
     "title": "Inicia sesión en tu espacio de trabajo",
@@ -204,5 +205,23 @@
     "minutes": "min",
     "noData": "Aún no hay actividad en este periodo.",
     "adminOnly": "La analítica está disponible para administradores y propietarios."
+  },
+  "teams": {
+    "title": "Equipos",
+    "subtitle": "Agrupa a los miembros en equipos. Un miembro puede estar en varios equipos; moverlo no afecta al historial de llamadas.",
+    "create": "Crear equipo",
+    "namePh": "Nombre del equipo",
+    "members": "miembros",
+    "manage": "Gestionar",
+    "rename": "Renombrar",
+    "delete": "Eliminar",
+    "add": "Añadir miembro",
+    "addPlaceholder": "Elige un miembro…",
+    "remove": "Quitar",
+    "empty": "Aún no hay equipos. Crea el primero arriba.",
+    "noMembers": "Aún no hay miembros en este equipo.",
+    "allAdded": "Todos los miembros ya están en este equipo.",
+    "confirmDelete": "¿Eliminar este equipo? Los miembros siguen en la organización.",
+    "adminOnly": "Solo administradores y propietarios pueden gestionar equipos."
   }
 }

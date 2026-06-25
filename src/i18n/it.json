@@ -22,7 +22,8 @@
     "history": "Cronologia",
     "credits": "Crediti",
     "settings": "Impostazioni",
-    "analytics": "Analitica"
+    "analytics": "Analitica",
+    "teams": "Team"
   },
   "login": {
     "title": "Accedi al tuo spazio di lavoro",
@@ -204,5 +205,23 @@
     "minutes": "min",
     "noData": "Ancora nessuna attività in questo periodo.",
     "adminOnly": "L'analitica è disponibile per amministratori e proprietari."
+  },
+  "teams": {
+    "title": "Team",
+    "subtitle": "Raggruppa i membri in team. Un membro può stare in più team; spostarlo non altera la cronologia delle chiamate.",
+    "create": "Crea team",
+    "namePh": "Nome del team",
+    "members": "membri",
+    "manage": "Gestisci",
+    "rename": "Rinomina",
+    "delete": "Elimina",
+    "add": "Aggiungi membro",
+    "addPlaceholder": "Scegli un membro…",
+    "remove": "Rimuovi",
+    "empty": "Ancora nessun team. Creane uno qui sopra.",
+    "noMembers": "Ancora nessun membro in questo team.",
+    "allAdded": "Tutti i membri sono già in questo team.",
+    "confirmDelete": "Eliminare questo team? I membri restano nell’organizzazione.",
+    "adminOnly": "Solo amministratori e proprietari possono gestire i team."
   }
 }
