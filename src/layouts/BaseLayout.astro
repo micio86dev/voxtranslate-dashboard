@@ -35,7 +35,9 @@ const { lang, title, description = '', chrome = false } = Astro.props;
     </script>
     <title>{title}</title>
     {description && <meta name="description" content={description} />}
-    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <!-- Brand favicon + app icon — same marks as the consumer app (client/public). -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
   </head>
   <body>
     {chrome && <Header lang={lang} />}
