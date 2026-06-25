@@ -18,7 +18,9 @@ const APP_URL = 'https://voxtranslate.app';
       <img src="/favicon-32.png" alt="" width="28" height="28" class="rounded-md" />
       VoxTranslate
     </a>
-    <nav class="flex gap-1 text-sm">
+    <nav
+      class="order-last flex w-full gap-1 overflow-x-auto whitespace-nowrap text-sm md:order-none md:w-auto"
+    >
       <a href={link('dashboard')} class="rounded px-3 py-1.5 hover:bg-base">{t('nav.dashboard')}</a>
       <a href={link('meetings')} class="rounded px-3 py-1.5 hover:bg-base">{t('nav.meetings')}</a>
       <a href={link('analytics')} class="rounded px-3 py-1.5 hover:bg-base">{t('nav.analytics')}</a>

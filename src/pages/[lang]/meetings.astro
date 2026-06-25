@@ -43,7 +43,7 @@ const t = useTranslations(lang);
           <label class="label" for="m-desc">{t('meetings.fDesc')}</label>
           <textarea id="m-desc" class="field" rows="2"></textarea>
         </div>
-        <div class="grid grid-cols-2 gap-3">
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
             <label class="label" for="m-start">{t('meetings.fStart')}</label>
             <input id="m-start" class="field" type="datetime-local" />
@@ -53,7 +53,7 @@ const t = useTranslations(lang);
             <input id="m-duration" class="field" type="number" min="5" step="5" value="30" />
           </div>
         </div>
-        <div class="grid grid-cols-2 gap-3">
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
             <label class="label" for="m-project">{t('meetings.fProject')}</label>
             <select id="m-project" class="field">
@@ -207,7 +207,7 @@ const t = useTranslations(lang);
           )
           .join('');
         cells.push(
-          `<div data-day="${k}" class="newday min-h-20 rounded border border-line p-1 ${isToday ? 'ring-1 ring-brand' : ''}">
+          `<div data-day="${k}" class="newday min-h-16 cursor-pointer rounded border border-line p-1 sm:min-h-20 ${isToday ? 'ring-1 ring-brand' : ''}">
              <div class="mb-1 text-right text-xs ${isToday ? 'font-bold text-brand' : 'text-muted'}">${d}</div>
              <div class="space-y-0.5">${chips}</div>
            </div>`,

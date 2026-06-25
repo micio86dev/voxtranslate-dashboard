@@ -30,6 +30,22 @@ body {
   box-sizing: border-box;
 }
 
+/* Tailwind v4 dropped the implicit `cursor: pointer` on <button>. Restore it for
+   every interactive element so anything clickable always shows the hand cursor. */
+@layer base {
+  button:not(:disabled),
+  [role='button'],
+  summary,
+  label[for],
+  select,
+  a[href] {
+    cursor: pointer;
+  }
+  button:disabled {
+    cursor: not-allowed;
+  }
+}
+
 /* Small reusable component classes layered on Tailwind. Note (Tailwind v4):
    `@apply` only accepts real utilities — not other custom classes — so the shared
    button base is applied via a grouped selector rather than `@apply btn`. */
