@@ -231,5 +231,20 @@
     "minutes": "Minutes en appel",
     "collaborators": "Collaborateurs les plus fréquents",
     "notFound": "Ce membre est introuvable."
+  },
+  "storyboard": {
+    "title": "Storyboard IA",
+    "subtitle": "Un récit du projet — chronologie, collaboration, contribution par membre et (en option) son alignement sur un workflow cible.",
+    "generate": "Générer",
+    "regenerate": "Régénérer",
+    "run": "Générer le storyboard",
+    "download": "Télécharger .md",
+    "targetLabel": "Workflow cible (facultatif)",
+    "targetPh": "Décrivez le workflow idéal que ce projet devrait suivre…",
+    "none": "Pas encore de storyboard — générez-en un pour voir l’histoire du projet.",
+    "generating": "Génération… cela peut prendre jusqu’à une minute.",
+    "updated": "Mis à jour le {date}",
+    "noCredits": "Crédits de l’organisation insuffisants pour générer un storyboard.",
+    "error": "Impossible de générer le storyboard. Veuillez réessayer."
   }
 }

@@ -386,6 +386,33 @@ export const getMemberAnalytics = (orgId: string, userId: string, days = 30) =>
     `/api/business/organizations/${orgId}/members/${userId}/analytics?days=${days}`,
   );
 
+// --- Project storyboard ------------------------------------------------------
+
+export interface ProjectStoryboard {
+  project_id: string;
+  target_workflow: string | null;
+  markdown: string;
+  model: string;
+  updated_at: string;
+}
+
+export const getStoryboard = (orgId: string, projectId: string) =>
+  request<ProjectStoryboard>(
+    'GET',
+    `/api/business/organizations/${orgId}/projects/${projectId}/storyboard`,
+  );
+
+export const generateStoryboard = (
+  orgId: string,
+  projectId: string,
+  body: { target_workflow?: string; lang?: string },
+) =>
+  request<ProjectStoryboard>(
+    'POST',
+    `/api/business/organizations/${orgId}/projects/${projectId}/storyboard`,
+    body,
+  );
+
 // --- Current-org helper (persisted selection) --------------------------------
 
 const ORG_KEY = 'voxb.org';

@@ -231,5 +231,20 @@
     "minutes": "Minuten in Anrufen",
     "collaborators": "Häufigste Mitwirkende",
     "notFound": "Dieses Mitglied wurde nicht gefunden."
+  },
+  "storyboard": {
+    "title": "KI-Storyboard",
+    "subtitle": "Eine Erzählung des Projekts — Zeitachse, Zusammenarbeit, Beitrag pro Mitglied und (optional) wie es einem Zielworkflow folgt.",
+    "generate": "Erstellen",
+    "regenerate": "Neu erstellen",
+    "run": "Storyboard erstellen",
+    "download": ".md herunterladen",
+    "targetLabel": "Zielworkflow (optional)",
+    "targetPh": "Beschreibe den idealen Workflow, dem dieses Projekt folgen soll…",
+    "none": "Noch kein Storyboard — erstelle eines, um die Projektgeschichte zu sehen.",
+    "generating": "Wird erstellt… das kann bis zu einer Minute dauern.",
+    "updated": "Aktualisiert am {date}",
+    "noCredits": "Nicht genügend Organisations-Credits, um ein Storyboard zu erstellen.",
+    "error": "Storyboard konnte nicht erstellt werden. Bitte erneut versuchen."
   }
 }

@@ -231,5 +231,20 @@
     "minutes": "Minutes in calls",
     "collaborators": "Most-frequent collaborators",
     "notFound": "This member could not be found."
+  },
+  "storyboard": {
+    "title": "AI storyboard",
+    "subtitle": "A narrative of this project — timeline, collaboration, per-member contribution, and (optionally) how it tracks against a target workflow.",
+    "generate": "Generate",
+    "regenerate": "Regenerate",
+    "run": "Generate storyboard",
+    "download": "Download .md",
+    "targetLabel": "Target workflow (optional)",
+    "targetPh": "Describe the ideal workflow this project should follow…",
+    "none": "No storyboard yet — generate one to see the project’s story.",
+    "generating": "Generating… this can take up to a minute.",
+    "updated": "Updated {date}",
+    "noCredits": "Not enough organization credits to generate a storyboard.",
+    "error": "Could not generate the storyboard. Please try again."
   }
 }

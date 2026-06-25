@@ -231,5 +231,20 @@
     "minutes": "Minuti in chiamata",
     "collaborators": "Collaboratori più frequenti",
     "notFound": "Questo membro non è stato trovato."
+  },
+  "storyboard": {
+    "title": "Storyboard AI",
+    "subtitle": "Una narrazione del progetto — cronologia, collaborazione, contributo per membro e (facoltativo) quanto segue un flusso di lavoro target.",
+    "generate": "Genera",
+    "regenerate": "Rigenera",
+    "run": "Genera storyboard",
+    "download": "Scarica .md",
+    "targetLabel": "Flusso di lavoro target (facoltativo)",
+    "targetPh": "Descrivi il flusso di lavoro ideale che il progetto dovrebbe seguire…",
+    "none": "Ancora nessuno storyboard — generane uno per vedere la storia del progetto.",
+    "generating": "Generazione… può richiedere fino a un minuto.",
+    "updated": "Aggiornato il {date}",
+    "noCredits": "Crediti dell’organizzazione insufficienti per generare lo storyboard.",
+    "error": "Impossibile generare lo storyboard. Riprova."
   }
 }
