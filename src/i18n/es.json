@@ -41,7 +41,14 @@
     "errRequired": "El título y la hora de inicio son obligatorios.",
     "errSave": "No se pudo guardar la reunión.",
     "connectCalendar": "Inicia sesión de nuevo para conectar Google Calendar.",
-    "cancelConfirm": "¿Cancelar esta reunión? Se avisará a los asistentes."
+    "cancelConfirm": "¿Cancelar esta reunión? Se avisará a los asistentes.",
+    "fRepeat": "Repetir",
+    "repeatNone": "No se repite",
+    "repeatDaily": "Cada día",
+    "repeatWeekly": "Cada semana",
+    "repeatMonthly": "Cada mes",
+    "fOccurrences": "Número de repeticiones",
+    "occurrencesPh": "p. ej. 10"
   },
   "notif": {
     "title": "Notificaciones",
@@ -84,7 +91,8 @@
     "credits": "Créditos",
     "settings": "Ajustes",
     "analytics": "Analítica",
-    "teams": "Equipos"
+    "teams": "Equipos",
+    "activity": "Actividad"
   },
   "login": {
     "title": "Inicia sesión en tu espacio de trabajo",
@@ -312,5 +320,18 @@
     "updated": "Actualizado el {date}",
     "noCredits": "Créditos de la organización insuficientes para generar el storyboard.",
     "error": "No se pudo generar el storyboard. Inténtalo de nuevo."
+  },
+  "activity": {
+    "title": "Registro de actividad",
+    "subtitle": "Acciones realizadas en tu organización. Visible solo para propietarios y administradores.",
+    "searchPh": "Buscar acciones, nombres, correos…",
+    "refresh": "Actualizar",
+    "colWhen": "Cuándo",
+    "colWho": "Quién",
+    "colAction": "Acción",
+    "colDetails": "Detalles",
+    "empty": "Aún no hay actividad registrada.",
+    "adminOnly": "Solo los propietarios y administradores pueden ver el registro de actividad.",
+    "loadMore": "Cargar más"
   }
 }

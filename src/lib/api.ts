@@ -401,7 +401,19 @@ export interface ScheduledMeeting {
   join_url: string;
   status: string;
   reminder_minutes_before: number;
+  /** RRULE string for a recurring series, or null for a one-off meeting. */
+  recurrence: string | null;
   created_at: string;
+}
+
+export interface MeetingRecurrence {
+  /** 'DAILY' | 'WEEKLY' | 'MONTHLY'. */
+  freq: string;
+  interval?: number;
+  /** Number of occurrences (mutually exclusive with `until`). */
+  count?: number;
+  /** ISO end date. */
+  until?: string;
 }
 
 export interface MeetingInvitee {
@@ -429,6 +441,8 @@ export interface MeetingCreate {
   invitee_user_ids?: string[];
   /** External invitees by email. */
   invitee_emails?: string[];
+  /** Optional recurrence; omit for a one-off meeting. */
+  recurrence?: MeetingRecurrence;
 }
 
 export interface MeetingsQuery {
@@ -462,6 +476,44 @@ export const updateMeeting = (orgId: string, meetingId: string, body: MeetingCre
 
 export const cancelMeeting = (orgId: string, meetingId: string) =>
   request<null>('POST', `/api/business/organizations/${orgId}/meetings/${meetingId}/cancel`);
+
+// --- Activity / audit log ----------------------------------------------------
+
+export interface AuditEntry {
+  id: string;
+  actor_id: string | null;
+  actor_name: string | null;
+  actor_email: string | null;
+  action: string;
+  resource_type: string;
+  resource_id: string;
+  metadata: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface AuditQuery {
+  action?: string;
+  from?: string;
+  to?: string;
+  q?: string;
+  page?: number;
+  limit?: number;
+}
+
+export const listAudit = (orgId: string, query: AuditQuery = {}) => {
+  const params = new URLSearchParams();
+  if (query.action) params.set('action', query.action);
+  if (query.from) params.set('from', query.from);
+  if (query.to) params.set('to', query.to);
+  if (query.q) params.set('q', query.q);
+  if (query.page) params.set('page', String(query.page));
+  if (query.limit) params.set('limit', String(query.limit));
+  const qs = params.toString();
+  return request<{ entries: AuditEntry[]; page: number; limit: number }>(
+    'GET',
+    `/api/business/organizations/${orgId}/audit${qs ? `?${qs}` : ''}`,
+  );
+};
 
 // --- Notifications -----------------------------------------------------------
 

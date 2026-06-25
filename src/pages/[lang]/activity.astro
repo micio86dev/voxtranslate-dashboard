@@ -1,0 +1,135 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { localePaths, isLocale, DEFAULT_LOCALE, useTranslations } from '../../lib/i18n';
+
+export function getStaticPaths() {
+  return localePaths();
+}
+
+const lang = isLocale(Astro.params.lang) ? Astro.params.lang : DEFAULT_LOCALE;
+const t = useTranslations(lang);
+---
+
+<BaseLayout lang={lang} title={t('activity.title')} chrome>
+  <h1 class="text-2xl font-bold">{t('activity.title')}</h1>
+  <p class="mt-1 text-sm text-muted">{t('activity.subtitle')}</p>
+
+  <div class="mt-4 flex flex-wrap items-center gap-2">
+    <input id="q" class="field max-w-xs" type="search" placeholder={t('activity.searchPh')} />
+    <button id="refresh" class="btn-ghost text-sm">{t('activity.refresh')}</button>
+  </div>
+
+  <p id="msg" class="mt-6 text-muted">{t('common.loading')}</p>
+
+  <div id="content" class="mt-4 hidden">
+    <div class="card overflow-x-auto p-0">
+      <table class="w-full text-sm">
+        <thead class="border-b border-line text-left text-muted">
+          <tr>
+            <th class="px-4 py-3">{t('activity.colWhen')}</th>
+            <th class="px-4 py-3">{t('activity.colWho')}</th>
+            <th class="px-4 py-3">{t('activity.colAction')}</th>
+            <th class="px-4 py-3">{t('activity.colDetails')}</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+      <p id="empty" class="hidden px-4 py-6 text-center text-muted">{t('activity.empty')}</p>
+    </div>
+    <div class="mt-3 text-center">
+      <button id="more" class="btn-ghost hidden text-sm">{t('activity.loadMore')}</button>
+    </div>
+  </div>
+</BaseLayout>
+
+<script>
+  import { boot } from '../../scripts/app-boot';
+  import { listAudit, type AuditEntry } from '../../lib/api';
+  import { useTranslations, type Locale } from '../../lib/i18n';
+
+  function esc(s: string): string {
+    return s.replace(
+      /[&<>"]/g,
+      (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c] || c,
+    );
+  }
+
+  /** A short, human details string from the audit metadata (canonical action stays
+   *  visible as a code badge separately). */
+  function detailsOf(e: AuditEntry): string {
+    const d = e.metadata || {};
+    const bits: string[] = [];
+    for (const key of ['name', 'title', 'email', 'role']) {
+      if (typeof d[key] === 'string' && d[key]) bits.push(`${key}: ${d[key]}`);
+    }
+    return bits.length ? bits.join(' · ') : `${e.resource_type} ${e.resource_id.slice(0, 8)}`;
+  }
+
+  void (async () => {
+    const ctx = await boot();
+    if (!ctx) return;
+    const lang = ctx.lang as Locale;
+    const t = useTranslations(lang);
+    const orgId = ctx.activeOrg.id;
+    const msg = document.getElementById('msg')!;
+    const content = document.getElementById('content')!;
+    const rows = document.getElementById('rows')!;
+    const empty = document.getElementById('empty')!;
+    const moreBtn = document.getElementById('more') as HTMLButtonElement;
+
+    // The audit API is admin/owner-gated; reflect that up front.
+    if (ctx.activeOrg.role !== 'admin' && ctx.activeOrg.role !== 'owner') {
+      msg.textContent = t('activity.adminOnly');
+      return;
+    }
+
+    const PAGE = 50;
+    let page = 0;
+    let query = '';
+
+    function rowHtml(e: AuditEntry): string {
+      const when = new Date(e.created_at).toLocaleString(lang);
+      const who = e.actor_name || e.actor_email || '—';
+      return `<tr class="border-b border-line last:border-0 align-top">
+        <td class="whitespace-nowrap px-4 py-2 text-muted">${esc(when)}</td>
+        <td class="px-4 py-2">${esc(who)}</td>
+        <td class="px-4 py-2"><code class="rounded bg-base px-1.5 py-0.5 text-xs">${esc(e.action)}</code></td>
+        <td class="px-4 py-2 text-muted">${esc(detailsOf(e))}</td>
+      </tr>`;
+    }
+
+    async function load(reset: boolean) {
+      if (reset) {
+        page = 0;
+        rows.innerHTML = '';
+      }
+      const res = await listAudit(orgId, { q: query || undefined, page, limit: PAGE });
+      if (!res.ok || !res.data) {
+        msg.textContent = t('common.error');
+        msg.classList.remove('hidden');
+        content.classList.add('hidden');
+        return;
+      }
+      const entries = res.data.entries;
+      rows.insertAdjacentHTML('beforeend', entries.map(rowHtml).join(''));
+      empty.classList.toggle('hidden', rows.children.length > 0);
+      moreBtn.classList.toggle('hidden', entries.length < PAGE);
+      msg.classList.add('hidden');
+      content.classList.remove('hidden');
+    }
+
+    let debounce: number | undefined;
+    document.getElementById('q')!.addEventListener('input', (e) => {
+      query = (e.target as HTMLInputElement).value.trim();
+      window.clearTimeout(debounce);
+      debounce = window.setTimeout(() => void load(true), 300);
+    });
+    document.getElementById('refresh')!.addEventListener('click', () => void load(true));
+    moreBtn.addEventListener('click', () => {
+      page += 1;
+      void load(false);
+    });
+
+    await load(true);
+  })();
+</script>

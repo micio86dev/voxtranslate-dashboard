@@ -41,7 +41,14 @@
     "errRequired": "Titel und Startzeit sind erforderlich.",
     "errSave": "Meeting konnte nicht gespeichert werden.",
     "connectCalendar": "Melde dich erneut an, um Google Calendar zu verbinden.",
-    "cancelConfirm": "Dieses Meeting absagen? Teilnehmer werden benachrichtigt."
+    "cancelConfirm": "Dieses Meeting absagen? Teilnehmer werden benachrichtigt.",
+    "fRepeat": "Wiederholen",
+    "repeatNone": "Wird nicht wiederholt",
+    "repeatDaily": "Täglich",
+    "repeatWeekly": "Wöchentlich",
+    "repeatMonthly": "Monatlich",
+    "fOccurrences": "Anzahl der Wiederholungen",
+    "occurrencesPh": "z. B. 10"
   },
   "notif": {
     "title": "Benachrichtigungen",
@@ -84,7 +91,8 @@
     "credits": "Guthaben",
     "settings": "Einstellungen",
     "analytics": "Analytik",
-    "teams": "Teams"
+    "teams": "Teams",
+    "activity": "Aktivität"
   },
   "login": {
     "title": "Bei deinem Workspace anmelden",
@@ -312,5 +320,18 @@
     "updated": "Aktualisiert am {date}",
     "noCredits": "Nicht genügend Organisations-Credits, um ein Storyboard zu erstellen.",
     "error": "Storyboard konnte nicht erstellt werden. Bitte erneut versuchen."
+  },
+  "activity": {
+    "title": "Aktivitätsprotokoll",
+    "subtitle": "Aktionen in deiner Organisation. Nur für Eigentümer und Administratoren sichtbar.",
+    "searchPh": "Aktionen, Namen, E-Mails suchen…",
+    "refresh": "Aktualisieren",
+    "colWhen": "Wann",
+    "colWho": "Wer",
+    "colAction": "Aktion",
+    "colDetails": "Details",
+    "empty": "Noch keine Aktivität aufgezeichnet.",
+    "adminOnly": "Nur Eigentümer und Administratoren können das Aktivitätsprotokoll sehen.",
+    "loadMore": "Mehr laden"
   }
 }

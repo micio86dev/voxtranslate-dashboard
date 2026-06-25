@@ -41,7 +41,14 @@
     "errRequired": "Title and start time are required.",
     "errSave": "Could not save the meeting.",
     "connectCalendar": "Sign in again to connect your Google Calendar.",
-    "cancelConfirm": "Cancel this meeting? Attendees will be notified."
+    "cancelConfirm": "Cancel this meeting? Attendees will be notified.",
+    "fRepeat": "Repeat",
+    "repeatNone": "Does not repeat",
+    "repeatDaily": "Daily",
+    "repeatWeekly": "Weekly",
+    "repeatMonthly": "Monthly",
+    "fOccurrences": "Number of occurrences",
+    "occurrencesPh": "e.g. 10"
   },
   "notif": {
     "title": "Notifications",
@@ -84,7 +91,8 @@
     "credits": "Credits",
     "settings": "Settings",
     "analytics": "Analytics",
-    "teams": "Teams"
+    "teams": "Teams",
+    "activity": "Activity"
   },
   "login": {
     "title": "Sign in to your workspace",
@@ -312,5 +320,18 @@
     "updated": "Updated {date}",
     "noCredits": "Not enough organization credits to generate a storyboard.",
     "error": "Could not generate the storyboard. Please try again."
+  },
+  "activity": {
+    "title": "Activity log",
+    "subtitle": "Actions taken across your organization. Visible to owners and admins only.",
+    "searchPh": "Search actions, names, emails…",
+    "refresh": "Refresh",
+    "colWhen": "When",
+    "colWho": "Who",
+    "colAction": "Action",
+    "colDetails": "Details",
+    "empty": "No activity recorded yet.",
+    "adminOnly": "Only owners and admins can view the activity log.",
+    "loadMore": "Load more"
   }
 }

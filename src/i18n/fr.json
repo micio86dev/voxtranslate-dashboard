@@ -41,7 +41,14 @@
     "errRequired": "Le titre et l'heure de début sont obligatoires.",
     "errSave": "Impossible d'enregistrer la réunion.",
     "connectCalendar": "Reconnectez-vous pour lier Google Calendar.",
-    "cancelConfirm": "Annuler cette réunion ? Les participants seront prévenus."
+    "cancelConfirm": "Annuler cette réunion ? Les participants seront prévenus.",
+    "fRepeat": "Répéter",
+    "repeatNone": "Ne se répète pas",
+    "repeatDaily": "Chaque jour",
+    "repeatWeekly": "Chaque semaine",
+    "repeatMonthly": "Chaque mois",
+    "fOccurrences": "Nombre d'occurrences",
+    "occurrencesPh": "ex. 10"
   },
   "notif": {
     "title": "Notifications",
@@ -84,7 +91,8 @@
     "credits": "Crédits",
     "settings": "Paramètres",
     "analytics": "Analytique",
-    "teams": "Équipes"
+    "teams": "Équipes",
+    "activity": "Activité"
   },
   "login": {
     "title": "Connectez-vous à votre espace de travail",
@@ -312,5 +320,18 @@
     "updated": "Mis à jour le {date}",
     "noCredits": "Crédits de l’organisation insuffisants pour générer un storyboard.",
     "error": "Impossible de générer le storyboard. Veuillez réessayer."
+  },
+  "activity": {
+    "title": "Journal d'activité",
+    "subtitle": "Actions effectuées dans votre organisation. Visible uniquement par les propriétaires et administrateurs.",
+    "searchPh": "Rechercher des actions, noms, e-mails…",
+    "refresh": "Actualiser",
+    "colWhen": "Quand",
+    "colWho": "Qui",
+    "colAction": "Action",
+    "colDetails": "Détails",
+    "empty": "Aucune activité enregistrée pour l'instant.",
+    "adminOnly": "Seuls les propriétaires et administrateurs peuvent voir le journal d'activité.",
+    "loadMore": "Charger plus"
   }
 }

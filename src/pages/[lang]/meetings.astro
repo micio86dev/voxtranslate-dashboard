@@ -65,6 +65,28 @@ const t = useTranslations(lang);
             <input id="m-reminder" class="field" type="number" min="0" step="5" value="10" />
           </div>
         </div>
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div>
+            <label class="label" for="m-repeat">{t('meetings.fRepeat')}</label>
+            <select id="m-repeat" class="field">
+              <option value="">{t('meetings.repeatNone')}</option>
+              <option value="DAILY">{t('meetings.repeatDaily')}</option>
+              <option value="WEEKLY">{t('meetings.repeatWeekly')}</option>
+              <option value="MONTHLY">{t('meetings.repeatMonthly')}</option>
+            </select>
+          </div>
+          <div id="m-count-wrap" class="hidden">
+            <label class="label" for="m-count">{t('meetings.fOccurrences')}</label>
+            <input
+              id="m-count"
+              class="field"
+              type="number"
+              min="1"
+              max="730"
+              placeholder={t('meetings.occurrencesPh')}
+            />
+          </div>
+        </div>
         <div>
           <label class="label">{t('meetings.fMembers')}</label>
           <div
@@ -106,6 +128,7 @@ const t = useTranslations(lang);
     listMembers,
     type ScheduledMeeting,
     type MeetingCreate,
+    type MeetingRecurrence,
   } from '../../lib/api';
   import { useTranslations, type Locale } from '../../lib/i18n';
 
@@ -203,7 +226,7 @@ const t = useTranslations(lang);
         const chips = dayMeets
           .map(
             (m) =>
-              `<button data-id="${m.id}" class="chip block w-full truncate rounded bg-base px-1 py-0.5 text-left text-xs hover:bg-line" title="${esc(m.title)}">${esc(tFmt.format(new Date(m.scheduled_at)))} ${esc(m.title)}</button>`,
+              `<button data-id="${m.id}" class="chip block w-full truncate rounded bg-base px-1 py-0.5 text-left text-xs hover:bg-line" title="${esc(m.title)}">${esc(tFmt.format(new Date(m.scheduled_at)))} ${m.recurrence ? '↻ ' : ''}${esc(m.title)}</button>`,
           )
           .join('');
         cells.push(
@@ -233,6 +256,8 @@ const t = useTranslations(lang);
     const errEl = document.getElementById('m-err')!;
     const delBtn = document.getElementById('m-delete')!;
     const joinBtn = document.getElementById('m-join') as HTMLAnchorElement;
+    const repeatSel = document.getElementById('m-repeat') as HTMLSelectElement;
+    repeatSel.addEventListener('change', () => syncRepeat());
     let editingId: string | null = null;
 
     function setForm(m?: Partial<ScheduledMeeting> & { startLocal?: string }) {
@@ -243,8 +268,20 @@ const t = useTranslations(lang);
       $('m-reminder').value = String(m?.reminder_minutes_before ?? 10);
       projectSel.value = m?.project_id ?? '';
       $('m-emails').value = '';
+      // Recurrence: parse FREQ/COUNT out of the stored RRULE for editing.
+      const rr = m?.recurrence ?? '';
+      const freq = /FREQ=(DAILY|WEEKLY|MONTHLY)/.exec(rr)?.[1] ?? '';
+      const count = /COUNT=(\d+)/.exec(rr)?.[1] ?? '';
+      repeatSel.value = freq;
+      $('m-count').value = count;
+      syncRepeat();
       modal.querySelectorAll<HTMLInputElement>('.m-mem').forEach((c) => (c.checked = false));
       errEl.classList.add('hidden');
+    }
+
+    // Show the "occurrences" field only for a recurring meeting.
+    function syncRepeat() {
+      document.getElementById('m-count-wrap')!.classList.toggle('hidden', !repeatSel.value);
     }
 
     function openNew(dayK?: string) {
@@ -292,6 +329,14 @@ const t = useTranslations(lang);
         .value.split(',')
         .map((e) => e.trim())
         .filter(Boolean);
+      let recurrence: MeetingRecurrence | undefined;
+      if (repeatSel.value) {
+        const count = Number($('m-count').value);
+        recurrence = {
+          freq: repeatSel.value,
+          ...(count > 0 ? { count } : {}),
+        };
+      }
       const body: MeetingCreate = {
         title,
         description: ($('m-desc') as unknown as HTMLTextAreaElement).value.trim() || undefined,
@@ -302,6 +347,7 @@ const t = useTranslations(lang);
         reminder_minutes_before: Number($('m-reminder').value) || 0,
         invitee_user_ids,
         invitee_emails,
+        recurrence,
       };
       const res = editingId
         ? await updateMeeting(orgId, editingId, body)
