@@ -84,6 +84,9 @@ const t = useTranslations(lang);
           >{t('meetings.cancelMeeting')}</button
         >
         <div class="ml-auto flex gap-2">
+          <a id="m-join" class="btn-ghost hidden" target="_blank" rel="noopener"
+            >{t('meetings.join')}</a
+          >
           <button id="m-cancel" class="btn-ghost">{t('common.cancel')}</button>
           <button id="m-save" class="btn-primary">{t('common.save')}</button>
         </div>
@@ -229,6 +232,7 @@ const t = useTranslations(lang);
     const $ = (id: string) => document.getElementById(id) as HTMLInputElement;
     const errEl = document.getElementById('m-err')!;
     const delBtn = document.getElementById('m-delete')!;
+    const joinBtn = document.getElementById('m-join') as HTMLAnchorElement;
     let editingId: string | null = null;
 
     function setForm(m?: Partial<ScheduledMeeting> & { startLocal?: string }) {
@@ -247,6 +251,7 @@ const t = useTranslations(lang);
       editingId = null;
       document.getElementById('modal-title')!.textContent = t('meetings.new');
       delBtn.classList.add('hidden');
+      joinBtn.classList.add('hidden');
       const start = dayK ? `${dayK}T09:00` : '';
       setForm({ startLocal: start });
       modal.classList.replace('hidden', 'flex');
@@ -256,6 +261,8 @@ const t = useTranslations(lang);
       editingId = m.id;
       document.getElementById('modal-title')!.textContent = m.title;
       delBtn.classList.remove('hidden');
+      joinBtn.href = m.join_url;
+      joinBtn.classList.remove('hidden');
       const d = new Date(m.scheduled_at);
       const local = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
       setForm({ ...m, startLocal: local });

@@ -20,6 +20,7 @@
   "meetings": {
     "title": "Riunioni",
     "new": "Nuova riunione",
+    "join": "Entra",
     "empty": "Nessuna riunione questo mese.",
     "prev": "Mese precedente",
     "next": "Mese successivo",

@@ -20,6 +20,7 @@
   "meetings": {
     "title": "Meetings",
     "new": "Neues Meeting",
+    "join": "Beitreten",
     "empty": "Keine Meetings in diesem Monat.",
     "prev": "Vorheriger Monat",
     "next": "Nächster Monat",
