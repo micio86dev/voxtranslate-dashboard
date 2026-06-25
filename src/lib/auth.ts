@@ -73,13 +73,21 @@ export function requireAuth(lang: string): boolean {
   return false;
 }
 
-/** Exchange a Google credential for our session JWT. Returns the user or null. */
-export async function loginWithGoogle(credential: string): Promise<User | null> {
+/** OAuth scopes requested at login — includes Calendar so the server can schedule
+ *  meetings on the user's behalf. Keep in sync with the server's GOOGLE_CALENDAR_SCOPES. */
+const OAUTH_SCOPE = 'openid email profile https://www.googleapis.com/auth/calendar.events';
+
+/**
+ * Exchange an OAuth authorization code for our session JWT. The popup code flow uses
+ * the magic `postmessage` redirect_uri; the server exchanges the code for an id_token
+ * + access/refresh tokens (Calendar access). Returns the user or null.
+ */
+export async function exchangeGoogleCode(code: string): Promise<User | null> {
   try {
     const res = await fetch(`${API_BASE}/api/auth/google`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ credential }),
+      body: JSON.stringify({ code, redirect_uri: 'postmessage' }),
     });
     if (!res.ok) return null;
     const data = (await res.json()) as { token: string; user: User };
@@ -91,18 +99,22 @@ export async function loginWithGoogle(credential: string): Promise<User | null> 
   }
 }
 
-// --- Google Identity Services ------------------------------------------------
+// --- Google Identity Services (OAuth code flow) ------------------------------
 
+interface CodeClient {
+  requestCode: () => void;
+}
 declare global {
   interface Window {
     google?: {
       accounts: {
-        id: {
-          initialize: (cfg: {
+        oauth2: {
+          initCodeClient: (cfg: {
             client_id: string;
-            callback: (resp: { credential: string }) => void;
-          }) => void;
-          renderButton: (el: HTMLElement, opts: Record<string, unknown>) => void;
+            scope: string;
+            ux_mode?: 'popup' | 'redirect';
+            callback: (resp: { code?: string; error?: string }) => void;
+          }) => CodeClient;
         };
       };
     };
@@ -110,36 +122,49 @@ declare global {
 }
 
 /**
- * Render the Google Sign-In button into `el` and call `onSignedIn` once the
- * credential has been exchanged for our session. Loads the GSI script on demand.
+ * Render a "Sign in with Google" button into `el` that runs the OAuth **code** flow
+ * (popup) and calls `onSignedIn` once the code has been exchanged for our session.
+ * Loads the GSI script on demand. Note: the OAuth consent screen must list the
+ * Calendar scope and the OAuth client must allow this origin.
  */
 export function renderGoogleButton(el: HTMLElement, onSignedIn: (user: User) => void): void {
   if (!GOOGLE_CLIENT_ID) {
     el.textContent = 'Google sign-in is not configured (PUBLIC_GOOGLE_CLIENT_ID).';
     return;
   }
-  const start = () => {
+  const mount = () => {
     const g = window.google;
     if (!g) return;
-    g.accounts.id.initialize({
+    const codeClient = g.accounts.oauth2.initCodeClient({
       client_id: GOOGLE_CLIENT_ID,
+      scope: OAUTH_SCOPE,
+      ux_mode: 'popup',
       callback: (resp) => {
-        void loginWithGoogle(resp.credential).then((user) => {
+        if (!resp.code) {
+          el.dispatchEvent(new CustomEvent('vox-login-error', { bubbles: true }));
+          return;
+        }
+        void exchangeGoogleCode(resp.code).then((user) => {
           if (user) onSignedIn(user);
           else el.dispatchEvent(new CustomEvent('vox-login-error', { bubbles: true }));
         });
       },
     });
-    g.accounts.id.renderButton(el, { theme: 'outline', size: 'large', width: 280 });
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn-primary';
+    btn.textContent = 'Sign in with Google';
+    btn.addEventListener('click', () => codeClient.requestCode());
+    el.replaceChildren(btn);
   };
   if (window.google) {
-    start();
+    mount();
     return;
   }
   const s = document.createElement('script');
   s.src = 'https://accounts.google.com/gsi/client';
   s.async = true;
   s.defer = true;
-  s.onload = start;
+  s.onload = mount;
   document.head.appendChild(s);
 }
