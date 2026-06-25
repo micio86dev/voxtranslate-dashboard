@@ -84,10 +84,13 @@ const OAUTH_SCOPE = 'openid email profile https://www.googleapis.com/auth/calend
  */
 export async function exchangeGoogleCode(code: string): Promise<User | null> {
   try {
+    // The locale the B2B user is signing in with (URL's `[lang]` segment) is stored
+    // on their account so meeting notifications reach them in their own language.
+    const locale = location.pathname.split('/').filter(Boolean)[0] || 'en';
     const res = await fetch(`${API_BASE}/api/auth/google`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code, redirect_uri: 'postmessage' }),
+      body: JSON.stringify({ code, redirect_uri: 'postmessage', locale }),
     });
     if (!res.ok) return null;
     const data = (await res.json()) as { token: string; user: User };
