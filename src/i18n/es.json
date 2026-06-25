@@ -10,6 +10,8 @@
     "back": "Atrás",
     "loading": "Cargando…",
     "error": "Algo salió mal. Inténtalo de nuevo.",
+    "connError": "No pudimos conectar con el servidor. Comprueba tu conexión e inténtalo de nuevo.",
+    "retry": "Reintentar",
     "none": "Ninguno",
     "copy": "Copiar enlace",
     "copied": "Copiado",

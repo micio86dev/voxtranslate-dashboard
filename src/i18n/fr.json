@@ -10,6 +10,8 @@
     "back": "Retour",
     "loading": "Chargement…",
     "error": "Une erreur est survenue. Veuillez réessayer.",
+    "connError": "Impossible de joindre le serveur. Vérifiez votre connexion et réessayez.",
+    "retry": "Réessayer",
     "none": "Aucun",
     "copy": "Copier le lien",
     "copied": "Copié",

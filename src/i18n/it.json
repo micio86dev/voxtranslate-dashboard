@@ -10,6 +10,8 @@
     "back": "Indietro",
     "loading": "Caricamento…",
     "error": "Qualcosa è andato storto. Riprova.",
+    "connError": "Impossibile raggiungere il server. Controlla la connessione e riprova.",
+    "retry": "Riprova",
     "none": "Nessuno",
     "copy": "Copia link",
     "copied": "Copiato",

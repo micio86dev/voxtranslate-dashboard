@@ -10,6 +10,8 @@
     "back": "Back",
     "loading": "Loading…",
     "error": "Something went wrong. Please try again.",
+    "connError": "We couldn't reach the server. Check your connection and try again.",
+    "retry": "Retry",
     "none": "None",
     "copy": "Copy link",
     "copied": "Copied",
