@@ -310,6 +310,30 @@
       ]
     }
   },
+  "sub": {
+    "title": "Suscripción",
+    "status": {
+      "none": "Sin suscripción",
+      "active": "Activa",
+      "past_due": "Pago vencido",
+      "canceled": "Caducada"
+    },
+    "plan": "Plan",
+    "billing": "Facturación",
+    "amount": "Precio",
+    "start": "Inicio",
+    "period": "Periodo actual",
+    "payment": "Método de pago",
+    "card": "{brand} •••• {last4}",
+    "cardExp": "cad. {mm}/{yyyy}",
+    "renewsOn": "Se renueva el {date}",
+    "cancelsOn": "Se cancela el {date} — sin renovación",
+    "endedOn": "Finalizó el {date}",
+    "pastDueNote": "El pago falló — actualiza tu tarjeta para mantener la suscripción.",
+    "noneTitle": "Sin suscripción activa",
+    "noneBody": "Elige un plan abajo para desbloquear la grabación en la nube, las transcripciones y más.",
+    "loadError": "No se pudieron cargar los datos de la suscripción."
+  },
   "settings": {
     "title": "Ajustes",
     "orgName": "Nombre de la organización",

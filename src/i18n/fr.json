@@ -310,6 +310,30 @@
       ]
     }
   },
+  "sub": {
+    "title": "Abonnement",
+    "status": {
+      "none": "Aucun abonnement",
+      "active": "Actif",
+      "past_due": "Paiement en retard",
+      "canceled": "Expiré"
+    },
+    "plan": "Formule",
+    "billing": "Facturation",
+    "amount": "Prix",
+    "start": "Début",
+    "period": "Période en cours",
+    "payment": "Moyen de paiement",
+    "card": "{brand} •••• {last4}",
+    "cardExp": "exp. {mm}/{yyyy}",
+    "renewsOn": "Se renouvelle le {date}",
+    "cancelsOn": "Se termine le {date} — pas de renouvellement",
+    "endedOn": "Terminé le {date}",
+    "pastDueNote": "Échec du paiement — mettez à jour votre carte pour conserver l'abonnement.",
+    "noneTitle": "Aucun abonnement actif",
+    "noneBody": "Choisissez une formule ci-dessous pour débloquer l'enregistrement cloud, les transcriptions et plus.",
+    "loadError": "Impossible de charger les détails de l'abonnement."
+  },
   "settings": {
     "title": "Paramètres",
     "orgName": "Nom de l'organisation",
