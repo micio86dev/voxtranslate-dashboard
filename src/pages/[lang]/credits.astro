@@ -28,6 +28,14 @@ const plans = [
         <button id="manage" class="btn-ghost text-sm">{t('credits.manage')}</button>
       </div>
     </div>
+    <!-- Subscription box — status + all details (filled from the API at runtime). -->
+    <div class="card">
+      <div class="flex items-center justify-between gap-2">
+        <div class="text-sm font-semibold">{t('sub.title')}</div>
+        <span id="sub-status" class="badge"></span>
+      </div>
+      <div id="sub-body" class="mt-3 text-sm text-muted">{t('common.loading')}</div>
+    </div>
   </div>
 
   <!-- Plan comparison + checkout (the banner deep-links here via #plans). -->
@@ -148,7 +156,14 @@ const plans = [
 
 <script>
   import { boot } from '../../scripts/app-boot';
-  import { billingPortal, getCredits, purchaseCredits, subscribe } from '../../lib/api';
+  import {
+    billingPortal,
+    getCredits,
+    getSubscription,
+    purchaseCredits,
+    subscribe,
+    type SubscriptionDetail,
+  } from '../../lib/api';
   import { useTranslations, type Locale } from '../../lib/i18n';
 
   function esc(s: string): string {
@@ -183,6 +198,100 @@ const plans = [
     // The Billing Portal only exists once there's a customer, so hide "Manage
     // subscription" until then (it would otherwise 409).
     document.getElementById('manage')!.classList.toggle('hidden', status === 'none');
+
+    // --- Subscription box: status + all details (DB + live Stripe overlay) ---
+    const statusEl = document.getElementById('sub-status')!;
+    const bodyEl = document.getElementById('sub-body')!;
+    const STATUS_BADGE: Record<string, string> = {
+      active: 'border-ok text-ok',
+      past_due: 'border-warn text-warn',
+      canceled: 'border-danger text-danger',
+      none: '',
+    };
+    const fmtDate = (iso?: string | null) =>
+      iso ? new Date(iso).toLocaleDateString(ctx.lang) : '';
+    const fmtMoney = (cents?: number | null, currency?: string | null) =>
+      typeof cents === 'number' && currency
+        ? (cents / 100).toLocaleString(ctx.lang, {
+            style: 'currency',
+            currency: currency.toUpperCase(),
+          })
+        : '';
+    const row = (label: string, value: string) =>
+      value
+        ? `<div class="flex justify-between gap-3 border-b border-line py-1.5 last:border-0">
+            <dt class="text-muted">${esc(label)}</dt>
+            <dd class="text-right font-medium text-ink">${esc(value)}</dd></div>`
+        : '';
+
+    const renderSubBox = (d: SubscriptionDetail) => {
+      const st = d.status || 'none';
+      statusEl.textContent = t(`sub.status.${st}`);
+      statusEl.className = `badge ${STATUS_BADGE[st] ?? ''}`;
+
+      if (st === 'none') {
+        bodyEl.innerHTML = `<p class="font-medium text-ink">${esc(t('sub.noneTitle'))}</p>
+          <p class="mt-1">${esc(t('sub.noneBody'))}</p>`;
+        return;
+      }
+
+      const interval = d.interval === 'year' ? t('plans.annual') : t('plans.monthly');
+      const per = d.interval === 'year' ? t('plans.perYear') : t('plans.perMonth');
+      const amount = fmtMoney(d.amount, d.currency);
+      const planName = t(`plans.${d.plan}.name`);
+
+      // Renewal / end line depends on where we are in the lifecycle.
+      let renew = '';
+      if (st === 'canceled') {
+        const end = fmtDate(d.canceled_at || d.current_period_end);
+        renew = end ? t('sub.endedOn', { date: end }) : '';
+      } else if (d.cancel_at_period_end) {
+        const end = fmtDate(d.cancel_at || d.current_period_end);
+        renew = end ? t('sub.cancelsOn', { date: end }) : '';
+      } else if (st === 'past_due') {
+        renew = t('sub.pastDueNote');
+      } else {
+        const end = fmtDate(d.current_period_end);
+        renew = end ? t('sub.renewsOn', { date: end }) : '';
+      }
+
+      const period =
+        d.current_period_start && d.current_period_end
+          ? `${fmtDate(d.current_period_start)} – ${fmtDate(d.current_period_end)}`
+          : '';
+
+      let card = '';
+      if (d.card_brand && d.card_last4) {
+        card = t('sub.card', { brand: d.card_brand, last4: d.card_last4 });
+        if (d.card_exp_month && d.card_exp_year) {
+          card += ` · ${t('sub.cardExp', {
+            mm: String(d.card_exp_month).padStart(2, '0'),
+            yyyy: d.card_exp_year,
+          })}`;
+        }
+      }
+
+      const warnTone = d.cancel_at_period_end || st !== 'active';
+      bodyEl.innerHTML =
+        '<dl>' +
+        row(t('sub.plan'), planName) +
+        row(t('sub.billing'), interval) +
+        row(t('sub.amount'), amount ? `${amount} ${per}` : '') +
+        row(t('sub.start'), fmtDate(d.start_date)) +
+        row(t('sub.period'), period) +
+        row(t('sub.payment'), card) +
+        '</dl>' +
+        (renew ? `<p class="mt-2 ${warnTone ? 'text-warn' : 'text-muted'}">${esc(renew)}</p>` : '');
+    };
+
+    {
+      const r = await getSubscription(orgId);
+      if (r.ok && r.data) renderSubBox(r.data);
+      else {
+        statusEl.classList.add('hidden');
+        bodyEl.textContent = t('sub.loadError');
+      }
+    }
 
     // --- Plan comparison: billing-interval toggle ---------------------------
     const PLANS = ['business', 'enterprise'] as const;
