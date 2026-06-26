@@ -2,7 +2,7 @@
 import { defineConfig } from 'astro/config';
 import tailwindcss from '@tailwindcss/vite';
 
-// Canonical origin (authenticated B2B app). Served on Cloudflare Pages.
+// Canonical origin (authenticated B2B app). Served on Vercel.
 const SITE = 'https://dashboard.voxtranslate.app';
 
 // 5 app locales. Keep in sync with src/i18n/*.json and src/lib/i18n.ts.
@@ -10,7 +10,7 @@ export const LOCALES = ['en', 'it', 'es', 'de', 'fr'];
 
 export default defineConfig({
   site: SITE,
-  // Static prerender → flat files in dist/, deployed to Cloudflare Pages.
+  // Static prerender → flat files in dist/, deployed to Vercel.
   // The app is auth-gated client-side; data is fetched at runtime from the API.
   output: 'static',
   trailingSlash: 'always',

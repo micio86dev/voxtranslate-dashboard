@@ -12,7 +12,8 @@ at `dashboard/` inside the main VoxTranslate repo; separate deploy from the call
 - **Auth:** Sign in with Google (GSI) → `POST {API}/api/auth/google` → JWT in `localStorage`
   (separate origin from the call app, so its own token). Route guarding is client-side.
 - **Data:** all from the Rust API under `/api/business/...` (typed client in `src/lib/api.ts`).
-- **Hosting:** Cloudflare Pages (static), like the marketing site.
+- **Hosting:** Vercel (static SSG) — project `voxtranslate-dashboard`, served at
+  `https://dashboard.voxtranslate.app`. Deploys via Vercel's Git integration.
 
 ## Directory structure
 
@@ -40,14 +41,32 @@ public/{favicon.svg,_headers}
 - Files: kebab-case. Components: PascalCase `.astro`. All copy via `useTranslations(lang)` →
   `t('key')`; never hardcode strings. Dynamic resource ids use a `?id=`/`?token=` query param
   (the app is static, so no `[id]` prerender).
-- Commits: Conventional Commits. Branches: `main` = production.
+- Commits: Conventional Commits. Branching follows **Git Flow** — see below.
+
+## Branching & deploy (Git Flow)
+
+This repo follows **Git Flow** (project-wide rule):
+
+- `feature/<name>` — branch off `develop`; merge back into `develop` (`--no-ff`).
+- `develop` — integration branch. Merging here triggers the **staging** deploy.
+- `release/<X.Y.Z>` — cut from `develop` (three-number version, e.g. `release/0.2.0`):
+  bump `package.json`, merge into `main` **and** back into `develop`, tag `vX.Y.Z`.
+- `main` — production. Pushing it (release/hotfix close) triggers the **prod** deploy.
+- `hotfix/<name>` — branch off `main` for urgent prod fixes; merge to `main` + `develop`.
+- After every merge, **prune the closed branch locally and on the remote**.
 
 ## Environment
 
 | Variable | Description |
 |---|---|
-| `PUBLIC_API_BASE` | Rust API origin (Railway), no trailing slash. Local: `http://localhost:3001`. |
+| `PUBLIC_API_BASE` | Rust API origin, no trailing slash. Local: `http://localhost:3001`; prod: `https://api.voxtranslate.app`. |
 | `PUBLIC_GOOGLE_CLIENT_ID` | Google OAuth client id (same project as the call app). |
+
+Both are `PUBLIC_` (client-side) values baked into the shipped JS at build time. They
+live in a **committed** `.env.production` (read by `astro build`) — intentionally not
+Vercel project env vars, so every build (local or on the host) bakes the right values.
+A plain build with neither set falls back to `localhost:3001` (broken prod). See the
+`dashboard-prod-deploy-bakes-localhost` note for the history.
 
 The API server's `ALLOWED_ORIGINS` must include this app's origin (CORS).
 
