@@ -86,6 +86,13 @@
       "server": "Push ist auf dem Server noch nicht konfiguriert — wende dich an deine Administratorin/deinen Administrator.",
       "failed": "Push-Benachrichtigungen konnten nicht aktiviert werden. Bitte erneut versuchen."
     },
+    "pushGuide": {
+      "title": "So entsperrst du Benachrichtigungen:",
+      "step1": "Klicke auf das Schloss-Symbol (oder ⓘ) neben der Adresse in der Adressleiste.",
+      "step2": "Öffne \"Website-Einstellungen\" oder \"Berechtigungen\".",
+      "step3": "Stelle \"Benachrichtigungen\" auf \"Zulassen\".",
+      "step4": "Lade die Seite neu und klicke erneut auf \"Aktivieren\"."
+    },
     "saved": "Gespeichert"
   },
   "nav": {

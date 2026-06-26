@@ -86,6 +86,13 @@
       "server": "Push isn't configured on the server yet — contact your administrator.",
       "failed": "Couldn't enable push notifications. Please try again."
     },
+    "pushGuide": {
+      "title": "How to unblock notifications:",
+      "step1": "Click the lock icon (or ⓘ) next to the site address in the address bar.",
+      "step2": "Open \"Site settings\" or \"Permissions\".",
+      "step3": "Set \"Notifications\" to \"Allow\".",
+      "step4": "Reload the page, then click \"Enable\" again."
+    },
     "saved": "Saved"
   },
   "nav": {

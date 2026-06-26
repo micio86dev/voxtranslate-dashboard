@@ -2,6 +2,8 @@
 
 /* Design tokens — clean, professional B2B light theme with VoxTranslate blue. */
 @theme {
+  /* NB: `base` is a color token, so Tailwind generates a `text-base` *color* utility
+     that shadows the font-size one — never use `text-base` for sizing (use text-sm/lg). */
   --color-base: #f5f7fb;
   --color-surface: #ffffff;
   --color-ink: #0f172a;
