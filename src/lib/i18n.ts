@@ -55,6 +55,16 @@ export function useTranslations(lang: Locale) {
   };
 }
 
+/**
+ * Reads an array value (e.g. a plan's feature bullets) for `lang`, falling back
+ * to English. Returns `[]` when the key is missing or not a string array.
+ */
+export function tList(lang: Locale, key: string): string[] {
+  const dict = DICTS[lang] ?? DICTS[DEFAULT_LOCALE];
+  const value = lookup(dict, key) ?? lookup(DICTS[DEFAULT_LOCALE], key);
+  return Array.isArray(value) ? value.filter((v): v is string => typeof v === 'string') : [];
+}
+
 /** All paths for `getStaticPaths` — one per locale. */
 export function localePaths() {
   return LOCALES.map((lang) => ({ params: { lang } }));

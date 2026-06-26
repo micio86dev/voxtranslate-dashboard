@@ -246,6 +246,70 @@
     "noTxns": "Aucune transaction pour l'instant.",
     "subscribeHint": "Les abonnements se renouvellent automatiquement. Annulez à tout moment depuis le portail de facturation."
   },
+  "banner": {
+    "none": {
+      "title": "Vous n'avez pas d'abonnement actif",
+      "body": "Activez une formule pour débloquer l'enregistrement cloud, les transcriptions et l'espace de travail de votre équipe.",
+      "cta": "Achetez votre premier abonnement"
+    },
+    "pastDue": {
+      "title": "Le paiement de votre abonnement est en retard",
+      "body": "Mettez à jour votre moyen de paiement pour ne pas interrompre enregistrements, transcriptions et historique.",
+      "cta": "Régler le paiement"
+    },
+    "canceled": {
+      "title": "Votre abonnement a expiré",
+      "body": "Réactivez-le pour rétablir l'enregistrement cloud, les transcriptions et l'historique des appels.",
+      "cta": "Réactiver l'abonnement"
+    },
+    "viewPlans": "Comparer les formules",
+    "memberNote": "Demandez au propriétaire de l'espace de travail d'activer une formule.",
+    "dismiss": "Fermer"
+  },
+  "plans": {
+    "title": "Choisissez votre formule",
+    "subtitle": "Tarif par organisation, pas par utilisateur. Renouvellement automatique — annulez à tout moment.",
+    "monthly": "Mensuel",
+    "annual": "Annuel",
+    "perMonth": "/mois",
+    "perYear": "/an",
+    "altYear": "ou {price}/an — 2 mois offerts",
+    "altMonth": "ou {price}/mois",
+    "current": "Formule actuelle",
+    "choose": "Choisir {plan}",
+    "mostPopular": "La plus choisie",
+    "ownerOnly": "Seul le propriétaire de l'espace de travail peut démarrer un abonnement.",
+    "manageHint": "Changez de formule, mettez à jour la carte ou annulez depuis le portail de facturation.",
+    "vsTitle": "Business ou Enterprise — laquelle choisir ?",
+    "vsBusiness": "Choisissez Business si vous avez jusqu'à 20 membres et souhaitez l'enregistrement cloud, les transcriptions et un historique illimité sans contraintes de conformité.",
+    "vsEnterprise": "Choisissez Enterprise pour des membres illimités, le mode conformité avec journal d'audit, une rétention des données configurable et un SLA avec support prioritaire.",
+    "business": {
+      "name": "Business",
+      "tagline": "Pour les équipes en croissance qui se réunissent en plusieurs langues.",
+      "priceMonth": "49 €",
+      "priceYear": "490 €",
+      "points": [
+        "Crédits mensuels inclus",
+        "Jusqu'à 20 membres",
+        "Historique des appels illimité",
+        "Transcriptions incluses",
+        "Support par e-mail"
+      ]
+    },
+    "enterprise": {
+      "name": "Enterprise",
+      "tagline": "Pour les grandes organisations avec des besoins de conformité.",
+      "priceMonth": "199 €",
+      "priceYear": "1 990 €",
+      "points": [
+        "Plus de crédits inclus",
+        "Membres illimités",
+        "Mode conformité + journal d'audit",
+        "Rétention des données configurable",
+        "SLA et support prioritaire"
+      ]
+    }
+  },
   "settings": {
     "title": "Paramètres",
     "orgName": "Nom de l'organisation",

@@ -246,6 +246,70 @@
     "noTxns": "Aún no hay transacciones.",
     "subscribeHint": "Las suscripciones se renuevan automáticamente. Cancela cuando quieras desde el portal de facturación."
   },
+  "banner": {
+    "none": {
+      "title": "No tienes una suscripción activa",
+      "body": "Activa un plan para desbloquear la grabación en la nube, las transcripciones y el espacio de trabajo de tu equipo.",
+      "cta": "Compra tu primera suscripción"
+    },
+    "pastDue": {
+      "title": "El pago de tu suscripción está vencido",
+      "body": "Actualiza tu método de pago para no interrumpir grabaciones, transcripciones e historial.",
+      "cta": "Resolver el pago"
+    },
+    "canceled": {
+      "title": "Tu suscripción ha caducado",
+      "body": "Reactívala para restaurar la grabación en la nube, las transcripciones y el historial de llamadas.",
+      "cta": "Reactivar la suscripción"
+    },
+    "viewPlans": "Comparar planes",
+    "memberNote": "Pide al propietario del espacio de trabajo que active un plan.",
+    "dismiss": "Cerrar"
+  },
+  "plans": {
+    "title": "Elige tu plan",
+    "subtitle": "Precio por organización, no por usuario. Se renueva automáticamente — cancela cuando quieras.",
+    "monthly": "Mensual",
+    "annual": "Anual",
+    "perMonth": "/mes",
+    "perYear": "/año",
+    "altYear": "o {price}/año — 2 meses gratis",
+    "altMonth": "o {price}/mes",
+    "current": "Plan actual",
+    "choose": "Elegir {plan}",
+    "mostPopular": "Más popular",
+    "ownerOnly": "Solo el propietario del espacio de trabajo puede iniciar una suscripción.",
+    "manageHint": "Cambia de plan, actualiza la tarjeta o cancela desde el portal de facturación.",
+    "vsTitle": "Business o Enterprise — ¿cuál elegir?",
+    "vsBusiness": "Elige Business si tienes hasta 20 miembros y quieres grabación en la nube, transcripciones e historial ilimitado sin los requisitos de compliance.",
+    "vsEnterprise": "Elige Enterprise para miembros ilimitados, modo compliance con registro de auditoría, retención de datos configurable y SLA con soporte prioritario.",
+    "business": {
+      "name": "Business",
+      "tagline": "Para equipos en crecimiento que se reúnen en varios idiomas.",
+      "priceMonth": "€49",
+      "priceYear": "€490",
+      "points": [
+        "Créditos mensuales incluidos",
+        "Hasta 20 miembros",
+        "Historial de llamadas ilimitado",
+        "Transcripciones incluidas",
+        "Soporte por email"
+      ]
+    },
+    "enterprise": {
+      "name": "Enterprise",
+      "tagline": "Para organizaciones más grandes con necesidades de compliance.",
+      "priceMonth": "€199",
+      "priceYear": "€1.990",
+      "points": [
+        "Más créditos incluidos",
+        "Miembros ilimitados",
+        "Modo compliance + registro de auditoría",
+        "Retención de datos configurable",
+        "SLA y soporte prioritario"
+      ]
+    }
+  },
   "settings": {
     "title": "Ajustes",
     "orgName": "Nombre de la organización",
