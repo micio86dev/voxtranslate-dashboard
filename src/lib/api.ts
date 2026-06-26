@@ -288,6 +288,39 @@ export const subscribe = (orgId: string, plan: string, interval: string) =>
     interval,
   });
 
+/**
+ * Subscription detail for the billing box. Always carries the DB-known fields;
+ * the live-Stripe overlay fields (start date, amount, card …) are present only
+ * when the org has a real subscription, and may be null on a Stripe hiccup.
+ */
+export interface SubscriptionDetail {
+  /** Coarse status: 'none' | 'active' | 'past_due' | 'canceled'. */
+  status: string;
+  plan: string;
+  /** 'month' | 'year' | null. */
+  interval: string | null;
+  /** ISO-8601, end of the current paid period (renewal/expiry). */
+  current_period_end: string | null;
+  cancel_at_period_end: boolean;
+  // --- live Stripe overlay (present when subscribed) ---
+  /** Raw Stripe status, e.g. 'active' | 'trialing' | 'past_due' | 'canceled'. */
+  stripe_status?: string | null;
+  start_date?: string | null;
+  current_period_start?: string | null;
+  cancel_at?: string | null;
+  canceled_at?: string | null;
+  /** Amount per interval, in the currency's minor unit (cents). */
+  amount?: number | null;
+  currency?: string | null;
+  card_brand?: string | null;
+  card_last4?: string | null;
+  card_exp_month?: number | null;
+  card_exp_year?: number | null;
+}
+
+export const getSubscription = (orgId: string) =>
+  request<SubscriptionDetail>('GET', `/api/business/organizations/${orgId}/subscription`);
+
 export const billingPortal = (orgId: string) =>
   request<{ url: string }>('POST', `/api/business/organizations/${orgId}/subscription/portal`);
 

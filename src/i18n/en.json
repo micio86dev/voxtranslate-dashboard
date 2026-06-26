@@ -310,6 +310,30 @@
       ]
     }
   },
+  "sub": {
+    "title": "Subscription",
+    "status": {
+      "none": "No subscription",
+      "active": "Active",
+      "past_due": "Payment overdue",
+      "canceled": "Expired"
+    },
+    "plan": "Plan",
+    "billing": "Billing",
+    "amount": "Price",
+    "start": "Started",
+    "period": "Current period",
+    "payment": "Payment method",
+    "card": "{brand} •••• {last4}",
+    "cardExp": "exp. {mm}/{yyyy}",
+    "renewsOn": "Renews on {date}",
+    "cancelsOn": "Cancels on {date} — no renewal",
+    "endedOn": "Ended on {date}",
+    "pastDueNote": "Payment failed — update your card to keep your subscription.",
+    "noneTitle": "No active subscription",
+    "noneBody": "Choose a plan below to unlock cloud recording, transcripts and more.",
+    "loadError": "Couldn't load subscription details."
+  },
   "settings": {
     "title": "Settings",
     "orgName": "Organization name",

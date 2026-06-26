@@ -310,6 +310,30 @@
       ]
     }
   },
+  "sub": {
+    "title": "Abbonamento",
+    "status": {
+      "none": "Nessun abbonamento",
+      "active": "Attivo",
+      "past_due": "Pagamento scaduto",
+      "canceled": "Scaduto"
+    },
+    "plan": "Piano",
+    "billing": "Fatturazione",
+    "amount": "Prezzo",
+    "start": "Inizio",
+    "period": "Periodo attuale",
+    "payment": "Metodo di pagamento",
+    "card": "{brand} •••• {last4}",
+    "cardExp": "scad. {mm}/{yyyy}",
+    "renewsOn": "Si rinnova il {date}",
+    "cancelsOn": "Si annulla il {date} — nessun rinnovo",
+    "endedOn": "Terminato il {date}",
+    "pastDueNote": "Pagamento non riuscito — aggiorna la carta per mantenere l'abbonamento.",
+    "noneTitle": "Nessun abbonamento attivo",
+    "noneBody": "Scegli un piano qui sotto per sbloccare registrazione su cloud, trascrizioni e altro.",
+    "loadError": "Impossibile caricare i dettagli dell'abbonamento."
+  },
   "settings": {
     "title": "Impostazioni",
     "orgName": "Nome dell'organizzazione",

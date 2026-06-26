@@ -310,6 +310,30 @@
       ]
     }
   },
+  "sub": {
+    "title": "Abo",
+    "status": {
+      "none": "Kein Abo",
+      "active": "Aktiv",
+      "past_due": "Zahlung überfällig",
+      "canceled": "Abgelaufen"
+    },
+    "plan": "Plan",
+    "billing": "Abrechnung",
+    "amount": "Preis",
+    "start": "Beginn",
+    "period": "Aktueller Zeitraum",
+    "payment": "Zahlungsmethode",
+    "card": "{brand} •••• {last4}",
+    "cardExp": "gültig bis {mm}/{yyyy}",
+    "renewsOn": "Verlängert sich am {date}",
+    "cancelsOn": "Endet am {date} — keine Verlängerung",
+    "endedOn": "Beendet am {date}",
+    "pastDueNote": "Zahlung fehlgeschlagen — aktualisiere deine Karte, um das Abo zu behalten.",
+    "noneTitle": "Kein aktives Abo",
+    "noneBody": "Wähle unten einen Plan, um Cloud-Aufnahme, Transkripte und mehr freizuschalten.",
+    "loadError": "Abo-Details konnten nicht geladen werden."
+  },
   "settings": {
     "title": "Einstellungen",
     "orgName": "Name der Organisation",
