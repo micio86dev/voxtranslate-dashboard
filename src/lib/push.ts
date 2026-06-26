@@ -34,30 +34,41 @@ async function readyRegistration(): Promise<ServiceWorkerRegistration | null> {
   }
 }
 
-/** Prompt for permission and subscribe. Returns true on success. */
-export async function enablePush(): Promise<boolean> {
-  if (!pushSupported()) return false;
+/** Why enabling push failed — lets the UI explain instead of silently no-op'ing. */
+export type EnablePushReason = 'unsupported' | 'denied' | 'server' | 'failed';
+export type EnablePushResult = { ok: true } | { ok: false; reason: EnablePushReason };
+
+/**
+ * Prompt for permission and subscribe. Returns `{ ok: true }` on success, or
+ * `{ ok: false, reason }` so the caller can tell the user *why* — a silent
+ * failure here is exactly what makes the "Enable" button look dead (e.g. the
+ * server has no VAPID key configured → `reason: 'server'`).
+ */
+export async function enablePush(): Promise<EnablePushResult> {
+  if (!pushSupported()) return { ok: false, reason: 'unsupported' };
   const perm = await Notification.requestPermission();
-  if (perm !== 'granted') return false;
+  if (perm !== 'granted') return { ok: false, reason: 'denied' };
   const reg = await readyRegistration();
-  if (!reg) return false;
+  if (!reg) return { ok: false, reason: 'failed' };
   const keyRes = await getVapidKey();
-  if (!keyRes.ok || !keyRes.data?.key) return false;
+  if (!keyRes.ok || !keyRes.data?.key) return { ok: false, reason: 'server' };
   try {
     const sub = await reg.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey: urlBase64ToUint8Array(keyRes.data.key) as BufferSource,
     });
     const json = sub.toJSON() as { endpoint?: string; keys?: { p256dh?: string; auth?: string } };
-    if (!json.endpoint || !json.keys?.p256dh || !json.keys?.auth) return false;
+    if (!json.endpoint || !json.keys?.p256dh || !json.keys?.auth) {
+      return { ok: false, reason: 'failed' };
+    }
     const res = await subscribePush({
       endpoint: json.endpoint,
       keys: { p256dh: json.keys.p256dh, auth: json.keys.auth },
       user_agent: navigator.userAgent,
     });
-    return res.ok;
+    return res.ok ? { ok: true } : { ok: false, reason: 'failed' };
   } catch {
-    return false;
+    return { ok: false, reason: 'failed' };
   }
 }
 

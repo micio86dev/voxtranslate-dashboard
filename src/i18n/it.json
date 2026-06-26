@@ -80,6 +80,12 @@
     "pushEnable": "Attiva",
     "pushDisable": "Disattiva",
     "pushUnsupported": "Questo browser non supporta le notifiche push.",
+    "pushErr": {
+      "unsupported": "Questo browser non supporta le notifiche push.",
+      "denied": "Le notifiche sono bloccate. Abilitale per questo sito nelle impostazioni del browser, poi riprova.",
+      "server": "Le notifiche push non sono ancora configurate sul server — contatta l'amministratore.",
+      "failed": "Impossibile attivare le notifiche push. Riprova."
+    },
     "saved": "Salvato"
   },
   "nav": {
