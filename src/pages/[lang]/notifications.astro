@@ -122,9 +122,23 @@ const CHANNELS = ['push', 'email', 'in_app'];
       toggleBtn.dataset.subbed = String(subbed);
     }
     toggleBtn.addEventListener('click', async () => {
-      if (toggleBtn.dataset.subbed === 'true') await disablePush();
-      else await enablePush();
+      toggleBtn.disabled = true;
+      let err = '';
+      if (toggleBtn.dataset.subbed === 'true') {
+        await disablePush();
+      } else {
+        const r = await enablePush();
+        // Surface *why* enabling failed instead of leaving a dead button.
+        if (!r.ok) err = t(`notif.pushErr.${r.reason}`);
+      }
       await refreshPush();
+      if (err) {
+        statusEl.textContent = err;
+        statusEl.classList.add('text-danger');
+      } else {
+        statusEl.classList.remove('text-danger');
+      }
+      toggleBtn.disabled = false;
     });
     await refreshPush();
 

@@ -80,6 +80,12 @@
     "pushEnable": "Activer",
     "pushDisable": "Désactiver",
     "pushUnsupported": "Ce navigateur ne prend pas en charge les notifications push.",
+    "pushErr": {
+      "unsupported": "Ce navigateur ne prend pas en charge les notifications push.",
+      "denied": "Les notifications sont bloquées. Autorisez-les pour ce site dans les paramètres du navigateur, puis réessayez.",
+      "server": "Les notifications push ne sont pas encore configurées sur le serveur — contactez votre administrateur.",
+      "failed": "Impossible d'activer les notifications push. Veuillez réessayer."
+    },
     "saved": "Enregistré"
   },
   "nav": {
