@@ -80,6 +80,12 @@
     "pushEnable": "Enable",
     "pushDisable": "Disable",
     "pushUnsupported": "This browser does not support push notifications.",
+    "pushErr": {
+      "unsupported": "This browser doesn't support push notifications.",
+      "denied": "Notifications are blocked. Allow them for this site in your browser settings, then try again.",
+      "server": "Push isn't configured on the server yet — contact your administrator.",
+      "failed": "Couldn't enable push notifications. Please try again."
+    },
     "saved": "Saved"
   },
   "nav": {

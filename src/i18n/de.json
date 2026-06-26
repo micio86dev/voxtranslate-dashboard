@@ -80,6 +80,12 @@
     "pushEnable": "Aktivieren",
     "pushDisable": "Deaktivieren",
     "pushUnsupported": "Dieser Browser unterstützt keine Push-Benachrichtigungen.",
+    "pushErr": {
+      "unsupported": "Dieser Browser unterstützt keine Push-Benachrichtigungen.",
+      "denied": "Benachrichtigungen sind blockiert. Erlaube sie für diese Seite in den Browsereinstellungen und versuche es erneut.",
+      "server": "Push ist auf dem Server noch nicht konfiguriert — wende dich an deine Administratorin/deinen Administrator.",
+      "failed": "Push-Benachrichtigungen konnten nicht aktiviert werden. Bitte erneut versuchen."
+    },
     "saved": "Gespeichert"
   },
   "nav": {
