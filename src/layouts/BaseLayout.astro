@@ -41,6 +41,8 @@ const { lang, title, description = '', chrome = false } = Astro.props;
   </head>
   <body>
     {chrome && <Header lang={lang} />}
+    {/* Subscription nudge bar — filled at runtime by app-boot (sub-banner.ts). */}
+    {chrome && <div id="sub-banner" />}
     <main class={chrome ? 'mx-auto w-full max-w-5xl px-4 py-8' : ''}>
       <slot />
     </main>

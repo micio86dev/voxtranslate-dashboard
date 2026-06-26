@@ -246,6 +246,70 @@
     "noTxns": "Noch keine Transaktionen.",
     "subscribeHint": "Abos verlängern sich automatisch. Jederzeit über das Abrechnungsportal kündbar."
   },
+  "banner": {
+    "none": {
+      "title": "Du hast kein aktives Abo",
+      "body": "Aktiviere einen Plan, um Cloud-Aufnahme, Transkripte und den Team-Arbeitsbereich freizuschalten.",
+      "cta": "Erstes Abo kaufen"
+    },
+    "pastDue": {
+      "title": "Die Zahlung deines Abos ist überfällig",
+      "body": "Aktualisiere deine Zahlungsmethode, damit Aufnahmen, Transkripte und Verlauf weiterlaufen.",
+      "cta": "Zahlung beheben"
+    },
+    "canceled": {
+      "title": "Dein Abo ist abgelaufen",
+      "body": "Reaktiviere es, um Cloud-Aufnahme, Transkripte und Anrufverlauf wiederherzustellen.",
+      "cta": "Abo reaktivieren"
+    },
+    "viewPlans": "Pläne vergleichen",
+    "memberNote": "Bitte die Inhaberin oder den Inhaber des Arbeitsbereichs, einen Plan zu aktivieren.",
+    "dismiss": "Schließen"
+  },
+  "plans": {
+    "title": "Wähle deinen Plan",
+    "subtitle": "Preis pro Organisation, nicht pro Person. Verlängert sich automatisch — jederzeit kündbar.",
+    "monthly": "Monatlich",
+    "annual": "Jährlich",
+    "perMonth": "/Mon.",
+    "perYear": "/Jahr",
+    "altYear": "oder {price}/Jahr — 2 Monate gratis",
+    "altMonth": "oder {price}/Mon.",
+    "current": "Aktueller Plan",
+    "choose": "{plan} wählen",
+    "mostPopular": "Am beliebtesten",
+    "ownerOnly": "Nur die Inhaberin oder der Inhaber des Arbeitsbereichs kann ein Abo starten.",
+    "manageHint": "Plan wechseln, Karte aktualisieren oder kündigen im Abrechnungsportal.",
+    "vsTitle": "Business oder Enterprise — welcher Plan?",
+    "vsBusiness": "Wähle Business, wenn du bis zu 20 Mitglieder hast und Cloud-Aufnahme, Transkripte und unbegrenzten Verlauf ohne Compliance-Aufwand möchtest.",
+    "vsEnterprise": "Wähle Enterprise für unbegrenzte Mitglieder plus Compliance-Modus mit Audit-Log, konfigurierbare Datenaufbewahrung und SLA mit priorisiertem Support.",
+    "business": {
+      "name": "Business",
+      "tagline": "Für wachsende Teams, die sich über Sprachen hinweg treffen.",
+      "priceMonth": "49 €",
+      "priceYear": "490 €",
+      "points": [
+        "Monatliche Credits inklusive",
+        "Bis zu 20 Mitglieder",
+        "Unbegrenzter Anrufverlauf",
+        "Transkripte inklusive",
+        "E-Mail-Support"
+      ]
+    },
+    "enterprise": {
+      "name": "Enterprise",
+      "tagline": "Für größere Organisationen mit Compliance-Anforderungen.",
+      "priceMonth": "199 €",
+      "priceYear": "1.990 €",
+      "points": [
+        "Mehr Credits inklusive",
+        "Unbegrenzte Mitglieder",
+        "Compliance-Modus + Audit-Log",
+        "Konfigurierbare Datenaufbewahrung",
+        "SLA und priorisierter Support"
+      ]
+    }
+  },
   "settings": {
     "title": "Einstellungen",
     "orgName": "Name der Organisation",

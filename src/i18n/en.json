@@ -246,6 +246,70 @@
     "noTxns": "No transactions yet.",
     "subscribeHint": "Subscriptions renew automatically. Cancel anytime from the billing portal."
   },
+  "banner": {
+    "none": {
+      "title": "You don't have an active subscription",
+      "body": "Activate a plan to unlock cloud recording, transcripts and your team workspace.",
+      "cta": "Buy your first subscription"
+    },
+    "pastDue": {
+      "title": "Your subscription payment is overdue",
+      "body": "Update your payment method to keep recording, transcripts and history running.",
+      "cta": "Fix payment"
+    },
+    "canceled": {
+      "title": "Your subscription has expired",
+      "body": "Reactivate to restore cloud recording, transcripts and call history.",
+      "cta": "Reactivate subscription"
+    },
+    "viewPlans": "Compare plans",
+    "memberNote": "Ask the workspace owner to activate a plan.",
+    "dismiss": "Dismiss"
+  },
+  "plans": {
+    "title": "Choose your plan",
+    "subtitle": "Priced per organization, not per seat. Auto-renews — cancel anytime.",
+    "monthly": "Monthly",
+    "annual": "Annual",
+    "perMonth": "/mo",
+    "perYear": "/yr",
+    "altYear": "or {price}/yr — 2 months free",
+    "altMonth": "or {price}/mo",
+    "current": "Current plan",
+    "choose": "Choose {plan}",
+    "mostPopular": "Most popular",
+    "ownerOnly": "Only the workspace owner can start a subscription.",
+    "manageHint": "Switch plans, update your card or cancel from the billing portal.",
+    "vsTitle": "Business vs Enterprise — which one?",
+    "vsBusiness": "Pick Business if you have up to 20 members and want cloud recording, transcripts and unlimited history without compliance overhead.",
+    "vsEnterprise": "Pick Enterprise for unlimited members plus compliance mode with audit log, configurable data retention, and an SLA with priority support.",
+    "business": {
+      "name": "Business",
+      "tagline": "For growing teams meeting across languages.",
+      "priceMonth": "€49",
+      "priceYear": "€490",
+      "points": [
+        "Monthly credits included",
+        "Up to 20 members",
+        "Unlimited call history",
+        "Transcripts included",
+        "Email support"
+      ]
+    },
+    "enterprise": {
+      "name": "Enterprise",
+      "tagline": "For larger orgs with compliance needs.",
+      "priceMonth": "€199",
+      "priceYear": "€1,990",
+      "points": [
+        "More credits included",
+        "Unlimited members",
+        "Compliance mode + audit log",
+        "Configurable data retention",
+        "SLA & priority support"
+      ]
+    }
+  },
   "settings": {
     "title": "Settings",
     "orgName": "Organization name",

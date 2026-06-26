@@ -9,6 +9,7 @@
 import { getUser, logout, requireAuth, type User } from '../lib/auth';
 import { currentOrgId, listOrgs, setCurrentOrgId, type OrgSummary } from '../lib/api';
 import { useTranslations, type Locale } from '../lib/i18n';
+import { renderSubBanner } from './sub-banner';
 
 export interface AppCtx {
   user: User | null;
@@ -93,6 +94,9 @@ export async function boot(): Promise<AppCtx | null> {
       location.reload();
     });
   }
+
+  // Nudge toward a subscription when the active org has none/expired/past-due.
+  renderSubBanner(activeOrg, lang);
 
   return { user: getUser(), orgs, activeOrg, lang };
 }
