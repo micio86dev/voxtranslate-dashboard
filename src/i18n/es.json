@@ -86,6 +86,13 @@
       "server": "Las notificaciones push aún no están configuradas en el servidor — contacta con tu administrador.",
       "failed": "No se pudieron activar las notificaciones push. Inténtalo de nuevo."
     },
+    "pushGuide": {
+      "title": "Cómo desbloquear las notificaciones:",
+      "step1": "Haz clic en el icono del candado (o ⓘ) junto a la dirección del sitio en la barra de direcciones.",
+      "step2": "Abre \"Configuración del sitio\" o \"Permisos\".",
+      "step3": "Pon \"Notificaciones\" en \"Permitir\".",
+      "step4": "Recarga la página y vuelve a hacer clic en \"Activar\"."
+    },
     "saved": "Guardado"
   },
   "nav": {

@@ -55,17 +55,29 @@ const CHANNELS = ['push', 'email', 'in_app'];
       </div>
       <div>
         <label class="label" for="q-tz">{t('notif.timezone')}</label>
-        <input id="q-tz" class="field" readonly />
+        <select id="q-tz" class="field"></select>
       </div>
     </div>
   </div>
 
-  <div class="card mt-6 flex items-center justify-between">
-    <div>
-      <h2 class="font-semibold">{t('notif.pushSection')}</h2>
-      <p id="push-status" class="mt-1 text-sm text-muted"></p>
+  <div class="card mt-6">
+    <div class="flex items-center justify-between gap-3">
+      <div>
+        <h2 class="font-semibold">{t('notif.pushSection')}</h2>
+        <p id="push-status" class="mt-1 text-sm text-muted"></p>
+      </div>
+      <button id="push-toggle" class="btn-ghost shrink-0 text-sm"></button>
     </div>
-    <button id="push-toggle" class="btn-ghost text-sm"></button>
+    <!-- Shown only when the browser has *blocked* notifications (reason: denied). -->
+    <div id="push-guide" class="mt-3 hidden rounded-lg border border-line bg-base p-3 text-sm">
+      <p class="font-medium text-ink">{t('notif.pushGuide.title')}</p>
+      <ol class="mt-1 list-decimal space-y-1 pl-5 text-muted">
+        <li>{t('notif.pushGuide.step1')}</li>
+        <li>{t('notif.pushGuide.step2')}</li>
+        <li>{t('notif.pushGuide.step3')}</li>
+        <li>{t('notif.pushGuide.step4')}</li>
+      </ol>
+    </div>
   </div>
 
   <div class="mt-6 flex items-center gap-3">
@@ -85,8 +97,23 @@ const CHANNELS = ['push', 'email', 'in_app'];
     if (!ctx) return;
     const t = useTranslations(ctx.lang as Locale);
 
-    const tzInput = document.getElementById('q-tz') as HTMLInputElement;
-    tzInput.value = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+    // Timezone picker: a real dropdown of IANA zones (was a read-only field stuck
+    // on UTC). Default to the browser's zone; the saved preference overrides below.
+    const tzSel = document.getElementById('q-tz') as HTMLSelectElement;
+    const browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+    let zones: string[] = [];
+    try {
+      const sv = (Intl as unknown as { supportedValuesOf?: (k: string) => string[] })
+        .supportedValuesOf;
+      if (sv) zones = sv('timeZone');
+    } catch {
+      /* older browser — fall back to a minimal list */
+    }
+    if (!zones.length) zones = [browserTz];
+    if (!zones.includes('UTC')) zones.unshift('UTC');
+    if (!zones.includes(browserTz)) zones.unshift(browserTz);
+    tzSel.innerHTML = zones.map((z) => `<option value="${z}">${z}</option>`).join('');
+    tzSel.value = browserTz;
 
     // Load current preferences and reflect them in the toggles.
     const res = await getNotifPreferences();
@@ -102,7 +129,15 @@ const CHANNELS = ['push', 'email', 'in_app'];
         res.data.quiet_hours_start == null ? '' : String(res.data.quiet_hours_start);
       (document.getElementById('q-to') as HTMLInputElement).value =
         res.data.quiet_hours_end == null ? '' : String(res.data.quiet_hours_end);
-      if (res.data.timezone) tzInput.value = res.data.timezone;
+      if (res.data.timezone) {
+        if (!zones.includes(res.data.timezone)) {
+          tzSel.insertAdjacentHTML(
+            'afterbegin',
+            `<option value="${res.data.timezone}">${res.data.timezone}</option>`,
+          );
+        }
+        tzSel.value = res.data.timezone;
+      }
     }
 
     // Push status + toggle.
@@ -121,23 +156,26 @@ const CHANNELS = ['push', 'email', 'in_app'];
       toggleBtn.classList.remove('hidden');
       toggleBtn.dataset.subbed = String(subbed);
     }
+    const guideEl = document.getElementById('push-guide')!;
     toggleBtn.addEventListener('click', async () => {
       toggleBtn.disabled = true;
       let err = '';
+      let denied = false;
       if (toggleBtn.dataset.subbed === 'true') {
         await disablePush();
       } else {
         const r = await enablePush();
         // Surface *why* enabling failed instead of leaving a dead button.
-        if (!r.ok) err = t(`notif.pushErr.${r.reason}`);
+        if (!r.ok) {
+          err = t(`notif.pushErr.${r.reason}`);
+          denied = r.reason === 'denied';
+        }
       }
       await refreshPush();
-      if (err) {
-        statusEl.textContent = err;
-        statusEl.classList.add('text-danger');
-      } else {
-        statusEl.classList.remove('text-danger');
-      }
+      statusEl.classList.toggle('text-danger', !!err);
+      if (err) statusEl.textContent = err;
+      // When the browser has blocked notifications, show the step-by-step guide.
+      guideEl.classList.toggle('hidden', !denied);
       toggleBtn.disabled = false;
     });
     await refreshPush();
@@ -153,7 +191,7 @@ const CHANNELS = ['push', 'email', 'in_app'];
         preferences,
         quiet_hours_start: fromVal === '' ? null : Number(fromVal),
         quiet_hours_end: toVal === '' ? null : Number(toVal),
-        timezone: tzInput.value,
+        timezone: tzSel.value,
       });
       const saved = document.getElementById('saved')!;
       saved.classList.remove('hidden');
