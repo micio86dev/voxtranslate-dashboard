@@ -86,6 +86,13 @@
       "server": "Le notifiche push non sono ancora configurate sul server — contatta l'amministratore.",
       "failed": "Impossibile attivare le notifiche push. Riprova."
     },
+    "pushGuide": {
+      "title": "Come sbloccare le notifiche:",
+      "step1": "Clicca l'icona del lucchetto (o ⓘ) accanto all'indirizzo del sito nella barra degli indirizzi.",
+      "step2": "Apri \"Impostazioni sito\" o \"Autorizzazioni\".",
+      "step3": "Imposta \"Notifiche\" su \"Consenti\".",
+      "step4": "Ricarica la pagina, poi clicca di nuovo su \"Attiva\"."
+    },
     "saved": "Salvato"
   },
   "nav": {

@@ -143,7 +143,9 @@ export function renderSubBanner(org: OrgSummary, lang: Locale): void {
   // Dismiss (×). Snoozes this exact state so a worse state still breaks through.
   const close = document.createElement('button');
   close.type = 'button';
-  close.className = 'btn-ghost px-2.5 py-2 text-base leading-none';
+  // NB: not `text-base` — `--color-base` makes that a (background-)color utility in
+  // Tailwind v4, which would override btn-ghost's text-ink. `text-lg` is size-only.
+  close.className = 'btn-ghost px-2.5 py-2 text-lg leading-none';
   close.setAttribute('aria-label', t('banner.dismiss'));
   close.textContent = '×';
   close.addEventListener('click', () => {
