@@ -44,7 +44,7 @@ const t = useTranslations(lang);
 
 <script>
   import { boot } from '../../scripts/app-boot';
-  import { getOrg, patchOrg } from '../../lib/api';
+  import { getOrg, patchOrg, type OrgSettings } from '../../lib/api';
   import { useTranslations, type Locale } from '../../lib/i18n';
 
   void (async () => {
@@ -55,7 +55,8 @@ const t = useTranslations(lang);
 
     // Compliance mode + configurable retention are Enterprise-only — hide them for
     // other plans (the API also rejects enabling compliance on a non-Enterprise org).
-    if (ctx.activeOrg.plan !== 'enterprise') {
+    const isEnterprise = ctx.activeOrg.plan === 'enterprise';
+    if (!isEnterprise) {
       document.getElementById('retention-field')!.classList.add('hidden');
       document.getElementById('compliance-field')!.classList.add('hidden');
     }
@@ -80,15 +81,22 @@ const t = useTranslations(lang);
     document.getElementById('settings-form')!.addEventListener('submit', async (e) => {
       e.preventDefault();
       saved.classList.add('hidden');
-      const settings = {
-        retention_days: parseInt(retention.value, 10) || 90,
-        compliance_mode: compliance.checked,
+      const settings: OrgSettings = {
         allowed_domains: domains.value
           .split(',')
           .map((d) => d.trim().toLowerCase())
           .filter(Boolean),
         recording_notify_participants: recnotice.checked,
       };
+      // Only Enterprise orgs may set compliance mode / retention. Sending these on a
+      // business-plan org makes the API reject the whole save with 403 — even when the
+      // value is unchanged, because the (hidden) inputs still re-submit. Omitting them lets
+      // a business org save its other settings, and clears any stale Enterprise flags left
+      // behind by a downgrade.
+      if (isEnterprise) {
+        settings.retention_days = parseInt(retention.value, 10) || 90;
+        settings.compliance_mode = compliance.checked;
+      }
       const r = await patchOrg(orgId, { name: name.value.trim() || undefined, settings });
       if (r.ok) {
         saved.classList.remove('hidden');
