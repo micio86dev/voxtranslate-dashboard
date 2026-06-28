@@ -378,6 +378,8 @@ export interface TeamMember {
   email: string;
   avatar_url: string | null;
   joined_at: string;
+  /** 'lead' | 'member' — leads can run the insights assistant for this team. */
+  role: string;
 }
 
 export const listTeams = (orgId: string) =>
@@ -402,6 +404,44 @@ export const addTeamMember = (orgId: string, teamId: string, user_id: string) =>
 
 export const removeTeamMember = (orgId: string, teamId: string, userId: string) =>
   request<null>('DELETE', `/api/business/organizations/${orgId}/teams/${teamId}/members/${userId}`);
+
+export const setTeamMemberRole = (orgId: string, teamId: string, userId: string, role: string) =>
+  request<{ user_id: string; role: string }>(
+    'PATCH',
+    `/api/business/organizations/${orgId}/teams/${teamId}/members/${userId}`,
+    { role },
+  );
+
+// --- Insights assistant (team-lead / owner) ----------------------------------
+
+export interface InsightSource {
+  session_id: string;
+  room: string;
+  project_name: string | null;
+  speaker_name: string | null;
+  snippet: string;
+}
+
+export interface InsightResult {
+  answer_markdown: string;
+  sources: InsightSource[];
+  model: string;
+}
+
+export interface InsightBody {
+  mode: 'qa' | 'project_report' | 'member_report';
+  question?: string;
+  project_id?: string;
+  member_id?: string;
+}
+
+/**
+ * Generate an insight (Q&A or structured report) over the caller's team scope.
+ * 403 if the caller leads no team and isn't the owner; 503 if embeddings aren't
+ * configured.
+ */
+export const generateInsight = (orgId: string, body: InsightBody) =>
+  request<InsightResult>('POST', `/api/business/organizations/${orgId}/insights`, body);
 
 // --- Analytics ---------------------------------------------------------------
 
