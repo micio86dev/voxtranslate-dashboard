@@ -1,0 +1,136 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { localePaths, isLocale, DEFAULT_LOCALE, useTranslations } from '../../lib/i18n';
+
+export function getStaticPaths() {
+  return localePaths();
+}
+
+const lang = isLocale(Astro.params.lang) ? Astro.params.lang : DEFAULT_LOCALE;
+const t = useTranslations(lang);
+---
+
+<BaseLayout lang={lang} title={t('search.title')} chrome>
+  <h1 class="text-2xl font-bold">{t('search.title')}</h1>
+  <p class="mt-1 text-muted">{t('search.subtitle')}</p>
+
+  <form id="search-form" class="mt-6 flex flex-wrap items-end gap-3">
+    <div class="min-w-48 flex-1">
+      <label class="text-sm text-muted" for="q">{t('search.queryLabel')}</label>
+      <input
+        id="q"
+        type="search"
+        class="field mt-1 w-full"
+        placeholder={t('search.placeholder')}
+        autocomplete="off"
+      />
+    </div>
+    <div>
+      <label class="text-sm text-muted" for="project">{t('search.projectLabel')}</label>
+      <select id="project" class="field mt-1 max-w-56">
+        <option value="">{t('search.allProjects')}</option>
+      </select>
+    </div>
+    <button type="submit" class="btn-primary">{t('search.run')}</button>
+  </form>
+
+  <p id="msg" class="mt-6 text-muted"></p>
+  <div id="results" class="mt-4 space-y-3"></div>
+</BaseLayout>
+
+<script>
+  import { boot } from '../../scripts/app-boot';
+  import { listProjects, searchTranscripts, type SearchResult } from '../../lib/api';
+  import { useTranslations, type Locale } from '../../lib/i18n';
+
+  function esc(s: string): string {
+    return s.replace(
+      /[&<>"]/g,
+      (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c] || c,
+    );
+  }
+
+  void (async () => {
+    const ctx = await boot();
+    if (!ctx) return;
+    const t = useTranslations(ctx.lang as Locale);
+    const orgId = ctx.activeOrg.id;
+
+    const form = document.getElementById('search-form') as HTMLFormElement;
+    const qInput = document.getElementById('q') as HTMLInputElement;
+    const projectSel = document.getElementById('project') as HTMLSelectElement;
+    const msg = document.getElementById('msg')!;
+    const results = document.getElementById('results')!;
+
+    const fmt = (iso: string) => new Date(iso).toLocaleString(ctx.lang);
+    const detail = (sessionId: string) =>
+      `/${ctx.lang}/history/detail/?session=${encodeURIComponent(sessionId)}`;
+
+    // Populate the project filter. The server still scopes results to the caller's
+    // role regardless of selection — this is just a narrowing convenience.
+    const projRes = await listProjects(orgId);
+    for (const p of projRes.data ?? []) {
+      const opt = document.createElement('option');
+      opt.value = p.id;
+      opt.textContent = p.name;
+      projectSel.appendChild(opt);
+    }
+
+    // Pre-scope from the URL (?project=&q=) — used by the per-project search box on
+    // the project detail page, which deep-links here.
+    const url = new URLSearchParams(location.search);
+    const preProject = url.get('project');
+    const preQ = url.get('q');
+    if (preProject) projectSel.value = preProject;
+    if (preQ) qInput.value = preQ;
+
+    async function run() {
+      const q = qInput.value.trim();
+      if (!q) return;
+      msg.textContent = t('common.loading');
+      results.innerHTML = '';
+      const res = await searchTranscripts(orgId, {
+        q,
+        project_id: projectSel.value || undefined,
+        limit: 25,
+      });
+      if (res.status === 503) {
+        msg.textContent = t('search.unavailable');
+        return;
+      }
+      if (!res.ok || !res.data) {
+        msg.textContent = t('common.connError');
+        return;
+      }
+      const list = res.data.results;
+      if (list.length === 0) {
+        msg.textContent = t('search.noResults');
+        return;
+      }
+      msg.textContent = '';
+      results.innerHTML = list
+        .map((r: SearchResult) => {
+          const meta = [r.project_name, r.room, fmt(r.started_at)]
+            .filter(Boolean)
+            .map((s) => esc(String(s)))
+            .join(' · ');
+          const speaker = r.speaker_name
+            ? `<span class="font-medium">${esc(r.speaker_name)}: </span>`
+            : '';
+          return `<a href="${detail(r.session_id)}" class="card block hover:border-brand">
+            <div class="text-xs text-muted">${meta}</div>
+            <div class="mt-1 text-sm">${speaker}${esc(r.snippet)}</div>
+          </a>`;
+        })
+        .join('');
+    }
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      void run();
+    });
+
+    // Auto-run when arriving pre-scoped from a project's search box.
+    if (preQ) void run();
+  })();
+</script>
