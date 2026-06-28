@@ -472,6 +472,7 @@
     "notLead": "Vous devez diriger une équipe pour utiliser les insights. Désignez-vous comme chef d'équipe dans Équipes.",
     "unavailable": "L'assistant insights n'est pas disponible pour le moment.",
     "selectProject": "Sélectionnez d'abord un projet.",
-    "selectMember": "Sélectionnez d'abord un membre."
+    "selectMember": "Sélectionnez d'abord un membre.",
+    "insufficientCredits": "Crédits d'organisation insuffisants pour cet insight. Rechargez dans Crédits."
   }
 }

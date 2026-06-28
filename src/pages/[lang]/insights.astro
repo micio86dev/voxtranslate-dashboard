@@ -173,6 +173,10 @@ const t = useTranslations(lang);
         msg.textContent = t('insights.unavailable');
         return;
       }
+      if (res.status === 402) {
+        msg.textContent = t('insights.insufficientCredits');
+        return;
+      }
       if (!res.ok || !res.data) {
         msg.textContent = t('common.connError');
         return;

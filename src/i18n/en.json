@@ -472,6 +472,7 @@
     "notLead": "You need to lead a team to use insights. Assign yourself as a team lead under Teams.",
     "unavailable": "The insights assistant isn't available right now.",
     "selectProject": "Select a project first.",
-    "selectMember": "Select a member first."
+    "selectMember": "Select a member first.",
+    "insufficientCredits": "Not enough org credits for this insight. Top up under Credits."
   }
 }
