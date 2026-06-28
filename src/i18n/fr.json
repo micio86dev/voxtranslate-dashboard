@@ -105,7 +105,8 @@
     "settings": "Paramètres",
     "analytics": "Analytique",
     "teams": "Équipes",
-    "activity": "Activité"
+    "activity": "Activité",
+    "search": "Recherche"
   },
   "login": {
     "title": "Connectez-vous à votre espace de travail",
@@ -434,5 +435,19 @@
     "empty": "Aucune activité enregistrée pour l'instant.",
     "adminOnly": "Seuls les propriétaires et administrateurs peuvent voir le journal d'activité.",
     "loadMore": "Charger plus"
+  },
+  "search": {
+    "title": "Recherche sémantique",
+    "subtitle": "Recherchez dans les transcriptions d'appels de vos projets par sens, pas seulement par mots-clés.",
+    "queryLabel": "Recherche",
+    "placeholder": "ex. préoccupations sur les tarifs",
+    "projectLabel": "Projet",
+    "allProjects": "Tous les projets",
+    "run": "Rechercher",
+    "noResults": "Aucune transcription correspondante trouvée.",
+    "unavailable": "La recherche sémantique n'est pas disponible pour le moment.",
+    "projectSearchTitle": "Rechercher dans ce projet",
+    "projectSearchSubtitle": "Trouvez des moments dans les transcriptions de ce projet par sens.",
+    "projectSearchPh": "Rechercher dans les transcriptions…"
   }
 }

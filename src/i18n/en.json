@@ -105,7 +105,8 @@
     "settings": "Settings",
     "analytics": "Analytics",
     "teams": "Teams",
-    "activity": "Activity"
+    "activity": "Activity",
+    "search": "Search"
   },
   "login": {
     "title": "Sign in to your workspace",
@@ -434,5 +435,19 @@
     "empty": "No activity recorded yet.",
     "adminOnly": "Only owners and admins can view the activity log.",
     "loadMore": "Load more"
+  },
+  "search": {
+    "title": "Semantic search",
+    "subtitle": "Search across your projects' call transcripts by meaning, not just keywords.",
+    "queryLabel": "Search",
+    "placeholder": "e.g. concerns about pricing",
+    "projectLabel": "Project",
+    "allProjects": "All projects",
+    "run": "Search",
+    "noResults": "No matching transcripts found.",
+    "unavailable": "Semantic search isn't available right now.",
+    "projectSearchTitle": "Search this project",
+    "projectSearchSubtitle": "Find moments across this project's transcripts by meaning.",
+    "projectSearchPh": "Search transcripts…"
   }
 }

@@ -105,7 +105,8 @@
     "settings": "Ajustes",
     "analytics": "Analítica",
     "teams": "Equipos",
-    "activity": "Actividad"
+    "activity": "Actividad",
+    "search": "Buscar"
   },
   "login": {
     "title": "Inicia sesión en tu espacio de trabajo",
@@ -434,5 +435,19 @@
     "empty": "Aún no hay actividad registrada.",
     "adminOnly": "Solo los propietarios y administradores pueden ver el registro de actividad.",
     "loadMore": "Cargar más"
+  },
+  "search": {
+    "title": "Búsqueda semántica",
+    "subtitle": "Busca en las transcripciones de las llamadas de tus proyectos por significado, no solo por palabras clave.",
+    "queryLabel": "Buscar",
+    "placeholder": "p. ej. dudas sobre los precios",
+    "projectLabel": "Proyecto",
+    "allProjects": "Todos los proyectos",
+    "run": "Buscar",
+    "noResults": "No se encontraron transcripciones coincidentes.",
+    "unavailable": "La búsqueda semántica no está disponible en este momento.",
+    "projectSearchTitle": "Buscar en este proyecto",
+    "projectSearchSubtitle": "Encuentra momentos en las transcripciones de este proyecto por significado.",
+    "projectSearchPh": "Buscar en las transcripciones…"
   }
 }
