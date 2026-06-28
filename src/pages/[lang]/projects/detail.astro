@@ -53,6 +53,20 @@ const link = (p: string) => localizePath(lang, p);
   <p id="sb-msg" class="mt-3 text-sm text-muted"></p>
   <article id="sb-doc" class="card mt-3 hidden"></article>
 
+  <!-- Semantic search scoped to this project -->
+  <h2 class="mt-8 text-lg font-semibold">{t('search.projectSearchTitle')}</h2>
+  <p class="mt-1 text-sm text-muted">{t('search.projectSearchSubtitle')}</p>
+  <form id="proj-search" class="mt-3 flex flex-wrap items-end gap-2">
+    <input
+      id="proj-search-q"
+      type="search"
+      class="field min-w-48 flex-1"
+      placeholder={t('search.projectSearchPh')}
+      autocomplete="off"
+    />
+    <button type="submit" class="btn-primary text-sm">{t('search.run')}</button>
+  </form>
+
   <h2 class="mt-8 text-lg font-semibold">{t('projects.callsInProject')}</h2>
   <p class="card mt-3 text-sm text-muted">—</p>
 </BaseLayout>
@@ -139,6 +153,18 @@ const link = (p: string) => localizePath(lang, p);
       if (!confirm(t('projects.archiveConfirm', { name: p.name }))) return;
       await deleteProject(ctx.activeOrg.id, p.id);
       location.href = `/${ctx.lang}/projects/`;
+    });
+
+    // Per-project semantic search: deep-link to the global Search page pre-scoped to
+    // this project (?project=&q=), so the search logic lives in one place.
+    const searchForm = document.getElementById('proj-search') as HTMLFormElement;
+    const searchInput = document.getElementById('proj-search-q') as HTMLInputElement;
+    searchForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const q = searchInput.value.trim();
+      if (!q) return;
+      const params = new URLSearchParams({ project: p.id, q });
+      location.href = `/${ctx.lang}/search/?${params.toString()}`;
     });
 
     // --- AI storyboard ---

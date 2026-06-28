@@ -105,7 +105,8 @@
     "settings": "Einstellungen",
     "analytics": "Analytik",
     "teams": "Teams",
-    "activity": "Aktivität"
+    "activity": "Aktivität",
+    "search": "Suche"
   },
   "login": {
     "title": "Bei deinem Workspace anmelden",
@@ -434,5 +435,19 @@
     "empty": "Noch keine Aktivität aufgezeichnet.",
     "adminOnly": "Nur Eigentümer und Administratoren können das Aktivitätsprotokoll sehen.",
     "loadMore": "Mehr laden"
+  },
+  "search": {
+    "title": "Semantische Suche",
+    "subtitle": "Durchsuche die Gesprächstranskripte deiner Projekte nach Bedeutung, nicht nur nach Schlüsselwörtern.",
+    "queryLabel": "Suche",
+    "placeholder": "z. B. Bedenken zum Preis",
+    "projectLabel": "Projekt",
+    "allProjects": "Alle Projekte",
+    "run": "Suchen",
+    "noResults": "Keine passenden Transkripte gefunden.",
+    "unavailable": "Die semantische Suche ist derzeit nicht verfügbar.",
+    "projectSearchTitle": "In diesem Projekt suchen",
+    "projectSearchSubtitle": "Finde Momente in den Transkripten dieses Projekts nach Bedeutung.",
+    "projectSearchPh": "Transkripte durchsuchen…"
   }
 }

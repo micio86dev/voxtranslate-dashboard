@@ -260,6 +260,45 @@ export async function downloadTranscript(
   }
 }
 
+// --- Semantic transcript search ----------------------------------------------
+
+export interface SearchResult {
+  session_id: string;
+  project_id: string | null;
+  project_name: string | null;
+  room: string;
+  started_at: string;
+  /** Matched transcript chunk, shown as the result snippet. */
+  snippet: string;
+  speaker_name: string | null;
+  start_ms: number | null;
+  /** Cosine similarity (0–1); higher is closer. */
+  score: number;
+}
+
+export interface SearchQuery {
+  q: string;
+  /** Narrow to one project; omit to search every project the caller may see. */
+  project_id?: string;
+  limit?: number;
+}
+
+/**
+ * Semantic search over the org's diarized transcripts, scoped server-side to the
+ * caller's role (members: own/participated projects; admins: all). 503 when the
+ * backend has no embeddings provider configured.
+ */
+export const searchTranscripts = (orgId: string, q: SearchQuery) => {
+  const params = new URLSearchParams();
+  params.set('q', q.q);
+  if (q.project_id) params.set('project_id', q.project_id);
+  if (q.limit) params.set('limit', String(q.limit));
+  return request<{ results: SearchResult[] }>(
+    'GET',
+    `/api/business/organizations/${orgId}/search?${params.toString()}`,
+  );
+};
+
 // --- Org billing -------------------------------------------------------------
 
 export interface LedgerTxn {
