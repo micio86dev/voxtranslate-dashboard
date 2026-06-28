@@ -35,6 +35,7 @@ const t = useTranslations(lang);
     listTeamMembers,
     removeTeamMember,
     renameTeam,
+    setTeamMemberRole,
     type Member,
     type Team,
     type TeamMember,
@@ -84,14 +85,15 @@ const t = useTranslations(lang);
       const current = new Set(members.map((m) => m.user_id));
       const chips = members.length
         ? members
-            .map(
-              (
-                m,
-              ) => `<span class="inline-flex items-center gap-1 rounded-full border border-line bg-base px-2 py-1 text-xs">
+            .map((m) => {
+              const isLead = m.role === 'lead';
+              return `<span class="inline-flex items-center gap-1 rounded-full border ${isLead ? 'border-brand text-brand' : 'border-line'} bg-base px-2 py-1 text-xs">
                 ${esc(m.name || m.email)}
+                ${isLead ? `<span class="font-semibold">★ ${esc(t('teams.lead'))}</span>` : ''}
+                ${isAdmin ? `<button class="text-muted hover:text-brand" data-lead="${teamId}:${m.user_id}:${m.role}" title="${esc(isLead ? t('teams.unsetLead') : t('teams.setLead'))}">${isLead ? '☆' : '★'}</button>` : ''}
                 ${isAdmin ? `<button class="text-muted hover:text-danger" data-rm="${teamId}:${m.user_id}" title="${esc(t('teams.remove'))}">×</button>` : ''}
-              </span>`,
-            )
+              </span>`;
+            })
             .join('')
         : `<p class="text-xs text-muted">${esc(t('teams.noMembers'))}</p>`;
       panel.innerHTML =
@@ -190,6 +192,14 @@ const t = useTranslations(lang);
         const panel = teamsEl.querySelector<HTMLElement>(`[data-panel="${addBtn}"]`)!;
         await renderTeamMembers(addBtn, panel);
         await refreshCount(addBtn);
+        return;
+      }
+      const lead = el.getAttribute('data-lead');
+      if (lead) {
+        const [teamId, userId, role] = lead.split(':');
+        await setTeamMemberRole(orgId, teamId, userId, role === 'lead' ? 'member' : 'lead');
+        const panel = teamsEl.querySelector<HTMLElement>(`[data-panel="${teamId}"]`)!;
+        await renderTeamMembers(teamId, panel);
         return;
       }
       const rm = el.getAttribute('data-rm');

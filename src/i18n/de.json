@@ -106,7 +106,8 @@
     "analytics": "Analytik",
     "teams": "Teams",
     "activity": "Aktivität",
-    "search": "Suche"
+    "search": "Suche",
+    "insights": "Insights"
   },
   "login": {
     "title": "Bei deinem Workspace anmelden",
@@ -399,7 +400,10 @@
     "noMembers": "Noch keine Mitglieder in diesem Team.",
     "allAdded": "Alle Mitglieder sind bereits in diesem Team.",
     "confirmDelete": "Dieses Team löschen? Mitglieder bleiben in der Organisation.",
-    "adminOnly": "Nur Administratoren und Eigentümer können Teams verwalten."
+    "adminOnly": "Nur Administratoren und Eigentümer können Teams verwalten.",
+    "lead": "Leitung",
+    "setLead": "Als Teamleiter festlegen",
+    "unsetLead": "Als Teamleiter entfernen"
   },
   "memberAnalytics": {
     "title": "Mitglieder-Insights",
@@ -449,5 +453,25 @@
     "projectSearchTitle": "In diesem Projekt suchen",
     "projectSearchSubtitle": "Finde Momente in den Transkripten dieses Projekts nach Bedeutung.",
     "projectSearchPh": "Transkripte durchsuchen…"
+  },
+  "insights": {
+    "title": "Insights",
+    "subtitle": "Frag zu deinen Projekten und Teammitgliedern oder erstelle einen Bericht — basierend auf Gesprächstranskripten und Aktivität.",
+    "projectLabel": "Projekt",
+    "allProjects": "Alle Projekte",
+    "memberLabel": "Mitglied",
+    "anyMember": "Beliebiges Mitglied",
+    "placeholder": "z. B. Wie läuft das Projekt Acme? Wo kann sich Maria verbessern?",
+    "ask": "Fragen",
+    "orReport": "oder einen Bericht erstellen:",
+    "projectReport": "Projektbericht",
+    "memberReport": "Mitgliederbericht",
+    "sources": "Quellen",
+    "thinking": "Analysiere…",
+    "notEligible": "Insights sind für Teamleiter und Eigentümer verfügbar. Bitte einen Admin, dich als Teamleiter festzulegen.",
+    "notLead": "Du musst ein Team leiten, um Insights zu nutzen. Weise dich unter Teams als Teamleiter zu.",
+    "unavailable": "Der Insights-Assistent ist derzeit nicht verfügbar.",
+    "selectProject": "Wähle zuerst ein Projekt.",
+    "selectMember": "Wähle zuerst ein Mitglied."
   }
 }

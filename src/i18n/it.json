@@ -106,7 +106,8 @@
     "analytics": "Analitica",
     "teams": "Team",
     "activity": "Attività",
-    "search": "Cerca"
+    "search": "Cerca",
+    "insights": "Insight"
   },
   "login": {
     "title": "Accedi al tuo spazio di lavoro",
@@ -399,7 +400,10 @@
     "noMembers": "Ancora nessun membro in questo team.",
     "allAdded": "Tutti i membri sono già in questo team.",
     "confirmDelete": "Eliminare questo team? I membri restano nell’organizzazione.",
-    "adminOnly": "Solo amministratori e proprietari possono gestire i team."
+    "adminOnly": "Solo amministratori e proprietari possono gestire i team.",
+    "lead": "Lead",
+    "setLead": "Rendi team lead",
+    "unsetLead": "Rimuovi da team lead"
   },
   "memberAnalytics": {
     "title": "Statistiche membro",
@@ -449,5 +453,25 @@
     "projectSearchTitle": "Cerca in questo progetto",
     "projectSearchSubtitle": "Trova momenti nelle trascrizioni di questo progetto per significato.",
     "projectSearchPh": "Cerca nelle trascrizioni…"
+  },
+  "insights": {
+    "title": "Insight",
+    "subtitle": "Chiedi sui tuoi progetti e membri del team, o genera un report — basato sulle trascrizioni delle chiamate e sull'attività.",
+    "projectLabel": "Progetto",
+    "allProjects": "Tutti i progetti",
+    "memberLabel": "Membro",
+    "anyMember": "Qualsiasi membro",
+    "placeholder": "es. Come sta andando il progetto Acme? Dove può migliorare Maria?",
+    "ask": "Chiedi",
+    "orReport": "oppure genera un report:",
+    "projectReport": "Report progetto",
+    "memberReport": "Report membro",
+    "sources": "Fonti",
+    "thinking": "Analisi in corso…",
+    "notEligible": "Gli insight sono disponibili per i team lead e i proprietari. Chiedi a un admin di nominarti team lead.",
+    "notLead": "Devi essere a capo di un team per usare gli insight. Assegnati come team lead nella sezione Team.",
+    "unavailable": "L'assistente insight non è disponibile al momento.",
+    "selectProject": "Seleziona prima un progetto.",
+    "selectMember": "Seleziona prima un membro."
   }
 }
