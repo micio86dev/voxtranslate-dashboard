@@ -106,7 +106,8 @@
     "analytics": "Analítica",
     "teams": "Equipos",
     "activity": "Actividad",
-    "search": "Buscar"
+    "search": "Buscar",
+    "insights": "Insights"
   },
   "login": {
     "title": "Inicia sesión en tu espacio de trabajo",
@@ -399,7 +400,10 @@
     "noMembers": "Aún no hay miembros en este equipo.",
     "allAdded": "Todos los miembros ya están en este equipo.",
     "confirmDelete": "¿Eliminar este equipo? Los miembros siguen en la organización.",
-    "adminOnly": "Solo administradores y propietarios pueden gestionar equipos."
+    "adminOnly": "Solo administradores y propietarios pueden gestionar equipos.",
+    "lead": "Líder",
+    "setLead": "Nombrar líder de equipo",
+    "unsetLead": "Quitar como líder de equipo"
   },
   "memberAnalytics": {
     "title": "Estadísticas del miembro",
@@ -449,5 +453,25 @@
     "projectSearchTitle": "Buscar en este proyecto",
     "projectSearchSubtitle": "Encuentra momentos en las transcripciones de este proyecto por significado.",
     "projectSearchPh": "Buscar en las transcripciones…"
+  },
+  "insights": {
+    "title": "Insights",
+    "subtitle": "Pregunta sobre tus proyectos y miembros del equipo, o genera un informe — basado en transcripciones de llamadas y actividad.",
+    "projectLabel": "Proyecto",
+    "allProjects": "Todos los proyectos",
+    "memberLabel": "Miembro",
+    "anyMember": "Cualquier miembro",
+    "placeholder": "p. ej. ¿Cómo va el proyecto Acme? ¿En qué puede mejorar María?",
+    "ask": "Preguntar",
+    "orReport": "o genera un informe:",
+    "projectReport": "Informe de proyecto",
+    "memberReport": "Informe de miembro",
+    "sources": "Fuentes",
+    "thinking": "Analizando…",
+    "notEligible": "Los insights están disponibles para líderes de equipo y propietarios. Pide a un admin que te nombre líder de equipo.",
+    "notLead": "Necesitas liderar un equipo para usar los insights. Asignáte como líder de equipo en Equipos.",
+    "unavailable": "El asistente de insights no está disponible en este momento.",
+    "selectProject": "Selecciona primero un proyecto.",
+    "selectMember": "Selecciona primero un miembro."
   }
 }

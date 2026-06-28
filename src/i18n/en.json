@@ -106,7 +106,8 @@
     "analytics": "Analytics",
     "teams": "Teams",
     "activity": "Activity",
-    "search": "Search"
+    "search": "Search",
+    "insights": "Insights"
   },
   "login": {
     "title": "Sign in to your workspace",
@@ -399,7 +400,10 @@
     "noMembers": "No members in this team yet.",
     "allAdded": "All members are already on this team.",
     "confirmDelete": "Delete this team? Members stay in the organization.",
-    "adminOnly": "Only admins and owners can manage teams."
+    "adminOnly": "Only admins and owners can manage teams.",
+    "lead": "Lead",
+    "setLead": "Make team lead",
+    "unsetLead": "Remove as team lead"
   },
   "memberAnalytics": {
     "title": "Member insights",
@@ -449,5 +453,25 @@
     "projectSearchTitle": "Search this project",
     "projectSearchSubtitle": "Find moments across this project's transcripts by meaning.",
     "projectSearchPh": "Search transcripts…"
+  },
+  "insights": {
+    "title": "Insights",
+    "subtitle": "Ask about your projects and team members, or generate a report — grounded in call transcripts and activity.",
+    "projectLabel": "Project",
+    "allProjects": "All projects",
+    "memberLabel": "Member",
+    "anyMember": "Any member",
+    "placeholder": "e.g. How is the Acme project going? Where can Maria improve?",
+    "ask": "Ask",
+    "orReport": "or generate a report:",
+    "projectReport": "Project report",
+    "memberReport": "Member report",
+    "sources": "Sources",
+    "thinking": "Analyzing…",
+    "notEligible": "Insights are available to team leads and owners. Ask an admin to make you a team lead.",
+    "notLead": "You need to lead a team to use insights. Assign yourself as a team lead under Teams.",
+    "unavailable": "The insights assistant isn't available right now.",
+    "selectProject": "Select a project first.",
+    "selectMember": "Select a member first."
   }
 }

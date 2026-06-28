@@ -106,7 +106,8 @@
     "analytics": "Analytique",
     "teams": "Équipes",
     "activity": "Activité",
-    "search": "Recherche"
+    "search": "Recherche",
+    "insights": "Insights"
   },
   "login": {
     "title": "Connectez-vous à votre espace de travail",
@@ -399,7 +400,10 @@
     "noMembers": "Aucun membre dans cette équipe pour l’instant.",
     "allAdded": "Tous les membres sont déjà dans cette équipe.",
     "confirmDelete": "Supprimer cette équipe ? Les membres restent dans l’organisation.",
-    "adminOnly": "Seuls les administrateurs et propriétaires peuvent gérer les équipes."
+    "adminOnly": "Seuls les administrateurs et propriétaires peuvent gérer les équipes.",
+    "lead": "Chef",
+    "setLead": "Nommer chef d'équipe",
+    "unsetLead": "Retirer comme chef d'équipe"
   },
   "memberAnalytics": {
     "title": "Statistiques du membre",
@@ -449,5 +453,25 @@
     "projectSearchTitle": "Rechercher dans ce projet",
     "projectSearchSubtitle": "Trouvez des moments dans les transcriptions de ce projet par sens.",
     "projectSearchPh": "Rechercher dans les transcriptions…"
+  },
+  "insights": {
+    "title": "Insights",
+    "subtitle": "Posez des questions sur vos projets et membres d'équipe, ou générez un rapport — basé sur les transcriptions d'appels et l'activité.",
+    "projectLabel": "Projet",
+    "allProjects": "Tous les projets",
+    "memberLabel": "Membre",
+    "anyMember": "N'importe quel membre",
+    "placeholder": "ex. Comment avance le projet Acme ? Où Maria peut-elle s'améliorer ?",
+    "ask": "Demander",
+    "orReport": "ou générez un rapport :",
+    "projectReport": "Rapport de projet",
+    "memberReport": "Rapport de membre",
+    "sources": "Sources",
+    "thinking": "Analyse en cours…",
+    "notEligible": "Les insights sont disponibles pour les chefs d'équipe et les propriétaires. Demandez à un admin de vous nommer chef d'équipe.",
+    "notLead": "Vous devez diriger une équipe pour utiliser les insights. Désignez-vous comme chef d'équipe dans Équipes.",
+    "unavailable": "L'assistant insights n'est pas disponible pour le moment.",
+    "selectProject": "Sélectionnez d'abord un projet.",
+    "selectMember": "Sélectionnez d'abord un membre."
   }
 }
