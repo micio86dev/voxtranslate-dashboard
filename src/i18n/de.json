@@ -472,6 +472,7 @@
     "notLead": "Du musst ein Team leiten, um Insights zu nutzen. Weise dich unter Teams als Teamleiter zu.",
     "unavailable": "Der Insights-Assistent ist derzeit nicht verfügbar.",
     "selectProject": "Wähle zuerst ein Projekt.",
-    "selectMember": "Wähle zuerst ein Mitglied."
+    "selectMember": "Wähle zuerst ein Mitglied.",
+    "insufficientCredits": "Nicht genug Org-Credits für diesen Insight. Lade unter Credits auf."
   }
 }
