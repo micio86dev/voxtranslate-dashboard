@@ -227,7 +227,15 @@
     "statusNone": "—",
     "statusProcessing": "Traitement…",
     "statusReady": "Prête",
-    "statusFailed": "Échec"
+    "statusFailed": "Échec",
+    "project": "Projet",
+    "allProjects": "Tous les projets",
+    "from": "Du",
+    "to": "Au",
+    "members": "Membres",
+    "allMembers": "Tous les membres",
+    "membersSelected": "{count} sélectionnés",
+    "clearFilters": "Effacer les filtres"
   },
   "transcript": {
     "title": "Transcription",

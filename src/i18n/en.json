@@ -227,7 +227,15 @@
     "statusNone": "—",
     "statusProcessing": "Processing…",
     "statusReady": "Ready",
-    "statusFailed": "Failed"
+    "statusFailed": "Failed",
+    "project": "Project",
+    "allProjects": "All projects",
+    "from": "From",
+    "to": "To",
+    "members": "Members",
+    "allMembers": "All members",
+    "membersSelected": "{count} selected",
+    "clearFilters": "Clear filters"
   },
   "transcript": {
     "title": "Transcript",

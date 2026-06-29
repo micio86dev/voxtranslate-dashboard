@@ -227,7 +227,15 @@
     "statusNone": "—",
     "statusProcessing": "Procesando…",
     "statusReady": "Lista",
-    "statusFailed": "Fallida"
+    "statusFailed": "Fallida",
+    "project": "Proyecto",
+    "allProjects": "Todos los proyectos",
+    "from": "Desde",
+    "to": "Hasta",
+    "members": "Miembros",
+    "allMembers": "Todos los miembros",
+    "membersSelected": "{count} seleccionados",
+    "clearFilters": "Borrar filtros"
   },
   "transcript": {
     "title": "Transcripción",
