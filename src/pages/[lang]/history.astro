@@ -13,11 +13,47 @@ const t = useTranslations(lang);
 <BaseLayout lang={lang} title={t('history.title')} chrome>
   <h1 class="text-2xl font-bold">{t('history.title')}</h1>
 
-  <div class="card mt-6 overflow-x-auto p-0">
+  <!-- Filters: project, date range, and participating members -->
+  <div class="mt-6 flex flex-wrap items-end gap-3">
+    <div>
+      <label class="label" for="f-project">{t('history.project')}</label>
+      <select id="f-project" class="field text-sm">
+        <option value="">{t('history.allProjects')}</option>
+      </select>
+    </div>
+    <div>
+      <label class="label" for="f-from">{t('history.from')}</label>
+      <input id="f-from" type="date" class="field text-sm" />
+    </div>
+    <div>
+      <label class="label" for="f-to">{t('history.to')}</label>
+      <input id="f-to" type="date" class="field text-sm" />
+    </div>
+    <div>
+      <span class="label">{t('history.members')}</span>
+      <details id="f-members" class="relative">
+        <summary
+          class="field flex w-48 cursor-pointer list-none items-center justify-between gap-2 text-sm"
+        >
+          <span id="f-members-label" class="truncate">{t('history.allMembers')}</span>
+          <span aria-hidden="true">▾</span>
+        </summary>
+        <div
+          id="f-members-list"
+          class="absolute z-20 mt-1 max-h-60 w-56 overflow-auto rounded-lg border border-line bg-surface p-1 shadow-lg"
+        >
+        </div>
+      </details>
+    </div>
+    <button id="f-clear" class="btn-ghost text-sm">{t('history.clearFilters')}</button>
+  </div>
+
+  <div class="card mt-4 overflow-x-auto p-0">
     <table class="w-full text-sm">
       <thead class="border-b border-line text-left text-muted">
         <tr>
           <th class="px-4 py-3">{t('history.room')}</th>
+          <th class="px-4 py-3">{t('history.project')}</th>
           <th class="px-4 py-3">{t('history.started')}</th>
           <th class="px-4 py-3">{t('history.status')}</th>
           <th class="px-4 py-3">{t('history.recording')}</th>
@@ -37,7 +73,7 @@ const t = useTranslations(lang);
 
 <script>
   import { boot } from '../../scripts/app-boot';
-  import { listOrgRooms } from '../../lib/api';
+  import { listOrgRooms, listProjects, listMembers } from '../../lib/api';
   import { useTranslations, type Locale } from '../../lib/i18n';
 
   function esc(s: string): string {
@@ -51,25 +87,67 @@ const t = useTranslations(lang);
     const ctx = await boot();
     if (!ctx) return;
     const t = useTranslations(ctx.lang as Locale);
+    const orgId = ctx.activeOrg.id;
     const limit = 20;
+
     let page = 1;
+    let projectId = '';
+    let from = ''; // YYYY-MM-DD from the date input
+    let to = '';
+    let memberIds: string[] = [];
 
     const rows = document.getElementById('rows')!;
     const empty = document.getElementById('empty')!;
     const prev = document.getElementById('prev') as HTMLButtonElement;
     const next = document.getElementById('next') as HTMLButtonElement;
+    const fProject = document.getElementById('f-project') as HTMLSelectElement;
+    const fFrom = document.getElementById('f-from') as HTMLInputElement;
+    const fTo = document.getElementById('f-to') as HTMLInputElement;
+    const fMembersList = document.getElementById('f-members-list')!;
+    const fMembersLabel = document.getElementById('f-members-label')!;
+    const fClear = document.getElementById('f-clear') as HTMLButtonElement;
+
     const fmt = (iso: string) => new Date(iso).toLocaleString(ctx.lang);
     const statusLabel = (s: string) => t(`history.status${s.charAt(0).toUpperCase()}${s.slice(1)}`);
     const detail = (id: string) => `/${ctx.lang}/history/detail/?session=${encodeURIComponent(id)}`;
+    // The API wants RFC3339; widen a day-input to cover the whole day in UTC.
+    const rfc = (d: string, end: boolean) =>
+      d ? `${d}T${end ? '23:59:59' : '00:00:00'}Z` : undefined;
+
+    // Populate the project + member filters (best-effort; filters just stay empty on failure).
+    const [projRes, memRes] = await Promise.all([listProjects(orgId), listMembers(orgId)]);
+    for (const p of (projRes.data ?? []).filter((p) => !p.archived_at)) {
+      const opt = document.createElement('option');
+      opt.value = p.id;
+      opt.textContent = p.name;
+      fProject.appendChild(opt);
+    }
+    fMembersList.innerHTML = (memRes.data ?? [])
+      .map(
+        (m) =>
+          `<label class="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 hover:bg-base">
+             <input type="checkbox" class="m-chk" value="${esc(m.user_id)}" />
+             <span class="truncate">${esc(m.name)}</span>
+           </label>`,
+      )
+      .join('');
 
     async function render() {
-      const res = await listOrgRooms(ctx!.activeOrg.id, { page, limit });
+      const res = await listOrgRooms(orgId, {
+        page,
+        limit,
+        project_id: projectId || undefined,
+        from: rfc(from, false),
+        to: rfc(to, true),
+        member_ids: memberIds.length ? memberIds.join(',') : undefined,
+      });
       const list = res.data?.rooms ?? [];
       empty.classList.toggle('hidden', list.length > 0 || page > 1);
       rows.innerHTML = list
         .map(
           (r) => `<tr class="border-b border-line last:border-0">
             <td class="px-4 py-3 font-medium">${esc(r.room)}</td>
+            <td class="px-4 py-3">${r.project_name ? `<span class="badge">${esc(r.project_name)}</span>` : '<span class="text-muted">—</span>'}</td>
             <td class="px-4 py-3 text-muted">${esc(fmt(r.started_at))}</td>
             <td class="px-4 py-3"><span class="badge">${esc(statusLabel(r.transcript_status))}</span></td>
             <td class="px-4 py-3">${r.has_recording ? '☁️' : '—'}</td>
@@ -80,6 +158,47 @@ const t = useTranslations(lang);
       prev.disabled = page <= 1;
       next.disabled = list.length < limit;
     }
+
+    const reset = () => {
+      page = 1;
+      void render();
+    };
+
+    fProject.addEventListener('change', () => {
+      projectId = fProject.value;
+      reset();
+    });
+    fFrom.addEventListener('change', () => {
+      from = fFrom.value;
+      reset();
+    });
+    fTo.addEventListener('change', () => {
+      to = fTo.value;
+      reset();
+    });
+    fMembersList.addEventListener('change', () => {
+      memberIds = Array.from(fMembersList.querySelectorAll<HTMLInputElement>('.m-chk:checked')).map(
+        (c) => c.value,
+      );
+      fMembersLabel.textContent = memberIds.length
+        ? t('history.membersSelected', { count: memberIds.length })
+        : t('history.allMembers');
+      reset();
+    });
+    fClear.addEventListener('click', () => {
+      projectId = '';
+      from = '';
+      to = '';
+      memberIds = [];
+      fProject.value = '';
+      fFrom.value = '';
+      fTo.value = '';
+      fMembersList
+        .querySelectorAll<HTMLInputElement>('.m-chk:checked')
+        .forEach((c) => (c.checked = false));
+      fMembersLabel.textContent = t('history.allMembers');
+      reset();
+    });
 
     prev.addEventListener('click', () => {
       if (page > 1) {
