@@ -474,5 +474,17 @@
     "selectProject": "Wähle zuerst ein Projekt.",
     "selectMember": "Wähle zuerst ein Mitglied.",
     "insufficientCredits": "Nicht genug Org-Credits für diesen Insight. Lade unter Credits auf."
+  },
+  "voiceNotes": {
+    "title": "Sprachnotizen",
+    "subtitle": "Nimm eine Sprachnotiz für dieses Projekt auf. Sie wird transkribiert und übersetzt und fließt in die Suche und Insights des Projekts ein.",
+    "record": "Sprachnotiz aufnehmen",
+    "send": "Senden",
+    "empty": "Noch keine Sprachnotizen in diesem Projekt.",
+    "uploading": "Wird hochgeladen…",
+    "sent": "Sprachnotiz zum Projekt hinzugefügt.",
+    "error": "Sprachnotiz konnte nicht gesendet werden — bitte erneut versuchen.",
+    "noCredits": "Sprachnotiz gespeichert, aber die Übersetzung benötigt Credits.",
+    "micDenied": "Mikrofonzugriff verweigert."
   }
 }
