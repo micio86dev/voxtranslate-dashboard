@@ -226,6 +226,7 @@ export interface RoomRow {
   started_at: string;
   ended_at: string | null;
   project_id: string | null;
+  project_name: string | null;
   transcript_status: string;
   has_recording: boolean;
 }
@@ -242,6 +243,8 @@ export interface HistoryQuery {
   limit?: number;
   from?: string;
   to?: string;
+  /** Comma-separated participant user-ids (OR filter). */
+  member_ids?: string;
 }
 
 export const listOrgRooms = (orgId: string, q: HistoryQuery = {}) => {
@@ -251,6 +254,7 @@ export const listOrgRooms = (orgId: string, q: HistoryQuery = {}) => {
   if (q.limit) params.set('limit', String(q.limit));
   if (q.from) params.set('from', q.from);
   if (q.to) params.set('to', q.to);
+  if (q.member_ids) params.set('member_ids', q.member_ids);
   const qs = params.toString();
   return request<HistoryPage>(
     'GET',
