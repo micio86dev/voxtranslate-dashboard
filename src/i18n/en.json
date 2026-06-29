@@ -474,5 +474,17 @@
     "selectProject": "Select a project first.",
     "selectMember": "Select a member first.",
     "insufficientCredits": "Not enough org credits for this insight. Top up under Credits."
+  },
+  "voiceNotes": {
+    "title": "Voice notes",
+    "subtitle": "Record a voice note for this project. It's transcribed and translated, and feeds the project's search and insights.",
+    "record": "Record a voice note",
+    "send": "Send",
+    "empty": "No voice notes in this project yet.",
+    "uploading": "Uploading…",
+    "sent": "Voice note added to the project.",
+    "error": "Couldn't send the voice note — please try again.",
+    "noCredits": "Voice note saved, but translation needs credits.",
+    "micDenied": "Microphone access denied."
   }
 }

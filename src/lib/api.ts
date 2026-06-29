@@ -153,6 +153,68 @@ export const patchProject = (
 export const deleteProject = (orgId: string, projectId: string) =>
   request<null>('DELETE', `/api/business/organizations/${orgId}/projects/${projectId}`);
 
+// --- Project voice messages --------------------------------------------------
+
+export interface ProjectVoiceMessage {
+  id: string;
+  session_id: string;
+  transcript_id: string | null;
+  created_by_name: string;
+  file_name: string;
+  content_type: string;
+  size_bytes: number;
+  duration_seconds: number | null;
+  source_language: string;
+  word_count: number | null;
+  translated: boolean;
+  created_at: string;
+}
+
+export interface VoiceMessageCreated {
+  id: string;
+  translated: boolean;
+  /** 'credits' (org out of credits, saved untranslated) | 'error' (Groq failed). */
+  translate_blocked: string | null;
+}
+
+export const listVoiceMessages = (orgId: string, projectId: string) =>
+  request<{ voice_messages: ProjectVoiceMessage[] }>(
+    'GET',
+    `/api/business/organizations/${orgId}/projects/${projectId}/voice-messages`,
+  );
+
+export const voiceMessageAudioUrl = (orgId: string, projectId: string, voiceMessageId: string) =>
+  request<{ url: string }>(
+    'GET',
+    `/api/business/organizations/${orgId}/projects/${projectId}/voice-messages/${voiceMessageId}/audio-url`,
+  );
+
+/** Upload a recorded voice note to a project (multipart — the JSON `request`
+ *  helper can't carry a file). The server transcribes + translates + persists it
+ *  into the project's insights data. */
+export async function uploadVoiceMessage(
+  orgId: string,
+  projectId: string,
+  file: File,
+  durationSeconds: number | null,
+): Promise<ApiResult<VoiceMessageCreated>> {
+  try {
+    const form = new FormData();
+    form.append('file', file, file.name);
+    if (durationSeconds != null) form.append('duration_seconds', String(Math.round(durationSeconds)));
+    // No Content-Type header — the browser sets the multipart boundary itself.
+    const res = await fetch(
+      `${API_BASE}/api/business/organizations/${orgId}/projects/${projectId}/voice-messages`,
+      { method: 'POST', headers: { ...authHeaders() }, body: form },
+    );
+    const data =
+      res.status !== 204 ? ((await res.json().catch(() => null)) as VoiceMessageCreated | null) : null;
+    return { ok: res.ok, status: res.status, data };
+  } catch {
+    return { ok: false, status: 0, data: null };
+  }
+}
+
 // --- Call history ------------------------------------------------------------
 
 export interface RoomRow {
