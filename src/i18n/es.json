@@ -474,5 +474,17 @@
     "selectProject": "Selecciona primero un proyecto.",
     "selectMember": "Selecciona primero un miembro.",
     "insufficientCredits": "No hay suficientes créditos de la organización para este insight. Recarga en Créditos."
+  },
+  "voiceNotes": {
+    "title": "Notas de voz",
+    "subtitle": "Graba una nota de voz para este proyecto. Se transcribe y traduce, y alimenta la búsqueda y los insights del proyecto.",
+    "record": "Grabar una nota de voz",
+    "send": "Enviar",
+    "empty": "Aún no hay notas de voz en este proyecto.",
+    "uploading": "Subiendo…",
+    "sent": "Nota de voz añadida al proyecto.",
+    "error": "No se pudo enviar la nota de voz: inténtalo de nuevo.",
+    "noCredits": "Nota de voz guardada, pero la traducción necesita créditos.",
+    "micDenied": "Acceso al micrófono denegado."
   }
 }
