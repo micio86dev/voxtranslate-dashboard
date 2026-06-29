@@ -51,7 +51,37 @@ const link = (p: string) => localizePath(lang, p);
   </div>
 
   <p id="sb-msg" class="mt-3 text-sm text-muted"></p>
-  <article id="sb-doc" class="card mt-3 hidden"></article>
+
+  <!-- View toggle: the same storyboard rendered as a Markdown document or as a
+       vertical timeline of its sections. Shown only once a storyboard exists. -->
+  <div
+    id="sb-tabs"
+    role="tablist"
+    aria-label={t('storyboard.viewsLabel')}
+    class="mt-3 hidden w-max items-center gap-0.5 rounded-lg border border-line bg-base p-0.5 text-sm"
+  >
+    <button
+      id="sb-tab-doc"
+      role="tab"
+      aria-selected="true"
+      aria-controls="sb-doc"
+      class="rounded-md px-3 py-1.5 font-medium">{t('storyboard.viewDocument')}</button>
+    <button
+      id="sb-tab-timeline"
+      role="tab"
+      aria-selected="false"
+      aria-controls="sb-timeline"
+      tabindex="-1"
+      class="rounded-md px-3 py-1.5 font-medium">{t('storyboard.viewTimeline')}</button>
+  </div>
+
+  <article id="sb-doc" role="tabpanel" aria-labelledby="sb-tab-doc" class="card mt-3 hidden"></article>
+  <article
+    id="sb-timeline"
+    role="tabpanel"
+    aria-labelledby="sb-tab-timeline"
+    tabindex="0"
+    class="card mt-3 hidden"></article>
 
   <!-- Semantic search scoped to this project -->
   <h2 class="mt-8 text-lg font-semibold">{t('search.projectSearchTitle')}</h2>
@@ -149,6 +179,51 @@ const link = (p: string) => localizePath(lang, p);
     return html;
   }
 
+  /** Split storyboard Markdown into its top-level (#/##) sections, one per
+   *  timeline node. Text before the first heading becomes an untitled lead node. */
+  function splitSections(md: string): { title: string; body: string }[] {
+    const out: { title: string; body: string }[] = [];
+    let cur: { title: string; body: string } | null = null;
+    for (const line of md.split('\n')) {
+      const m = /^#{1,2}\s+(.*\S)\s*$/.exec(line);
+      if (m) {
+        if (cur) out.push(cur);
+        cur = { title: m[1], body: '' };
+      } else if (cur) {
+        cur.body += line + '\n';
+      } else if (line.trim()) {
+        cur = { title: '', body: line + '\n' };
+      }
+    }
+    if (cur) out.push(cur);
+    return out.filter((s) => s.title || s.body.trim());
+  }
+
+  /** Render the storyboard as a vertical timeline — one node per section on a
+   *  brand-dotted rail. Bodies reuse renderMarkdown (minus the section heading).
+   *  Falls back to the plain document if the text has no headings to anchor on. */
+  function renderTimeline(md: string): string {
+    const sections = splitSections(md);
+    if (sections.length < 2) return renderMarkdown(md);
+    const nodes = sections
+      .map((s) => {
+        const title = s.title
+          ? `<h3 class="font-semibold leading-6 text-ink">${esc(s.title).replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')}</h3>`
+          : '';
+        const body = s.body.trim()
+          ? `<div class="mt-1 text-sm text-muted [&_h3]:mt-3 [&_h3]:text-sm [&_h3]:text-ink [&_h4]:text-ink [&_strong]:text-ink">${renderMarkdown(s.body.trim())}</div>`
+          : '';
+        return `<li class="relative pl-9 pb-7 last:pb-0">
+            <span class="absolute left-0 top-0.5 grid h-[22px] w-[22px] place-items-center rounded-full border-2 border-brand bg-surface" aria-hidden="true">
+              <span class="h-1.5 w-1.5 rounded-full bg-brand"></span>
+            </span>
+            ${title}${body}
+          </li>`;
+      })
+      .join('');
+    return `<ol class="relative before:absolute before:bottom-2 before:left-[11px] before:top-2 before:w-px before:bg-line">${nodes}</ol>`;
+  }
+
   void (async () => {
     const ctx = await boot();
     if (!ctx) return;
@@ -199,16 +274,50 @@ const link = (p: string) => localizePath(lang, p);
     const sbGenerate = document.getElementById('sb-generate') as HTMLButtonElement;
     const sbDownload = document.getElementById('sb-download') as HTMLButtonElement;
     const sbTarget = document.getElementById('sb-target') as HTMLTextAreaElement;
+    const sbTimeline = document.getElementById('sb-timeline')!;
+    const sbTabs = document.getElementById('sb-tabs')!;
+    const sbTabDoc = document.getElementById('sb-tab-doc') as HTMLButtonElement;
+    const sbTabTimeline = document.getElementById('sb-tab-timeline') as HTMLButtonElement;
     let current: ProjectStoryboard | null = null;
+    let sbView: 'doc' | 'timeline' = 'doc';
 
     if (isAdmin) sbActions.classList.replace('hidden', 'flex');
+
+    // Document ⇄ Timeline toggle (WAI-ARIA tabs: aria-selected + roving tabindex).
+    const sbTabClass = (active: boolean) =>
+      `rounded-md px-3 py-1.5 font-medium transition-colors ${
+        active ? 'bg-surface text-ink shadow-sm' : 'text-muted hover:text-ink'
+      }`;
+    const selectSbView = (view: 'doc' | 'timeline') => {
+      sbView = view;
+      const doc = view === 'doc';
+      sbTabDoc.setAttribute('aria-selected', String(doc));
+      sbTabTimeline.setAttribute('aria-selected', String(!doc));
+      sbTabDoc.tabIndex = doc ? 0 : -1;
+      sbTabTimeline.tabIndex = doc ? -1 : 0;
+      sbTabDoc.className = sbTabClass(doc);
+      sbTabTimeline.className = sbTabClass(!doc);
+      sbDoc.classList.toggle('hidden', !doc);
+      sbTimeline.classList.toggle('hidden', doc);
+    };
+    sbTabDoc.addEventListener('click', () => selectSbView('doc'));
+    sbTabTimeline.addEventListener('click', () => selectSbView('timeline'));
+    sbTabs.addEventListener('keydown', (e) => {
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+      e.preventDefault();
+      const next = sbView === 'doc' ? 'timeline' : 'doc';
+      selectSbView(next);
+      (next === 'doc' ? sbTabDoc : sbTabTimeline).focus();
+    });
 
     const showStoryboard = (sb: ProjectStoryboard | null) => {
       current = sb;
       sbMsg.className = 'mt-3 text-sm text-muted';
       if (sb) {
         sbDoc.innerHTML = renderMarkdown(sb.markdown);
-        sbDoc.classList.remove('hidden');
+        sbTimeline.innerHTML = renderTimeline(sb.markdown);
+        if (sbTabs.classList.contains('hidden')) sbTabs.classList.replace('hidden', 'inline-flex');
+        selectSbView(sbView); // shows the active panel, hides the other
         sbDownload.classList.remove('hidden');
         sbMsg.textContent = t('storyboard.updated', {
           date: new Date(sb.updated_at).toLocaleString(ctx.lang),
@@ -217,6 +326,8 @@ const link = (p: string) => localizePath(lang, p);
         if (sb.target_workflow) sbTarget.value = sb.target_workflow;
       } else {
         sbDoc.classList.add('hidden');
+        sbTimeline.classList.add('hidden');
+        if (!sbTabs.classList.contains('hidden')) sbTabs.classList.replace('inline-flex', 'hidden');
         sbDownload.classList.add('hidden');
         sbMsg.textContent = t('storyboard.none');
         sbGenerate.textContent = t('storyboard.generate');

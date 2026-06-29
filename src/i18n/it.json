@@ -425,7 +425,10 @@
     "generating": "Generazione… può richiedere fino a un minuto.",
     "updated": "Aggiornato il {date}",
     "noCredits": "Crediti dell’organizzazione insufficienti per generare lo storyboard.",
-    "error": "Impossibile generare lo storyboard. Riprova."
+    "error": "Impossibile generare lo storyboard. Riprova.",
+    "viewsLabel": "Vista storyboard",
+    "viewDocument": "Documento",
+    "viewTimeline": "Linea temporale"
   },
   "activity": {
     "title": "Registro attività",

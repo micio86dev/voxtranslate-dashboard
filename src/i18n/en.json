@@ -425,7 +425,10 @@
     "generating": "Generating… this can take up to a minute.",
     "updated": "Updated {date}",
     "noCredits": "Not enough organization credits to generate a storyboard.",
-    "error": "Could not generate the storyboard. Please try again."
+    "error": "Could not generate the storyboard. Please try again.",
+    "viewsLabel": "Storyboard view",
+    "viewDocument": "Document",
+    "viewTimeline": "Timeline"
   },
   "activity": {
     "title": "Activity log",

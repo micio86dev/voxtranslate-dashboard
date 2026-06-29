@@ -425,7 +425,10 @@
     "generating": "Wird erstellt… das kann bis zu einer Minute dauern.",
     "updated": "Aktualisiert am {date}",
     "noCredits": "Nicht genügend Organisations-Credits, um ein Storyboard zu erstellen.",
-    "error": "Storyboard konnte nicht erstellt werden. Bitte erneut versuchen."
+    "error": "Storyboard konnte nicht erstellt werden. Bitte erneut versuchen.",
+    "viewsLabel": "Storyboard-Ansicht",
+    "viewDocument": "Dokument",
+    "viewTimeline": "Zeitleiste"
   },
   "activity": {
     "title": "Aktivitätsprotokoll",
