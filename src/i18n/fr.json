@@ -425,7 +425,10 @@
     "generating": "Génération… cela peut prendre jusqu’à une minute.",
     "updated": "Mis à jour le {date}",
     "noCredits": "Crédits de l’organisation insuffisants pour générer un storyboard.",
-    "error": "Impossible de générer le storyboard. Veuillez réessayer."
+    "error": "Impossible de générer le storyboard. Veuillez réessayer.",
+    "viewsLabel": "Vue du storyboard",
+    "viewDocument": "Document",
+    "viewTimeline": "Chronologie"
   },
   "activity": {
     "title": "Journal d'activité",
