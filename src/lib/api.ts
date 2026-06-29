@@ -201,14 +201,17 @@ export async function uploadVoiceMessage(
   try {
     const form = new FormData();
     form.append('file', file, file.name);
-    if (durationSeconds != null) form.append('duration_seconds', String(Math.round(durationSeconds)));
+    if (durationSeconds != null)
+      form.append('duration_seconds', String(Math.round(durationSeconds)));
     // No Content-Type header — the browser sets the multipart boundary itself.
     const res = await fetch(
       `${API_BASE}/api/business/organizations/${orgId}/projects/${projectId}/voice-messages`,
       { method: 'POST', headers: { ...authHeaders() }, body: form },
     );
     const data =
-      res.status !== 204 ? ((await res.json().catch(() => null)) as VoiceMessageCreated | null) : null;
+      res.status !== 204
+        ? ((await res.json().catch(() => null)) as VoiceMessageCreated | null)
+        : null;
     return { ok: res.ok, status: res.status, data };
   } catch {
     return { ok: false, status: 0, data: null };

@@ -65,23 +65,28 @@ const link = (p: string) => localizePath(lang, p);
       role="tab"
       aria-selected="true"
       aria-controls="sb-doc"
-      class="rounded-md px-3 py-1.5 font-medium">{t('storyboard.viewDocument')}</button>
+      class="rounded-md px-3 py-1.5 font-medium">{t('storyboard.viewDocument')}</button
+    >
     <button
       id="sb-tab-timeline"
       role="tab"
       aria-selected="false"
       aria-controls="sb-timeline"
       tabindex="-1"
-      class="rounded-md px-3 py-1.5 font-medium">{t('storyboard.viewTimeline')}</button>
+      class="rounded-md px-3 py-1.5 font-medium">{t('storyboard.viewTimeline')}</button
+    >
   </div>
 
-  <article id="sb-doc" role="tabpanel" aria-labelledby="sb-tab-doc" class="card mt-3 hidden"></article>
+  <article id="sb-doc" role="tabpanel" aria-labelledby="sb-tab-doc" class="card mt-3 hidden">
+  </article>
   <article
     id="sb-timeline"
     role="tabpanel"
     aria-labelledby="sb-tab-timeline"
     tabindex="0"
-    class="card mt-3 hidden"></article>
+    class="card mt-3 hidden"
+  >
+  </article>
 
   <!-- Semantic search scoped to this project -->
   <h2 class="mt-8 text-lg font-semibold">{t('search.projectSearchTitle')}</h2>
@@ -106,7 +111,8 @@ const link = (p: string) => localizePath(lang, p);
     <div class="mt-3 flex flex-wrap items-center gap-2">
       <button id="vn-record" class="btn-primary text-sm">{t('voiceNotes.record')}</button>
       <div id="vn-recording" class="hidden items-center gap-2">
-        <span class="inline-block h-2.5 w-2.5 animate-pulse rounded-full bg-current text-danger"></span>
+        <span class="inline-block h-2.5 w-2.5 animate-pulse rounded-full bg-current text-danger"
+        ></span>
         <span id="vn-time" class="text-sm tabular-nums">0:00</span>
         <button id="vn-cancel" class="btn-ghost text-sm">{t('common.cancel')}</button>
         <button id="vn-send" class="btn-primary text-sm">{t('voiceNotes.send')}</button>
