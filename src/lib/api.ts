@@ -274,6 +274,9 @@ export interface Segment {
 
 export interface TranscriptDoc {
   status: string;
+  /** 'recording' = diarized from the cloud recording; 'live' = reconstructed from
+   *  the realtime transcript captured during the call (no recording was made). */
+  source?: 'recording' | 'live';
   source_language?: string;
   segments: Segment[];
   duration_seconds?: number | null;

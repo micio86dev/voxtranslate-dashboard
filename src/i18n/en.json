@@ -242,6 +242,7 @@
     "processing": "Transcription is in progress. Check back shortly.",
     "failed": "Transcription failed for this recording.",
     "none": "No transcript for this call.",
+    "liveOnly": "Live transcript from the call. No cloud recording was made, so translation, export and playback aren’t available.",
     "translateTo": "Translate to…",
     "original": "Original",
     "translating": "Translating…",

@@ -123,7 +123,21 @@ const link = (p: string) => localizePath(lang, p);
   </div>
 
   <h2 class="mt-8 text-lg font-semibold">{t('projects.callsInProject')}</h2>
-  <p class="card mt-3 text-sm text-muted">—</p>
+  <div class="card mt-3 overflow-x-auto p-0">
+    <p id="calls-msg" class="px-4 py-6 text-center text-sm text-muted">{t('common.loading')}</p>
+    <table id="calls-table" class="hidden w-full text-sm">
+      <thead class="border-b border-line text-left text-muted">
+        <tr>
+          <th class="px-4 py-3">{t('history.room')}</th>
+          <th class="px-4 py-3">{t('history.started')}</th>
+          <th class="px-4 py-3">{t('history.status')}</th>
+          <th class="px-4 py-3">{t('history.recording')}</th>
+          <th class="px-4 py-3"></th>
+        </tr>
+      </thead>
+      <tbody id="calls-rows"></tbody>
+    </table>
+  </div>
 </BaseLayout>
 
 <script>
@@ -133,6 +147,7 @@ const link = (p: string) => localizePath(lang, p);
     generateStoryboard,
     getProject,
     getStoryboard,
+    listOrgRooms,
     listVoiceMessages,
     uploadVoiceMessage,
     voiceMessageAudioUrl,
@@ -271,6 +286,9 @@ const link = (p: string) => localizePath(lang, p);
       location.href = `/${ctx.lang}/search/?${params.toString()}`;
     });
 
+    // Calls linked to this project (same data the History page shows, pre-scoped).
+    void loadCalls(ctx.activeOrg.id, p.id, ctx.lang as Locale);
+
     // --- AI storyboard ---
     const isAdmin = ctx.activeOrg.role === 'admin' || ctx.activeOrg.role === 'owner';
     const sbMsg = document.getElementById('sb-msg')!;
@@ -386,6 +404,39 @@ const link = (p: string) => localizePath(lang, p);
       setupVoiceNotes(ctx.activeOrg.id, p.id, ctx.lang, t);
     }
   })();
+
+  /** Render the calls bound to this project — the same rows the History page
+   *  shows, pre-filtered to the project. Each links to the call's transcript. */
+  async function loadCalls(orgId: string, projectId: string, lang: Locale): Promise<void> {
+    const t = useTranslations(lang);
+    const msg = document.getElementById('calls-msg')!;
+    const table = document.getElementById('calls-table')!;
+    const rowsEl = document.getElementById('calls-rows')!;
+    const res = await listOrgRooms(orgId, { project_id: projectId, limit: 50 });
+    const calls = res.data?.rooms ?? [];
+    if (!res.ok) {
+      msg.textContent = t('common.error');
+      return;
+    }
+    if (!calls.length) {
+      msg.textContent = t('history.empty');
+      return;
+    }
+    const statusLabel = (s: string) => t(`history.status${s.charAt(0).toUpperCase()}${s.slice(1)}`);
+    rowsEl.innerHTML = calls
+      .map(
+        (r) => `<tr class="border-b border-line last:border-0">
+          <td class="px-4 py-3 font-medium">${esc(r.room)}</td>
+          <td class="px-4 py-3 text-muted">${esc(new Date(r.started_at).toLocaleString(lang))}</td>
+          <td class="px-4 py-3"><span class="badge">${esc(statusLabel(r.transcript_status))}</span></td>
+          <td class="px-4 py-3">${r.has_recording ? '☁️' : '—'}</td>
+          <td class="px-4 py-3 text-right"><a href="/${lang}/history/detail/?session=${encodeURIComponent(r.id)}" class="btn-ghost text-xs">${esc(t('history.open'))}</a></td>
+        </tr>`,
+      )
+      .join('');
+    msg.classList.add('hidden');
+    table.classList.remove('hidden');
+  }
 
   /** mm:ss for an elapsed millisecond count (negatives clamp to 0). */
   function recTime(ms: number): string {

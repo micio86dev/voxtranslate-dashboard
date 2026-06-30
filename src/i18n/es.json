@@ -242,6 +242,7 @@
     "processing": "La transcripción está en curso. Vuelve en un momento.",
     "failed": "La transcripción de esta grabación falló.",
     "none": "No hay transcripción para esta llamada.",
+    "liveOnly": "Transcripción en vivo de la llamada. No se realizó ninguna grabación en la nube, por lo que la traducción, la exportación y la reproducción no están disponibles.",
     "translateTo": "Traducir a…",
     "original": "Original",
     "translating": "Traduciendo…",
