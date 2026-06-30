@@ -228,6 +228,7 @@
     "statusProcessing": "Traitement…",
     "statusReady": "Prête",
     "statusFailed": "Échec",
+    "statusLive": "En direct",
     "project": "Projet",
     "allProjects": "Tous les projets",
     "from": "Du",
