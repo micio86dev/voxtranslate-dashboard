@@ -242,6 +242,7 @@
     "processing": "Transkription läuft. Schau gleich noch einmal vorbei.",
     "failed": "Die Transkription dieser Aufnahme ist fehlgeschlagen.",
     "none": "Kein Transkript für diesen Anruf.",
+    "liveOnly": "Live-Transkript des Anrufs. Es wurde keine Cloud-Aufnahme erstellt, daher sind Übersetzung, Export und Wiedergabe nicht verfügbar.",
     "translateTo": "Übersetzen nach…",
     "original": "Original",
     "translating": "Wird übersetzt…",

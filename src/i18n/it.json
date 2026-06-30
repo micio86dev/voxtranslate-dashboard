@@ -242,6 +242,7 @@
     "processing": "Trascrizione in corso. Riprova tra poco.",
     "failed": "Trascrizione non riuscita per questa registrazione.",
     "none": "Nessuna trascrizione per questa chiamata.",
+    "liveOnly": "Trascrizione dal vivo della chiamata. Non è stata effettuata alcuna registrazione cloud, quindi traduzione, esportazione e riproduzione non sono disponibili.",
     "translateTo": "Traduci in…",
     "original": "Originale",
     "translating": "Traduzione…",

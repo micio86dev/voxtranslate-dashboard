@@ -242,6 +242,7 @@
     "processing": "La transcription est en cours. Revenez dans un instant.",
     "failed": "La transcription de cet enregistrement a échoué.",
     "none": "Aucune transcription pour cet appel.",
+    "liveOnly": "Transcription en direct de l’appel. Aucun enregistrement cloud n’a été réalisé, la traduction, l’export et la lecture ne sont donc pas disponibles.",
     "translateTo": "Traduire en…",
     "original": "Original",
     "translating": "Traduction…",

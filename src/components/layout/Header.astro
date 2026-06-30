@@ -78,7 +78,7 @@ const APP_URL = 'https://voxtranslate.app';
           >
           </div>
           <div class="flex items-center justify-between border-t border-line px-3 py-2">
-            <button id="notif-enable" class="text-xs text-brand">{t('notif.enable')}</button>
+            <button id="notif-enable" class="hidden text-xs text-brand">{t('notif.enable')}</button>
             <a href={link('notifications')} class="text-xs text-muted">{t('notif.settings')}</a>
           </div>
         </div>
@@ -171,7 +171,7 @@ const APP_URL = 'https://voxtranslate.app';
     markAllNotificationsRead,
     type NotificationItem,
   } from '../../lib/api';
-  import { enablePush } from '../../lib/push';
+  import { enablePush, isPushSubscribed, pushSupported } from '../../lib/push';
   import { getToken } from '../../lib/auth';
 
   function esc(s: string): string {
@@ -233,9 +233,21 @@ const APP_URL = 'https://voxtranslate.app';
       await markAllNotificationsRead();
       void refresh();
     });
-    document.getElementById('notif-enable')?.addEventListener('click', async () => {
+
+    // The "Enable push" CTA only makes sense when this browser can do push AND
+    // isn't already subscribed — otherwise it wrongly nags a user who already
+    // turned push on. Defaults to hidden in the markup; revealed only here.
+    const enableBtn = document.getElementById('notif-enable');
+    async function syncPushCta() {
+      if (!enableBtn) return;
+      const offer = pushSupported() && !(await isPushSubscribed());
+      enableBtn.classList.toggle('hidden', !offer);
+    }
+    enableBtn?.addEventListener('click', async () => {
       await enablePush();
+      void syncPushCta();
     });
+    void syncPushCta();
 
     await refresh();
     // Light polling so the badge stays roughly current without a socket.
