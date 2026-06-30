@@ -228,6 +228,7 @@
     "statusProcessing": "Wird verarbeitet…",
     "statusReady": "Bereit",
     "statusFailed": "Fehlgeschlagen",
+    "statusLive": "Live",
     "project": "Projekt",
     "allProjects": "Alle Projekte",
     "from": "Von",

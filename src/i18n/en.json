@@ -228,6 +228,7 @@
     "statusProcessing": "Processing…",
     "statusReady": "Ready",
     "statusFailed": "Failed",
+    "statusLive": "Live",
     "project": "Project",
     "allProjects": "All projects",
     "from": "From",
