@@ -2,6 +2,10 @@
 dist/
 .output/
 
+# test coverage
+coverage/
+coverage-unit/
+
 # deps
 node_modules/
 
