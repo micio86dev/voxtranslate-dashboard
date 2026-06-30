@@ -228,6 +228,7 @@
     "statusProcessing": "In elaborazione…",
     "statusReady": "Pronta",
     "statusFailed": "Non riuscita",
+    "statusLive": "Live",
     "project": "Progetto",
     "allProjects": "Tutti i progetti",
     "from": "Da",
