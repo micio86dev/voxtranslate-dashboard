@@ -131,10 +131,12 @@ const CHANNELS = ['push', 'email', 'in_app'];
         res.data.quiet_hours_end == null ? '' : String(res.data.quiet_hours_end);
       if (res.data.timezone) {
         if (!zones.includes(res.data.timezone)) {
-          tzSel.insertAdjacentHTML(
-            'afterbegin',
-            `<option value="${res.data.timezone}">${res.data.timezone}</option>`,
-          );
+          // Build with createElement/textContent, not innerHTML, so the stored
+          // timezone string can't inject markup (self-XSS hardening).
+          const opt = document.createElement('option');
+          opt.value = res.data.timezone;
+          opt.textContent = res.data.timezone;
+          tzSel.insertBefore(opt, tzSel.firstChild);
         }
         tzSel.value = res.data.timezone;
       }
