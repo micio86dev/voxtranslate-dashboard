@@ -1,9 +1,14 @@
 # Cloudflare Pages headers. Authenticated app — no indexing, sane security defaults.
+# NOTE (M10): CSP added. It keeps 'unsafe-inline' for now (Astro hydration + GSI) so it
+# can't break sign-in; tightening to nonces/hashes should be done with a live test. The
+# restrictive object-src/base-uri/frame-ancestors + scoped connect/frame close the
+# highest-value gaps (script/object injection, clickjacking, base-tag hijack).
 /*
   X-Content-Type-Options: nosniff
   X-Frame-Options: DENY
   Referrer-Policy: strict-origin-when-cross-origin
   X-Robots-Tag: noindex
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://accounts.google.com https://apis.google.com https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://accounts.google.com; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://api.voxtranslate.app https://accounts.google.com; frame-src https://accounts.google.com; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'
 
 /_astro/*
   Cache-Control: public, max-age=31536000, immutable
