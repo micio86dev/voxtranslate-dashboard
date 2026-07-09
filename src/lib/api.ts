@@ -786,6 +786,44 @@ export const generateStoryboard = (
     body,
   );
 
+// --- Voice Assistant (B2B) ---------------------------------------------------
+
+/**
+ * Build the WebSocket URL for the voice-assistant endpoint from an explicit
+ * API base URL. The protocol swap (https→wss, http→ws) is applied here.
+ *
+ * Accepting `apiBase` as a parameter makes this function unit-testable without
+ * mocking the module-level `API_BASE` constant. It is re-exported from
+ * `voice-assistant.ts` so consumers import from a single source.
+ */
+export function buildWsUrl(
+  apiBase: string,
+  orgId: string,
+  opts: { project_id?: string; member_id?: string } = {},
+): string {
+  const base = apiBase
+    .replace(/\/+$/, '')
+    .replace(/^https:\/\//, 'wss://')
+    .replace(/^http:\/\//, 'ws://');
+  const path = `${base}/api/business/organizations/${orgId}/voice-assistant`;
+  const params = new URLSearchParams();
+  if (opts.project_id) params.set('project_id', opts.project_id);
+  if (opts.member_id) params.set('member_id', opts.member_id);
+  const qs = params.toString();
+  return qs ? `${path}?${qs}` : path;
+}
+
+/**
+ * Build the WebSocket URL for the voice-assistant endpoint using the
+ * module-level `API_BASE`. Convenience wrapper around `buildWsUrl`.
+ */
+export function voiceAssistantWsUrl(
+  orgId: string,
+  opts: { project_id?: string; member_id?: string } = {},
+): string {
+  return buildWsUrl(API_BASE, orgId, opts);
+}
+
 // --- Current-org helper (persisted selection) --------------------------------
 
 const ORG_KEY = 'voxb.org';

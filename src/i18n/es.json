@@ -499,5 +499,22 @@
     "error": "No se pudo enviar la nota de voz: inténtalo de nuevo.",
     "noCredits": "Nota de voz guardada, pero la traducción necesita créditos.",
     "micDenied": "Acceso al micrófono denegado."
+  },
+  "voiceAssistant": {
+    "startLabel": "Preguntar con voz",
+    "stopLabel": "Detener",
+    "connecting": "Conectando…",
+    "listening": "Escuchando…",
+    "speaking": "Respondiendo…",
+    "errorLabel": "Error — toca para reintentar",
+    "capacityFull": "Todas las sesiones del asistente de voz están ocupadas. Inténtalo en un momento.",
+    "creditsExhausted": "Tu organización se ha quedado sin créditos. Recárgalos en la sección Créditos.",
+    "micDenied": "Se necesita acceso al micrófono para el asistente de voz.",
+    "wsError": "Error de conexión. Inténtalo de nuevo.",
+    "transcriptHeader": "Transcripción",
+    "costLabel": "Costo de sesión",
+    "sessionEnded": "Sesión finalizada",
+    "unavailable": "El asistente de voz no está disponible para tu plan o no está habilitado.",
+    "notEligible": "El asistente de voz está disponible solo para líderes de equipo y propietarios."
   }
 }

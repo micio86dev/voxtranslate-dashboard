@@ -499,5 +499,22 @@
     "error": "Impossible d'envoyer la note vocale — veuillez réessayer.",
     "noCredits": "Note vocale enregistrée, mais la traduction nécessite des crédits.",
     "micDenied": "Accès au microphone refusé."
+  },
+  "voiceAssistant": {
+    "startLabel": "Poser une question vocalement",
+    "stopLabel": "Arrêter",
+    "connecting": "Connexion…",
+    "listening": "En écoute…",
+    "speaking": "Réponse en cours…",
+    "errorLabel": "Erreur — appuyer pour réessayer",
+    "capacityFull": "Toutes les sessions de l'assistant vocal sont occupées. Réessayez dans un instant.",
+    "creditsExhausted": "Votre organisation a épuisé ses crédits. Rechargez-les dans la section Crédits.",
+    "micDenied": "L'accès au microphone est requis pour l'assistant vocal.",
+    "wsError": "Erreur de connexion. Veuillez réessayer.",
+    "transcriptHeader": "Transcription",
+    "costLabel": "Coût de la session",
+    "sessionEnded": "Session terminée",
+    "unavailable": "L'assistant vocal n'est pas disponible pour votre abonnement ou n'est pas activé.",
+    "notEligible": "L'assistant vocal est réservé aux responsables d'équipe et aux propriétaires."
   }
 }
