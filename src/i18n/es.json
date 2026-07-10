@@ -516,5 +516,23 @@
     "sessionEnded": "Sesión finalizada",
     "unavailable": "El asistente de voz no está disponible para tu plan o no está habilitado.",
     "notEligible": "El asistente de voz está disponible solo para líderes de equipo y propietarios."
+  },
+  "helpAssistant": {
+    "panelTitle": "Ayuda del panel",
+    "startLabel": "Preguntar con voz",
+    "stopLabel": "Detener",
+    "connecting": "Conectando…",
+    "listening": "Escuchando…",
+    "speaking": "Respondiendo…",
+    "errorLabel": "Error — toca para reintentar",
+    "capacityFull": "Todas las sesiones de ayuda están ocupadas. Inténtalo en un momento.",
+    "creditsExhausted": "Tu organización se ha quedado sin créditos. Recárgalos en la sección Créditos.",
+    "micDenied": "Se necesita acceso al micrófono para el asistente de voz.",
+    "wsError": "Error de conexión. Inténtalo de nuevo.",
+    "transcriptHeader": "Conversación",
+    "costLabel": "Costo de sesión",
+    "sessionEnded": "Sesión finalizada",
+    "closePanel": "✕",
+    "unavailable": "El asistente de voz no está disponible para tu plan."
   }
 }

@@ -516,5 +516,23 @@
     "sessionEnded": "Sessione terminata",
     "unavailable": "L'assistente vocale non è disponibile per il tuo piano o non è attivato.",
     "notEligible": "L'assistente vocale è disponibile solo per i team lead e i proprietari."
+  },
+  "helpAssistant": {
+    "panelTitle": "Assistenza dashboard",
+    "startLabel": "Chiedi con la voce",
+    "stopLabel": "Ferma",
+    "connecting": "Connessione…",
+    "listening": "In ascolto…",
+    "speaking": "Risposta in corso…",
+    "errorLabel": "Errore — tocca per riprovare",
+    "capacityFull": "Tutte le sessioni di assistenza sono occupate. Riprova tra poco.",
+    "creditsExhausted": "L'organizzazione ha esaurito i crediti. Ricarica nella sezione Crediti.",
+    "micDenied": "Il microfono è necessario per l'assistente vocale.",
+    "wsError": "Errore di connessione. Riprova.",
+    "transcriptHeader": "Conversazione",
+    "costLabel": "Costo sessione",
+    "sessionEnded": "Sessione terminata",
+    "closePanel": "✕",
+    "unavailable": "L'assistente vocale non è disponibile per il tuo piano."
   }
 }

@@ -516,5 +516,23 @@
     "sessionEnded": "Session terminée",
     "unavailable": "L'assistant vocal n'est pas disponible pour votre abonnement ou n'est pas activé.",
     "notEligible": "L'assistant vocal est réservé aux responsables d'équipe et aux propriétaires."
+  },
+  "helpAssistant": {
+    "panelTitle": "Aide du tableau de bord",
+    "startLabel": "Poser une question vocalement",
+    "stopLabel": "Arrêter",
+    "connecting": "Connexion…",
+    "listening": "En écoute…",
+    "speaking": "Réponse en cours…",
+    "errorLabel": "Erreur — appuyer pour réessayer",
+    "capacityFull": "Toutes les sessions d'aide sont occupées. Réessayez dans un instant.",
+    "creditsExhausted": "Votre organisation a épuisé ses crédits. Rechargez-les dans la section Crédits.",
+    "micDenied": "L'accès au microphone est requis pour l'assistant vocal.",
+    "wsError": "Erreur de connexion. Veuillez réessayer.",
+    "transcriptHeader": "Conversation",
+    "costLabel": "Coût de la session",
+    "sessionEnded": "Session terminée",
+    "closePanel": "✕",
+    "unavailable": "L'assistant vocal n'est pas disponible pour votre abonnement."
   }
 }

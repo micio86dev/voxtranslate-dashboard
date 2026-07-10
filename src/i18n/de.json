@@ -516,5 +516,23 @@
     "sessionEnded": "Sitzung beendet",
     "unavailable": "Der Sprachassistent ist für dein Abonnement nicht verfügbar oder nicht aktiviert.",
     "notEligible": "Der Sprachassistent steht nur Teamleitern und Inhabern zur Verfügung."
+  },
+  "helpAssistant": {
+    "panelTitle": "Dashboard-Hilfe",
+    "startLabel": "Per Sprache fragen",
+    "stopLabel": "Stopp",
+    "connecting": "Verbindung wird hergestellt…",
+    "listening": "Höre zu…",
+    "speaking": "Antwort läuft…",
+    "errorLabel": "Fehler — tippen zum Wiederholen",
+    "capacityFull": "Alle Hilfesitzungen sind belegt. Bitte versuche es in einem Moment erneut.",
+    "creditsExhausted": "Deiner Organisation fehlen Credits. Lade sie im Bereich Credits auf.",
+    "micDenied": "Der Sprachassistent benötigt Mikrofonzugriff.",
+    "wsError": "Verbindungsfehler. Bitte erneut versuchen.",
+    "transcriptHeader": "Gespräch",
+    "costLabel": "Sitzungskosten",
+    "sessionEnded": "Sitzung beendet",
+    "closePanel": "✕",
+    "unavailable": "Der Sprachassistent ist für dein Abonnement nicht verfügbar."
   }
 }
