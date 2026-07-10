@@ -132,7 +132,7 @@ const { lang, title, description = '', chrome = false } = Astro.props;
 
     <script>
       import { boot } from '../scripts/app-boot';
-      import { createHelpAssistant } from '../scripts/help-assistant';
+      import { createHelpAssistant, keepHaWorkerAlive } from '../scripts/help-assistant';
       import { useTranslations, type Locale } from '../lib/i18n';
       import { VoiceAssistantState } from '../scripts/voice-assistant';
       import {
@@ -144,6 +144,11 @@ const { lang, title, description = '', chrome = false } = Astro.props;
 
       void (async () => {
         if (document.documentElement.dataset.chrome !== 'true') return;
+        // Connect to the Help Assistant SharedWorker IMMEDIATELY (before the async
+        // auth boot) so a live session's WebSocket isn't torn down during the
+        // navigation load gap. Keep the reference so the port stays connected.
+        const haKeepAlive = keepHaWorkerAlive();
+        console.debug('[ha] keep-alive worker connected:', !!haKeepAlive);
         const ctx = await boot();
         if (!ctx) return;
         if (ctx.activeOrg?.subscription_status !== 'active') return;
@@ -305,6 +310,7 @@ const { lang, title, description = '', chrome = false } = Astro.props;
           onSync(state, syncTranscript, costDisplay) {
             // Restore state from a session the SharedWorker already holds (another
             // tab, or — the common case — this same tab after a page navigation).
+            console.debug('[ha] sync state:', state, 'transcript entries:', syncTranscript.length);
             setMicState(state);
             transcriptBody.innerHTML = '';
             for (const entry of syncTranscript) {

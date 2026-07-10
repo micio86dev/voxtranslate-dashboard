@@ -65,6 +65,29 @@ export function detectSharedWorkerSupport(): boolean {
 }
 
 /**
+ * Connect a port to the Help Assistant SharedWorker as early as possible on page
+ * load — BEFORE the async auth boot — so Chrome doesn't terminate the worker
+ * (and, with it, a live session's WebSocket) during the brief 0-client gap of a
+ * same-tab navigation. Uses the SAME `new URL(..., import.meta.url)` as
+ * `connectWorker()` so it resolves to the identical worker and keeps that one
+ * instance alive. Returns the SharedWorker (kept referenced by the caller) or
+ * null when SharedWorker is unavailable (Safari/iOS — page-scoped anyway).
+ */
+export function keepHaWorkerAlive(): SharedWorker | null {
+  if (!detectSharedWorkerSupport()) return null;
+  try {
+    const worker = new SharedWorker(
+      new URL('../workers/help-assistant.worker.ts', import.meta.url),
+      { type: 'module', name: 'ha-worker' },
+    );
+    worker.port.start();
+    return worker;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Append ?token= (or &token=) to a WebSocket URL.
  * Returns the URL unchanged when token is null.
  */
@@ -202,7 +225,8 @@ export class HelpAssistantController {
 
     try {
       this.stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-    } catch {
+    } catch (err) {
+      console.debug('[ha] resume: getUserMedia failed', err);
       return false;
     }
 
@@ -210,6 +234,7 @@ export class HelpAssistantController {
     this.port.postMessage({ type: 'resume' });
     this.isActive = true;
     this.startAudioCapture();
+    console.debug('[ha] resume: adopted existing session, mic re-acquired');
     return true;
   }
 
