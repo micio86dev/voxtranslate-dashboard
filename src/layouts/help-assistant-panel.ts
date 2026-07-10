@@ -101,10 +101,7 @@ export function buildMicState(state: string): MicStateDescriptor {
  * Produce the CSS class and text for a transcript bubble paragraph element.
  * Mirrors the appendTranscript helper used in insights.astro.
  */
-export function buildTranscriptBubble(
-  role: 'user' | 'assistant',
-  delta: string,
-): TranscriptBubble {
+export function buildTranscriptBubble(role: 'user' | 'assistant', delta: string): TranscriptBubble {
   return {
     role,
     text: delta,
