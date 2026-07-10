@@ -11,6 +11,7 @@ const t = useTranslations(lang);
 ---
 
 <BaseLayout lang={lang} title={t('analytics.title')} chrome>
+  <span id="page-analytics" hidden></span>
   <div class="flex flex-wrap items-center justify-between gap-3">
     <h1 class="text-2xl font-bold">{t('analytics.title')}</h1>
     <label class="flex items-center gap-2 text-sm text-muted">
@@ -69,12 +70,13 @@ const t = useTranslations(lang);
 </BaseLayout>
 
 <script>
+  import { onPage } from '../../scripts/nav';
   import { boot } from '../../scripts/app-boot';
   import { getAnalytics, type AnalyticsSummary } from '../../lib/api';
   import { useTranslations, type Locale } from '../../lib/i18n';
   import { barChart, esc, hbars } from '../../lib/charts';
 
-  void (async () => {
+  onPage('page-analytics', async () => {
     const ctx = await boot();
     if (!ctx) return;
     const t = useTranslations(ctx.lang as Locale);
@@ -130,5 +132,5 @@ const t = useTranslations(lang);
     const range = document.getElementById('range') as HTMLSelectElement;
     range.addEventListener('change', () => void load(parseInt(range.value, 10) || 30));
     await load(30);
-  })();
+  });
 </script>

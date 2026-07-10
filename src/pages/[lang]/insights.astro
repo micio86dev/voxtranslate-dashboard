@@ -104,6 +104,7 @@ const t = useTranslations(lang);
 </BaseLayout>
 
 <script>
+  import { onPage } from '../../scripts/nav';
   import { boot } from '../../scripts/app-boot';
   import {
     generateInsight,
@@ -221,7 +222,7 @@ const t = useTranslations(lang);
     msg: HTMLElement,
     projectSel: HTMLSelectElement,
     memberSel: HTMLSelectElement,
-  ): void {
+  ): () => void {
     let va: VoiceAssistant | null = null;
     let isActive = false;
 
@@ -368,13 +369,24 @@ const t = useTranslations(lang);
 
       await va.start();
     });
+
+    // Cleanup for client-side navigation away: stop any live voice session (mic +
+    // WebSocket + AudioContext) and the waveform animation frame so they don't leak.
+    return () => {
+      if (va) {
+        va.stop();
+        va = null;
+      }
+      isActive = false;
+      stopWaveform();
+    };
   }
 
   // ---------------------------------------------------------------------------
   // Page bootstrap
   // ---------------------------------------------------------------------------
 
-  void (async () => {
+  onPage('qa-form', async () => {
     const ctx = await boot();
     if (!ctx) return;
     const t = useTranslations(ctx.lang as Locale);
@@ -431,7 +443,7 @@ const t = useTranslations(lang);
     // 503 if not configured, and we handle that in the error callback. We show
     // the button unconditionally for admin users (the server is the gate), but
     // hide it for members (gate.textContent already redirected them away).
-    initVoiceAssistant(
+    const cleanupVa = initVoiceAssistant(
       t,
       orgId,
       vaBtn,
@@ -525,5 +537,8 @@ const t = useTranslations(lang);
       }
       void run({ mode: 'member_report', member_id: memberSel.value });
     });
-  })();
+
+    // Stop the voice assistant when navigating away (ClientRouter).
+    return cleanupVa;
+  });
 </script>

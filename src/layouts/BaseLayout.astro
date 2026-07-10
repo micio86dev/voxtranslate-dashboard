@@ -1,5 +1,6 @@
 ---
 import '../styles/global.css';
+import { ClientRouter } from 'astro:transitions';
 import Header from '../components/layout/Header.astro';
 import { type Locale } from '../lib/i18n';
 
@@ -38,6 +39,10 @@ const { lang, title, description = '', chrome = false } = Astro.props;
     <!-- Brand favicon + app icon — same marks as the consumer app (client/public). -->
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    {/* Client-side navigation (no full reload) so the global Help Assistant — its
+        WebSocket, SharedWorker, mic, and audio — survives page changes. Pages
+        re-init via the `astro:page-load` event; #ha-container is transition:persist. */}
+    <ClientRouter />
   </head>
   <body>
     {chrome && <Header lang={lang} />}
@@ -47,8 +52,10 @@ const { lang, title, description = '', chrome = false } = Astro.props;
       <slot />
     </main>
 
-    <!-- Help assistant floating panel (hidden until auth + subscription check passes) -->
-    <div id="ha-container" class="hidden">
+    <!-- Help assistant floating panel (hidden until auth + subscription check passes).
+         transition:persist keeps this element (and its live session, listeners, and
+         audio) across client-side navigations instead of swapping it per page. -->
+    <div id="ha-container" class="hidden" transition:persist="ha-container">
       <!-- Avatar trigger button: round, fixed bottom-right -->
       <button
         id="ha-trigger"
@@ -132,7 +139,7 @@ const { lang, title, description = '', chrome = false } = Astro.props;
 
     <script>
       import { boot } from '../scripts/app-boot';
-      import { createHelpAssistant, keepHaWorkerAlive } from '../scripts/help-assistant';
+      import { createHelpAssistant } from '../scripts/help-assistant';
       import { useTranslations, type Locale } from '../lib/i18n';
       import { VoiceAssistantState } from '../scripts/voice-assistant';
       import {
@@ -144,11 +151,6 @@ const { lang, title, description = '', chrome = false } = Astro.props;
 
       void (async () => {
         if (document.documentElement.dataset.chrome !== 'true') return;
-        // Connect to the Help Assistant SharedWorker IMMEDIATELY (before the async
-        // auth boot) so a live session's WebSocket isn't torn down during the
-        // navigation load gap. Keep the reference so the port stays connected.
-        const haKeepAlive = keepHaWorkerAlive();
-        console.debug('[ha] keep-alive worker connected:', !!haKeepAlive);
         const ctx = await boot();
         if (!ctx) return;
         if (ctx.activeOrg?.subscription_status !== 'active') return;
@@ -308,9 +310,10 @@ const { lang, title, description = '', chrome = false } = Astro.props;
             isSessionActive = false;
           },
           onSync(state, syncTranscript, costDisplay) {
-            // Restore state from a session the SharedWorker already holds (another
-            // tab, or — the common case — this same tab after a page navigation).
-            console.debug('[ha] sync state:', state, 'transcript entries:', syncTranscript.length);
+            // Restore state from a session the SharedWorker already holds (e.g. the
+            // Help Assistant running in another open tab of the same org). Under
+            // ClientRouter this tab's own session persists across navigation without
+            // any resume — same document, so the controller + WS stay alive.
             setMicState(state);
             transcriptBody.innerHTML = '';
             for (const entry of syncTranscript) {
@@ -320,29 +323,13 @@ const { lang, title, description = '', chrome = false } = Astro.props;
               cost.classList.remove('hidden');
               costValue.textContent = costDisplay;
             }
-            // Seamless continuation (choice A): if a session is live and this tab
-            // isn't already driving it, re-open the panel and re-adopt the mic —
-            // without restarting the WS — so talking continues across navigation.
-            const live =
-              state === VoiceAssistantState.Connecting ||
-              state === VoiceAssistantState.Listening ||
-              state === VoiceAssistantState.Speaking;
-            if (live && !isSessionActive) {
-              isSessionActive = true;
-              if (!isPanelOpen) {
-                isPanelOpen = true;
-                panel.classList.remove('hidden');
-                mic.classList.remove('hidden');
-                mic.classList.add('flex');
-              }
-              void ha.resume();
-            }
           },
         });
 
-        // Re-attach to any live session on every page load (choice A: the
-        // Help Assistant survives navigation via the SharedWorker). The worker
-        // replies with a `sync`; onSync above resumes it if one is running.
+        // Connect to the SharedWorker on load so cross-tab state (onSync) is
+        // available before the first mic click. This whole HA script runs once
+        // (module) and #ha-container is transition:persist, so the assistant and
+        // its listeners survive client-side navigation with no per-page re-init.
         ha.attach();
 
         // -----------------------------------------------------------------

@@ -72,6 +72,7 @@ const t = useTranslations(lang);
 </BaseLayout>
 
 <script>
+  import { onPage } from '../../scripts/nav';
   import { boot } from '../../scripts/app-boot';
   import { listOrgRooms, listProjects, listMembers } from '../../lib/api';
   import { useTranslations, type Locale } from '../../lib/i18n';
@@ -83,7 +84,7 @@ const t = useTranslations(lang);
     );
   }
 
-  void (async () => {
+  onPage('f-project', async () => {
     const ctx = await boot();
     if (!ctx) return;
     const t = useTranslations(ctx.lang as Locale);
@@ -211,5 +212,5 @@ const t = useTranslations(lang);
       void render();
     });
     void render();
-  })();
+  });
 </script>

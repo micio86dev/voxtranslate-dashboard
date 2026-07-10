@@ -18,6 +18,7 @@ const link = (p: string) => localizePath(lang, p);
 ---
 
 <BaseLayout lang={lang} title={t('projects.title')} chrome>
+  <span id="page-projects" hidden></span>
   <div class="flex items-center justify-between">
     <h1 class="text-2xl font-bold">{t('projects.title')}</h1>
     <a href={link('projects/new')} class="btn-primary">{t('projects.new')}</a>
@@ -28,6 +29,7 @@ const link = (p: string) => localizePath(lang, p);
 </BaseLayout>
 
 <script>
+  import { onPage } from '../../../scripts/nav';
   import { boot } from '../../../scripts/app-boot';
   import { deleteProject, listProjects } from '../../../lib/api';
   import { useTranslations, type Locale } from '../../../lib/i18n';
@@ -39,7 +41,7 @@ const link = (p: string) => localizePath(lang, p);
     );
   }
 
-  void (async () => {
+  onPage('page-projects', async () => {
     const ctx = await boot();
     if (!ctx) return;
     const t = useTranslations(ctx.lang as Locale);
@@ -76,5 +78,5 @@ const link = (p: string) => localizePath(lang, p);
       );
     }
     void render();
-  })();
+  });
 </script>

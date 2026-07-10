@@ -155,6 +155,7 @@ const plans = [
 </BaseLayout>
 
 <script>
+  import { onPage } from '../../scripts/nav';
   import { boot } from '../../scripts/app-boot';
   import {
     billingPortal,
@@ -173,7 +174,7 @@ const plans = [
     );
   }
 
-  void (async () => {
+  onPage('plans', async () => {
     const ctx = await boot();
     if (!ctx) return;
     const t = useTranslations(ctx.lang as Locale);
@@ -394,5 +395,5 @@ const plans = [
       const r = await billingPortal(orgId);
       go(r.data?.url);
     });
-  })();
+  });
 </script>

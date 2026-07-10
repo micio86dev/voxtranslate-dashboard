@@ -186,6 +186,7 @@ const link = (p: string) => localizePath(lang, p);
 </BaseLayout>
 
 <script>
+  import { onPage } from '../../../scripts/nav';
   import { boot } from '../../../scripts/app-boot';
   import {
     deleteProject,
@@ -257,7 +258,7 @@ const link = (p: string) => localizePath(lang, p);
     orgId: string,
     projectId: string,
     t: (k: string, v?: Record<string, string | number>) => string,
-  ): void {
+  ): () => void {
     const vaBtn = document.getElementById('va-btn') as HTMLButtonElement;
     const vaBtnLabel = document.getElementById('va-btn-label') as HTMLSpanElement;
     const vaIcon = document.getElementById('va-icon') as unknown as SVGElement;
@@ -395,6 +396,17 @@ const link = (p: string) => localizePath(lang, p);
 
       await va.start();
     });
+
+    // Cleanup for client-side navigation away: stop any live voice session (mic +
+    // WebSocket + AudioContext) and the waveform animation frame so they don't leak.
+    return () => {
+      if (va) {
+        va.stop();
+        va = null;
+      }
+      isActive = false;
+      stopWaveform();
+    };
   }
 
   /** Minimal, safe Markdown → HTML: escape first, then headings, bold, lists,
@@ -479,7 +491,7 @@ const link = (p: string) => localizePath(lang, p);
     return `<ol class="relative before:absolute before:bottom-2 before:left-[11px] before:top-2 before:w-px before:bg-line">${nodes}</ol>`;
   }
 
-  void (async () => {
+  onPage('proj-name', async () => {
     const ctx = await boot();
     if (!ctx) return;
     const t = useTranslations(ctx.lang as Locale);
@@ -523,13 +535,18 @@ const link = (p: string) => localizePath(lang, p);
     // Calls linked to this project (same data the History page shows, pre-scoped).
     void loadCalls(ctx.activeOrg.id, p.id, ctx.lang as Locale);
 
+    // Cleanups registered by the voice assistant + voice notes controllers, run on
+    // client-side navigation away (ClientRouter) to release mic/WS/AudioContext/timers.
+    let cleanupVa: (() => void) | undefined;
+    let cleanupVoiceNotes: (() => void) | undefined;
+
     // Voice assistant (owner/admin/lead with an active subscription).
     const isVaEligible =
       ctx.activeOrg.subscription_status === 'active' &&
       ['owner', 'admin', 'lead'].includes(ctx.activeOrg.role);
     if (isVaEligible) {
       document.getElementById('va-section')!.classList.remove('hidden');
-      setupVoiceAssistant(ctx.activeOrg.id, p.id, t);
+      cleanupVa = setupVoiceAssistant(ctx.activeOrg.id, p.id, t);
     }
 
     // --- AI storyboard ---
@@ -644,9 +661,15 @@ const link = (p: string) => localizePath(lang, p);
     // --- Project voice notes (active-subscription orgs) ---
     if (ctx.activeOrg.subscription_status === 'active') {
       document.getElementById('vn-section')!.classList.remove('hidden');
-      setupVoiceNotes(ctx.activeOrg.id, p.id, ctx.lang, t);
+      cleanupVoiceNotes = setupVoiceNotes(ctx.activeOrg.id, p.id, ctx.lang, t);
     }
-  })();
+
+    // Stop the voice assistant + any in-progress voice note when navigating away.
+    return () => {
+      cleanupVa?.();
+      cleanupVoiceNotes?.();
+    };
+  });
 
   /** Render the calls bound to this project — the same rows the History page
    *  shows, pre-filtered to the project. Each links to the call's transcript. */
@@ -693,7 +716,7 @@ const link = (p: string) => localizePath(lang, p);
     projectId: string,
     lang: string,
     t: (k: string, v?: Record<string, string | number>) => string,
-  ): void {
+  ): () => void {
     const recordBtn = document.getElementById('vn-record') as HTMLButtonElement;
     const bar = document.getElementById('vn-recording')!;
     const timeEl = document.getElementById('vn-time')!;
@@ -843,5 +866,21 @@ const link = (p: string) => localizePath(lang, p);
     document.getElementById('vn-cancel')!.addEventListener('click', () => stop(false));
 
     void loadNotes();
+
+    // Cleanup for client-side navigation away: stop an in-progress recording (mic
+    // stream + MediaRecorder) and the elapsed-time interval so they don't leak.
+    return () => {
+      if (timer !== null) {
+        clearInterval(timer);
+        timer = null;
+      }
+      shouldSend = false;
+      if (recorder && recorder.state !== 'inactive') recorder.stop();
+      recorder = null;
+      if (stream) {
+        stream.getTracks().forEach((tr) => tr.stop());
+        stream = null;
+      }
+    };
   }
 </script>

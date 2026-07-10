@@ -43,11 +43,12 @@ const t = useTranslations(lang);
 </BaseLayout>
 
 <script>
+  import { onPage } from '../../scripts/nav';
   import { boot } from '../../scripts/app-boot';
   import { getOrg, patchOrg, type OrgSettings } from '../../lib/api';
   import { useTranslations, type Locale } from '../../lib/i18n';
 
-  void (async () => {
+  onPage('settings-form', async () => {
     const ctx = await boot();
     if (!ctx) return;
     const t = useTranslations(ctx.lang as Locale);
@@ -105,5 +106,5 @@ const t = useTranslations(lang);
         alert(t('common.error'));
       }
     });
-  })();
+  });
 </script>

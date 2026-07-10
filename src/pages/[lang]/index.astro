@@ -12,6 +12,7 @@ const t = useTranslations(lang);
 
 <BaseLayout lang={lang} title={t('common.appName')} description={t('login.subtitle')}>
   <div class="mx-auto flex min-h-screen max-w-md flex-col justify-center px-4">
+    <span id="page-login" hidden></span>
     <div class="card text-center">
       <img
         src="/apple-touch-icon.png"
@@ -30,19 +31,22 @@ const t = useTranslations(lang);
 </BaseLayout>
 
 <script>
+  import { onPage } from '../../scripts/nav';
   import { isLoggedIn, renderGoogleButton } from '../../lib/auth';
 
-  const lang = document.documentElement.lang || 'en';
-  const next = new URLSearchParams(location.search).get('next');
-  const dest = next && next.startsWith('/') ? next : `/${lang}/dashboard/`;
+  onPage('page-login', () => {
+    const lang = document.documentElement.lang || 'en';
+    const next = new URLSearchParams(location.search).get('next');
+    const dest = next && next.startsWith('/') ? next : `/${lang}/dashboard/`;
 
-  if (isLoggedIn()) {
-    location.replace(dest);
-  } else {
-    const el = document.getElementById('gbtn');
-    if (el) renderGoogleButton(el, () => location.replace(dest));
-    document.addEventListener('vox-login-error', () =>
-      document.getElementById('err')?.classList.remove('hidden'),
-    );
-  }
+    if (isLoggedIn()) {
+      location.replace(dest);
+    } else {
+      const el = document.getElementById('gbtn');
+      if (el) renderGoogleButton(el, () => location.replace(dest));
+      document.addEventListener('vox-login-error', () =>
+        document.getElementById('err')?.classList.remove('hidden'),
+      );
+    }
+  });
 </script>

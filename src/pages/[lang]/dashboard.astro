@@ -100,12 +100,13 @@ const link = (p: string) => localizePath(lang, p);
 </BaseLayout>
 
 <script>
+  import { onPage } from '../../scripts/nav';
   import { boot } from '../../scripts/app-boot';
   import { listMembers, listProjects, getAnalytics, listMeetings } from '../../lib/api';
   import { useTranslations, type Locale } from '../../lib/i18n';
   import { barChart, esc, hbars } from '../../lib/charts';
 
-  void (async () => {
+  onPage('welcome', async () => {
     const ctx = await boot();
     if (!ctx) return;
     const t = useTranslations(ctx.lang as Locale);
@@ -170,5 +171,5 @@ const link = (p: string) => localizePath(lang, p);
         document.getElementById('analytics-section')!.classList.remove('hidden');
       }
     }
-  })();
+  });
 </script>
