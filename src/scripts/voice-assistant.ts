@@ -189,6 +189,9 @@ export class VoiceAssistant {
   private ws: WebSocket | null = null;
   private stream: MediaStream | null = null;
   private audioCtx: AudioContext | null = null;
+  /** Playback cursor (AudioContext time) so answer_audio chunks queue back-to-back
+   *  instead of all firing at `now` and overlapping. Reset per session. */
+  private nextPlayTime = 0;
   private scriptProcessor: ScriptProcessorNode | null = null;
   private analyser: AnalyserNode | null = null;
   private animFrame: number | null = null;
@@ -291,6 +294,9 @@ export class VoiceAssistant {
   private startAudioCapture(): void {
     if (!this.stream) return;
     this.audioCtx = new AudioContext({ sampleRate: 16000 });
+    // Fresh context → reset the playback cursor so it can't inherit a stale
+    // (huge) value from a previous session and delay all audio.
+    this.nextPlayTime = 0;
     const source = this.audioCtx.createMediaStreamSource(this.stream);
 
     // Waveform analyser (for the UI animation).
@@ -380,6 +386,11 @@ export class VoiceAssistant {
     const src = this.audioCtx.createBufferSource();
     src.buffer = audioBuf;
     src.connect(this.audioCtx.destination);
-    src.start();
+    // Schedule chunks sequentially: start at the running cursor, or `now` if the
+    // cursor has fallen behind (gap between AI turns). Without this every chunk
+    // starts at `now` and they all play on top of each other.
+    const startAt = Math.max(this.audioCtx.currentTime, this.nextPlayTime);
+    src.start(startAt);
+    this.nextPlayTime = startAt + audioBuf.duration;
   }
 }

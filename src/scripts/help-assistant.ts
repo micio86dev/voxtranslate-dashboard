@@ -126,6 +126,9 @@ export function handleWorkerMessage(msg: HaWorkerInboundMessage, cb: HaCallbacks
 export class HelpAssistantController {
   private port: MessagePort | null = null;
   private audioCtx: AudioContext | null = null;
+  /** Playback cursor so answer_audio chunks queue back-to-back instead of
+   *  overlapping. Reset whenever a fresh AudioContext is opened. */
+  private nextPlayTime = 0;
   private stream: MediaStream | null = null;
   private scriptProcessor: ScriptProcessorNode | null = null;
   private analyser: AnalyserNode | null = null;
@@ -215,6 +218,7 @@ export class HelpAssistantController {
   private startAudioCapture(): void {
     if (!this.stream || !this.port) return;
     this.audioCtx = new AudioContext({ sampleRate: 16000 });
+    this.nextPlayTime = 0;
     const source = this.audioCtx.createMediaStreamSource(this.stream);
 
     this.analyser = this.audioCtx.createAnalyser();
@@ -250,6 +254,7 @@ export class HelpAssistantController {
       // Playback AudioContext opened lazily (e.g., this tab was passive and
       // became active after the capture context was closed)
       this.audioCtx = new AudioContext();
+      this.nextPlayTime = 0;
     }
     const bin = atob(b64);
     const pcm = new ArrayBuffer(bin.length);
@@ -265,7 +270,10 @@ export class HelpAssistantController {
     const src = this.audioCtx.createBufferSource();
     src.buffer = audioBuf;
     src.connect(this.audioCtx.destination);
-    src.start();
+    // Queue sequentially so chunks don't all start at `now` and overlap.
+    const startAt = Math.max(this.audioCtx.currentTime, this.nextPlayTime);
+    src.start(startAt);
+    this.nextPlayTime = startAt + audioBuf.duration;
   }
 }
 
@@ -281,6 +289,9 @@ export class HelpAssistantController {
 export class HelpAssistantFallback {
   private ws: WebSocket | null = null;
   private audioCtx: AudioContext | null = null;
+  /** Playback cursor so answer_audio chunks queue back-to-back instead of
+   *  overlapping. Reset whenever a fresh AudioContext is opened. */
+  private nextPlayTime = 0;
   private stream: MediaStream | null = null;
   private scriptProcessor: ScriptProcessorNode | null = null;
   private analyser: AnalyserNode | null = null;
@@ -364,6 +375,7 @@ export class HelpAssistantFallback {
   private startAudioCapture(): void {
     if (!this.stream || !this.ws) return;
     this.audioCtx = new AudioContext({ sampleRate: 16000 });
+    this.nextPlayTime = 0;
     const source = this.audioCtx.createMediaStreamSource(this.stream);
     this.analyser = this.audioCtx.createAnalyser();
     this.analyser.fftSize = 256;
@@ -442,7 +454,10 @@ export class HelpAssistantFallback {
     const src = this.audioCtx.createBufferSource();
     src.buffer = audioBuf;
     src.connect(this.audioCtx.destination);
-    src.start();
+    // Queue sequentially so chunks don't all start at `now` and overlap.
+    const startAt = Math.max(this.audioCtx.currentTime, this.nextPlayTime);
+    src.start(startAt);
+    this.nextPlayTime = startAt + audioBuf.duration;
   }
 }
 
