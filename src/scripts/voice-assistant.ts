@@ -293,7 +293,12 @@ export class VoiceAssistant {
 
   private startAudioCapture(): void {
     if (!this.stream) return;
-    this.audioCtx = new AudioContext({ sampleRate: 16000 });
+    // 24 kHz for BOTH capture and playback: it matches the OpenAI Realtime
+    // session's declared input/output rate (audio.{input,output}.format.rate:
+    // 24000), so mic PCM isn't misread as a faster rate AND the 24 kHz answer
+    // buffers play with NO resampling — resampling 24k→16k per chunk left
+    // boundary artifacts that accumulated into growing noise over a turn.
+    this.audioCtx = new AudioContext({ sampleRate: 24000 });
     // Fresh context → reset the playback cursor so it can't inherit a stale
     // (huge) value from a previous session and delay all audio.
     this.nextPlayTime = 0;
@@ -373,9 +378,8 @@ export class VoiceAssistant {
   private playPcm16(b64: string): void {
     if (!this.audioCtx) return;
     const pcm = base64ToArrayBuffer(b64);
-    // The server sends raw PCM16 LE at 24kHz (OpenAI Realtime output rate).
-    // We create a mono AudioBuffer at the context's native rate (16kHz) and
-    // resample by just playing it — the output quality is adequate for voice.
+    // The server sends raw PCM16 LE at 24kHz (OpenAI Realtime output rate). The
+    // AudioContext also runs at 24kHz, so the buffer plays 1:1 with no resampling.
     const int16 = new Int16Array(pcm);
     const float32 = new Float32Array(int16.length);
     for (let i = 0; i < int16.length; i++) {

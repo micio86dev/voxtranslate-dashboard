@@ -217,7 +217,9 @@ export class HelpAssistantController {
 
   private startAudioCapture(): void {
     if (!this.stream || !this.port) return;
-    this.audioCtx = new AudioContext({ sampleRate: 16000 });
+    // 24 kHz matches the OpenAI Realtime session rate for both capture and the
+    // 24 kHz answer buffers → no per-chunk resampling (which caused growing noise).
+    this.audioCtx = new AudioContext({ sampleRate: 24000 });
     this.nextPlayTime = 0;
     const source = this.audioCtx.createMediaStreamSource(this.stream);
 
@@ -252,8 +254,9 @@ export class HelpAssistantController {
   private playPcm16(b64: string): void {
     if (!this.audioCtx) {
       // Playback AudioContext opened lazily (e.g., this tab was passive and
-      // became active after the capture context was closed)
-      this.audioCtx = new AudioContext();
+      // became active after the capture context was closed). 24 kHz matches the
+      // answer buffers so playback needs no resampling.
+      this.audioCtx = new AudioContext({ sampleRate: 24000 });
       this.nextPlayTime = 0;
     }
     const bin = atob(b64);
@@ -374,7 +377,9 @@ export class HelpAssistantFallback {
 
   private startAudioCapture(): void {
     if (!this.stream || !this.ws) return;
-    this.audioCtx = new AudioContext({ sampleRate: 16000 });
+    // 24 kHz matches the OpenAI Realtime session rate for both capture and the
+    // 24 kHz answer buffers → no per-chunk resampling (which caused growing noise).
+    this.audioCtx = new AudioContext({ sampleRate: 24000 });
     this.nextPlayTime = 0;
     const source = this.audioCtx.createMediaStreamSource(this.stream);
     this.analyser = this.audioCtx.createAnalyser();
