@@ -303,8 +303,10 @@ const { lang, title, description = '', chrome = false } = Astro.props;
             isSessionActive = false;
           },
           onSync(state, syncTranscript, costDisplay) {
-            // Restore state from another tab's session
+            // Restore state from a session the SharedWorker already holds (another
+            // tab, or — the common case — this same tab after a page navigation).
             setMicState(state);
+            transcriptBody.innerHTML = '';
             for (const entry of syncTranscript) {
               appendTranscript(entry.role, entry.text);
             }
@@ -312,8 +314,30 @@ const { lang, title, description = '', chrome = false } = Astro.props;
               cost.classList.remove('hidden');
               costValue.textContent = costDisplay;
             }
+            // Seamless continuation (choice A): if a session is live and this tab
+            // isn't already driving it, re-open the panel and re-adopt the mic —
+            // without restarting the WS — so talking continues across navigation.
+            const live =
+              state === VoiceAssistantState.Connecting ||
+              state === VoiceAssistantState.Listening ||
+              state === VoiceAssistantState.Speaking;
+            if (live && !isSessionActive) {
+              isSessionActive = true;
+              if (!isPanelOpen) {
+                isPanelOpen = true;
+                panel.classList.remove('hidden');
+                mic.classList.remove('hidden');
+                mic.classList.add('flex');
+              }
+              void ha.resume();
+            }
           },
         });
+
+        // Re-attach to any live session on every page load (choice A: the
+        // Help Assistant survives navigation via the SharedWorker). The worker
+        // replies with a `sync`; onSync above resumes it if one is running.
+        ha.attach();
 
         // -----------------------------------------------------------------
         // Panel open / close

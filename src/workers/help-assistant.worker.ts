@@ -341,6 +341,22 @@ if (typeof self !== 'undefined' && 'onconnect' in self) {
           break;
         }
 
+        case 'resume': {
+          // Re-adopt a live session after a page navigation: become the active
+          // port and cancel the teardown grace timer WITHOUT restarting the WS.
+          // If the session already ended (grace expired, WS gone), this is a
+          // no-op — the page already got an 'idle' sync and stays idle.
+          if (ws && ws.readyState === WebSocket.OPEN) {
+            if (gracePeriodTimer !== null) {
+              clearTimeout(gracePeriodTimer);
+              gracePeriodTimer = null;
+            }
+            activePort = port;
+            port.postMessage(buildSyncMessage(workerState, transcript, costDisplay));
+          }
+          break;
+        }
+
         case 'stop': {
           if (ws && ws.readyState === WebSocket.OPEN) {
             try {

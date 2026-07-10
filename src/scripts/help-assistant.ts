@@ -142,15 +142,13 @@ export class HelpAssistantController {
   }
 
   /**
-   * Connect to the SharedWorker and start the session.
-   * Returns false if the worker or mic could not be opened.
+   * Open the SharedWorker and wire the message pump. Idempotent — safe to call
+   * from attach(), start(), and resume(). Returns false if the worker could not
+   * be opened.
    */
-  async start(): Promise<boolean> {
-    const token = localStorage.getItem('voxb.token');
-    const baseUrl = helpAssistantWsUrl(this.orgId);
-    const wsUrl = buildHaFullWsUrl(baseUrl, token);
+  private connectWorker(): boolean {
+    if (this.port) return true;
 
-    // Open SharedWorker
     let worker: SharedWorker;
     try {
       worker = new SharedWorker(new URL('../workers/help-assistant.worker.ts', import.meta.url), {
@@ -158,7 +156,8 @@ export class HelpAssistantController {
         name: 'ha-worker',
       });
     } catch {
-      this.callbacks.onError('worker_error', 'Failed to open SharedWorker.');
+      // Silent: attach()/resume() run on page load and must never surface an
+      // error unprompted. start() reports worker_error explicitly on failure.
       return false;
     }
 
@@ -178,6 +177,55 @@ export class HelpAssistantController {
     });
 
     this.port.start();
+    return true;
+  }
+
+  /**
+   * Connect to the SharedWorker WITHOUT starting a session. On page load this
+   * lets a freshly-loaded page discover any live session — the worker replies
+   * with a `sync` snapshot (state + transcript), which the caller can act on
+   * (e.g. call resume() to seamlessly continue after a navigation).
+   */
+  attach(): void {
+    this.connectWorker();
+  }
+
+  /**
+   * Re-adopt a live session as the active port WITHOUT restarting the WebSocket.
+   * Used to continue seamlessly after a page navigation: re-acquire the mic and
+   * resume capture against the session the SharedWorker already holds open.
+   * Returns false if the mic could not be opened (session keeps running in the
+   * worker; this tab just won't capture).
+   */
+  async resume(): Promise<boolean> {
+    if (!this.connectWorker() || !this.port) return false;
+
+    try {
+      this.stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    } catch {
+      return false;
+    }
+
+    // 'resume' adopts the existing WS (unlike 'start', which opens a fresh one).
+    this.port.postMessage({ type: 'resume' });
+    this.isActive = true;
+    this.startAudioCapture();
+    return true;
+  }
+
+  /**
+   * Connect to the SharedWorker and start a FRESH session (opens a new WS).
+   * Returns false if the worker or mic could not be opened.
+   */
+  async start(): Promise<boolean> {
+    const token = localStorage.getItem('voxb.token');
+    const baseUrl = helpAssistantWsUrl(this.orgId);
+    const wsUrl = buildHaFullWsUrl(baseUrl, token);
+
+    if (!this.connectWorker() || !this.port) {
+      this.callbacks.onError('worker_error', 'Failed to open SharedWorker.');
+      return false;
+    }
 
     // Request mic
     try {
@@ -305,6 +353,16 @@ export class HelpAssistantFallback {
   constructor(orgId: string, callbacks: HaCallbacks) {
     this.orgId = orgId;
     this.callbacks = callbacks;
+  }
+
+  /** No SharedWorker on this path — there is nothing to re-attach to across
+   *  pages, so this is a no-op (Safari/iOS sessions end on navigation). */
+  attach(): void {}
+
+  /** No cross-page persistence without a SharedWorker: the session ended on
+   *  navigation, so there is nothing to resume. */
+  async resume(): Promise<boolean> {
+    return false;
   }
 
   async start(): Promise<boolean> {
