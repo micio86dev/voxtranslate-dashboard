@@ -824,6 +824,31 @@ export function voiceAssistantWsUrl(
   return buildWsUrl(API_BASE, orgId, opts);
 }
 
+// --- Help Assistant (B2B) ----------------------------------------------------
+
+/**
+ * Build the WebSocket URL for the help-assistant endpoint from an explicit
+ * API base URL. Protocol swap (https→wss, http→ws) is applied here.
+ *
+ * Parameterised for unit-testability (no dependency on module-level API_BASE).
+ * The caller is responsible for appending `?token=` before connecting.
+ */
+export function buildHelpAssistantWsUrl(apiBase: string, orgId: string): string {
+  const base = apiBase
+    .replace(/\/+$/, '')
+    .replace(/^https:\/\//, 'wss://')
+    .replace(/^http:\/\//, 'ws://');
+  return `${base}/api/business/organizations/${orgId}/help-assistant`;
+}
+
+/**
+ * Build the WebSocket URL for the help-assistant endpoint using the
+ * module-level `API_BASE`. Convenience wrapper around `buildHelpAssistantWsUrl`.
+ */
+export function helpAssistantWsUrl(orgId: string): string {
+  return buildHelpAssistantWsUrl(API_BASE, orgId);
+}
+
 // --- Current-org helper (persisted selection) --------------------------------
 
 const ORG_KEY = 'voxb.org';
