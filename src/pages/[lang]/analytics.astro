@@ -51,6 +51,33 @@ const t = useTranslations(lang);
       </div>
     </div>
 
+    <!-- Webinar KPI cards (webinar-analytics epic); hidden until data present -->
+    <div id="webinar-kpis" class="mt-6 hidden">
+      <div class="text-sm font-semibold">{t('analytics.webinarKpis')}</div>
+      <div class="mt-3 grid gap-3 sm:grid-cols-3 lg:grid-cols-5">
+        <div class="card">
+          <div class="text-xs text-muted">{t('analytics.kpiWebinars')}</div>
+          <div id="kpi-webinars" class="mt-1 text-2xl font-bold">—</div>
+        </div>
+        <div class="card">
+          <div class="text-xs text-muted">{t('analytics.kpiPeakViewers')}</div>
+          <div id="kpi-peak" class="mt-1 text-2xl font-bold">—</div>
+        </div>
+        <div class="card">
+          <div class="text-xs text-muted">{t('analytics.kpiBroadcastHours')}</div>
+          <div id="kpi-broadcast" class="mt-1 text-2xl font-bold">—</div>
+        </div>
+        <div class="card">
+          <div class="text-xs text-muted">{t('analytics.kpiWatchHours')}</div>
+          <div id="kpi-watch" class="mt-1 text-2xl font-bold">—</div>
+        </div>
+        <div class="card">
+          <div class="text-xs text-muted">{t('analytics.kpiWebinarSpend')}</div>
+          <div id="kpi-webinar-spend" class="mt-1 text-2xl font-bold">—</div>
+        </div>
+      </div>
+    </div>
+
     <div class="mt-4 grid gap-4 lg:grid-cols-2">
       <div class="card">
         <div class="text-sm font-semibold">{t('analytics.callsOverTime')}</div>
@@ -97,6 +124,21 @@ const t = useTranslations(lang);
       set('kpi-transcripts', a.kpis.transcripts);
       set('kpi-recordings', a.kpis.recordings);
       set('kpi-credits', a.kpis.credits_spent);
+
+      // Webinar KPIs — only shown when the server includes the block.
+      const w = a.webinars;
+      const wkpis = document.getElementById('webinar-kpis')!;
+      if (w) {
+        const setStr = (id: string, v: string) => (document.getElementById(id)!.textContent = v);
+        setStr('kpi-webinars', String(w.webinars_hosted));
+        setStr('kpi-peak', String(w.peak_viewers_max));
+        setStr('kpi-broadcast', w.total_broadcast_hours.toFixed(1));
+        setStr('kpi-watch', w.total_watch_hours.toFixed(1));
+        setStr('kpi-webinar-spend', String(w.webinar_spend));
+        wkpis.classList.remove('hidden');
+      } else {
+        wkpis.classList.add('hidden');
+      }
 
       document.getElementById('chart-calls')!.innerHTML =
         barChart(a.calls_by_day, t('analytics.calls')) ||

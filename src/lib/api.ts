@@ -262,6 +262,115 @@ export const listOrgRooms = (orgId: string, q: HistoryQuery = {}) => {
   );
 };
 
+// --- Webinar history ---------------------------------------------------------
+
+export interface WebinarRow {
+  id: string;
+  code: string;
+  title: string;
+  /** 'scheduled' | 'live' | 'ended' | 'archived' (server-defined status). */
+  status: string;
+  tier: string;
+  project_id: string | null;
+  project_name: string | null;
+  scheduled_start: string | null;
+  actual_start: string | null;
+  actual_end: string | null;
+  duration_seconds: number | null;
+  peak_viewers: number | null;
+  cost_credits: number | null;
+  has_report: boolean;
+}
+
+export interface WebinarsPage {
+  webinars: WebinarRow[];
+  page: number;
+  limit: number;
+}
+
+export interface WebinarsQuery {
+  project_id?: string;
+  page?: number;
+  limit?: number;
+  from?: string;
+  to?: string;
+  status?: string;
+  include_archived?: boolean;
+}
+
+export const listOrgWebinars = (orgId: string, q: WebinarsQuery = {}) => {
+  const params = new URLSearchParams();
+  if (q.project_id) params.set('project_id', q.project_id);
+  if (q.page) params.set('page', String(q.page));
+  if (q.limit) params.set('limit', String(q.limit));
+  if (q.from) params.set('from', q.from);
+  if (q.to) params.set('to', q.to);
+  if (q.status) params.set('status', q.status);
+  if (q.include_archived) params.set('include_archived', 'true');
+  const qs = params.toString();
+  return request<WebinarsPage>(
+    'GET',
+    `/api/business/organizations/${orgId}/webinars${qs ? `?${qs}` : ''}`,
+  );
+};
+
+export interface WebinarInfo {
+  id: string;
+  code: string;
+  title: string;
+  description: string | null;
+  status: string;
+  tier: string;
+  source_language: string | null;
+  project_id: string | null;
+  project_name: string | null;
+  host_user_id: string | null;
+  scheduled_start: string | null;
+  scheduled_end: string | null;
+  actual_start: string | null;
+  actual_end: string | null;
+  archived_at: string | null;
+  created_at: string;
+}
+
+export interface WebinarSession {
+  actual_start: string | null;
+  actual_end: string | null;
+  scheduled_start: string | null;
+  scheduled_end: string | null;
+  duration_seconds: number | null;
+  host_online_seconds: number | null;
+  peak_viewers: number | null;
+  translated_language_count: number | null;
+  cost_credits: number | null;
+}
+
+export interface WebinarParticipant {
+  name: string;
+  language_code: string | null;
+  total_watch_seconds: number | null;
+  joined_at: string | null;
+  last_seen: string | null;
+  approx_country: string | null;
+}
+
+export interface WebinarEmailStatus {
+  status: string;
+  count: number;
+}
+
+export interface WebinarDetail {
+  webinar: WebinarInfo;
+  /** null until the webinar is finalized (no session row yet). */
+  session: WebinarSession | null;
+  participants: WebinarParticipant[];
+  report: { available: boolean; languages: string[] };
+  emails: { total: number; by_status: WebinarEmailStatus[] };
+}
+
+export const getWebinarDetail = (orgId: string, webinarId: string) =>
+  request<WebinarDetail>('GET', `/api/business/organizations/${orgId}/webinars/${webinarId}`);
+
 // --- Transcripts -------------------------------------------------------------
 
 export interface Segment {
@@ -543,12 +652,23 @@ export interface AnalyticsProject {
   minutes: number;
 }
 
+/** Webinar KPI block within the org analytics summary. */
+export interface AnalyticsWebinars {
+  webinars_hosted: number;
+  peak_viewers_max: number;
+  total_broadcast_hours: number;
+  total_watch_hours: number;
+  webinar_spend: number;
+}
+
 export interface AnalyticsSummary {
   range_days: number;
   kpis: AnalyticsKpis;
   credits_by_type: AnalyticsTypeSpend[];
   calls_by_day: AnalyticsDay[];
   top_projects: AnalyticsProject[];
+  /** Webinar KPIs (webinar-analytics epic). May be absent on older servers. */
+  webinars?: AnalyticsWebinars;
 }
 
 export const getAnalytics = (orgId: string, days = 30) =>
