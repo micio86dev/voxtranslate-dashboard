@@ -187,6 +187,9 @@
   "projects": {
     "title": "Progetti",
     "new": "Nuovo progetto",
+    "edit": "Modifica",
+    "save": "Salva modifiche",
+    "saving": "Salvataggio…",
     "name": "Nome del progetto",
     "namePh": "Pianificazione Q3",
     "description": "Descrizione",

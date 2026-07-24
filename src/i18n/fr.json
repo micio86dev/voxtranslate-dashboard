@@ -187,6 +187,9 @@
   "projects": {
     "title": "Projets",
     "new": "Nouveau projet",
+    "edit": "Modifier",
+    "save": "Enregistrer",
+    "saving": "Enregistrement…",
     "name": "Nom du projet",
     "namePh": "Planification T3",
     "description": "Description",

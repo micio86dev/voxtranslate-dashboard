@@ -21,10 +21,36 @@ const link = (p: string) => localizePath(lang, p);
   <a href={link('projects')} class="text-sm text-muted hover:text-ink">← {t('projects.title')}</a>
   <div class="mt-2 flex items-start justify-between gap-2">
     <h1 id="proj-name" class="text-2xl font-bold">{t('common.loading')}</h1>
-    <button id="archive" class="btn-danger hidden text-sm">{t('projects.archive')}</button>
+    <div class="flex flex-shrink-0 gap-2">
+      <button id="edit" class="btn-ghost hidden text-sm">{t('projects.edit')}</button>
+      <button id="archive" class="btn-danger hidden text-sm">{t('projects.archive')}</button>
+    </div>
   </div>
   <p id="proj-desc" class="mt-1 text-muted"></p>
   <div id="proj-langs" class="mt-3 flex flex-wrap gap-1"></div>
+
+  <!-- Edit form — hidden until "Edit". Pre-filled with the current values;
+       PATCHes the project and updates the header in place on success. -->
+  <form id="edit-form" class="card mt-4 hidden max-w-lg space-y-4">
+    <div>
+      <label class="label" for="edit-name">{t('projects.name')}</label>
+      <input id="edit-name" class="field" required placeholder={t('projects.namePh')} />
+    </div>
+    <div>
+      <label class="label" for="edit-desc">{t('projects.description')}</label>
+      <textarea id="edit-desc" class="field" rows="2" placeholder={t('projects.descPh')}></textarea>
+    </div>
+    <div>
+      <label class="label" for="edit-langs">{t('projects.languages')}</label>
+      <input id="edit-langs" class="field" placeholder={t('projects.langsPh')} />
+      <p class="mt-1 text-xs text-muted">{t('projects.langsHint')}</p>
+    </div>
+    <p id="edit-err" class="hidden text-sm text-danger"></p>
+    <div class="flex gap-2">
+      <button id="edit-save" class="btn-primary" type="submit">{t('projects.save')}</button>
+      <button id="edit-cancel" class="btn-ghost" type="button">{t('common.cancel')}</button>
+    </div>
+  </form>
 
   <!-- AI storyboard -->
   <div class="mt-8 flex flex-wrap items-center justify-between gap-2">
@@ -193,6 +219,7 @@ const link = (p: string) => localizePath(lang, p);
     generateStoryboard,
     getProject,
     getStoryboard,
+    patchProject,
     listOrgRooms,
     listVoiceMessages,
     uploadVoiceMessage,
@@ -518,6 +545,69 @@ const link = (p: string) => localizePath(lang, p);
       if (!confirm(t('projects.archiveConfirm', { name: p.name }))) return;
       await deleteProject(ctx.activeOrg.id, p.id);
       location.href = `/${ctx.lang}/projects/`;
+    });
+
+    // --- Edit / rename ---
+    const nameEl = document.getElementById('proj-name')!;
+    const descEl = document.getElementById('proj-desc')!;
+    const langsEl = document.getElementById('proj-langs')!;
+    const editForm = document.getElementById('edit-form') as HTMLFormElement;
+    const editName = document.getElementById('edit-name') as HTMLInputElement;
+    const editDesc = document.getElementById('edit-desc') as HTMLTextAreaElement;
+    const editLangs = document.getElementById('edit-langs') as HTMLInputElement;
+    const editErr = document.getElementById('edit-err')!;
+    const editSave = document.getElementById('edit-save') as HTMLButtonElement;
+    const edit = document.getElementById('edit') as HTMLButtonElement;
+
+    const renderLangs = () => {
+      langsEl.innerHTML = (p.default_languages ?? [])
+        .map((l) => `<span class="badge">${esc(l)}</span>`)
+        .join(' ');
+    };
+
+    edit.classList.remove('hidden');
+    edit.addEventListener('click', () => {
+      editName.value = p.name;
+      editDesc.value = p.description ?? '';
+      editLangs.value = (p.default_languages ?? []).join(', ');
+      editErr.classList.add('hidden');
+      editForm.classList.toggle('hidden');
+    });
+    document
+      .getElementById('edit-cancel')!
+      .addEventListener('click', () => editForm.classList.add('hidden'));
+
+    editForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      editErr.classList.add('hidden');
+      const name = editName.value.trim();
+      const description = editDesc.value.trim();
+      const langs = editLangs.value
+        .split(',')
+        .map((s) => s.trim().toLowerCase())
+        .filter(Boolean);
+      if (!name) return;
+      editSave.disabled = true;
+      editSave.textContent = t('projects.saving');
+      const res2 = await patchProject(ctx.activeOrg.id, p.id, {
+        name,
+        description,
+        default_languages: langs,
+      });
+      editSave.disabled = false;
+      editSave.textContent = t('projects.save');
+      if (res2.ok && res2.data) {
+        p.name = res2.data.name;
+        p.description = res2.data.description;
+        p.default_languages = res2.data.default_languages;
+        nameEl.textContent = p.name;
+        descEl.textContent = p.description ?? '';
+        renderLangs();
+        editForm.classList.add('hidden');
+      } else {
+        editErr.textContent = t('common.error');
+        editErr.classList.remove('hidden');
+      }
     });
 
     // Per-project semantic search: deep-link to the global Search page pre-scoped to

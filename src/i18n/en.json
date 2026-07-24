@@ -187,6 +187,9 @@
   "projects": {
     "title": "Projects",
     "new": "New project",
+    "edit": "Edit",
+    "save": "Save changes",
+    "saving": "Saving…",
     "name": "Project name",
     "namePh": "Q3 Planning",
     "description": "Description",

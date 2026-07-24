@@ -187,6 +187,9 @@
   "projects": {
     "title": "Projekte",
     "new": "Neues Projekt",
+    "edit": "Bearbeiten",
+    "save": "Änderungen speichern",
+    "saving": "Speichern…",
     "name": "Projektname",
     "namePh": "Q3-Planung",
     "description": "Beschreibung",
