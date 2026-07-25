@@ -586,6 +586,38 @@ describe('downloadTranscript', () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// 2.1 [RED] — helpAssistantWsUrl / buildHelpAssistantWsUrl
+// ---------------------------------------------------------------------------
+
+describe('buildHelpAssistantWsUrl', () => {
+  it('builds wss:// URL from https API base', () => {
+    const url = api.buildHelpAssistantWsUrl('https://api.voxtranslate.app', 'org-123');
+    expect(url).toBe(
+      'wss://api.voxtranslate.app/api/business/organizations/org-123/help-assistant',
+    );
+  });
+
+  it('builds ws:// URL from http API base', () => {
+    const url = api.buildHelpAssistantWsUrl('http://localhost:3001', 'org-abc');
+    expect(url).toBe('ws://localhost:3001/api/business/organizations/org-abc/help-assistant');
+  });
+
+  it('strips trailing slash from apiBase', () => {
+    const url = api.buildHelpAssistantWsUrl('https://api.voxtranslate.app/', 'org-1');
+    expect(url).toBe('wss://api.voxtranslate.app/api/business/organizations/org-1/help-assistant');
+  });
+});
+
+describe('helpAssistantWsUrl', () => {
+  it('returns a wss:// URL for the help-assistant endpoint', () => {
+    const url = api.helpAssistantWsUrl('org-xyz');
+    // Module-level API_BASE defaults to 'http://localhost:3001' in test env
+    expect(url).toContain('/api/business/organizations/org-xyz/help-assistant');
+    expect(url).toMatch(/^ws(s)?:\/\//);
+  });
+});
+
 describe('current-org persistence', () => {
   it('round-trips through localStorage', () => {
     expect(api.currentOrgId()).toBeNull();

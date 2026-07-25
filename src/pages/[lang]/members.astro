@@ -70,6 +70,7 @@ const t = useTranslations(lang);
 </BaseLayout>
 
 <script>
+  import { onPage } from '../../scripts/nav';
   import { boot } from '../../scripts/app-boot';
   import { changeMemberRole, createInvite, listMembers, removeMember } from '../../lib/api';
   import { useTranslations, type Locale } from '../../lib/i18n';
@@ -81,7 +82,7 @@ const t = useTranslations(lang);
     );
   }
 
-  void (async () => {
+  onPage('invite-btn', async () => {
     const ctx = await boot();
     if (!ctx) return;
     const t = useTranslations(ctx.lang as Locale);
@@ -188,5 +189,5 @@ const t = useTranslations(lang);
     });
 
     void render();
-  })();
+  });
 </script>

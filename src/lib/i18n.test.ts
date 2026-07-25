@@ -10,6 +10,13 @@ import {
   localizePath,
 } from './i18n';
 
+// Raw JSON dicts (loaded directly so tests catch missing keys at the JSON layer)
+import enDict from '../i18n/en.json';
+import itDict from '../i18n/it.json';
+import esDict from '../i18n/es.json';
+import deDict from '../i18n/de.json';
+import frDict from '../i18n/fr.json';
+
 describe('isLocale', () => {
   it('accepts the shipped locales', () => {
     for (const l of LOCALES) expect(isLocale(l)).toBe(true);
@@ -106,5 +113,86 @@ describe('constants', () => {
   it('exposes a name for every locale and a default', () => {
     expect(DEFAULT_LOCALE).toBe('en');
     for (const l of LOCALES) expect(LOCALE_NAMES[l]).toBeTruthy();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// helpAssistant namespace — key parity across all 5 locales
+// ---------------------------------------------------------------------------
+
+const HA_KEYS = [
+  'panelTitle',
+  'startLabel',
+  'stopLabel',
+  'connecting',
+  'listening',
+  'speaking',
+  'errorLabel',
+  'capacityFull',
+  'creditsExhausted',
+  'micDenied',
+  'wsError',
+  'transcriptHeader',
+  'costLabel',
+  'sessionEnded',
+  'closePanel',
+  'unavailable',
+] as const;
+
+const ALL_DICTS: Record<string, Record<string, unknown>> = {
+  en: enDict as unknown as Record<string, unknown>,
+  it: itDict as unknown as Record<string, unknown>,
+  es: esDict as unknown as Record<string, unknown>,
+  de: deDict as unknown as Record<string, unknown>,
+  fr: frDict as unknown as Record<string, unknown>,
+};
+
+describe('helpAssistant i18n namespace', () => {
+  it('en.json has a helpAssistant namespace object', () => {
+    expect(typeof ALL_DICTS['en']?.['helpAssistant']).toBe('object');
+    expect(ALL_DICTS['en']?.['helpAssistant']).not.toBeNull();
+  });
+
+  for (const locale of LOCALES) {
+    it(`${locale}.json has every required helpAssistant key`, () => {
+      const ns = (ALL_DICTS[locale]?.['helpAssistant'] ?? {}) as Record<string, unknown>;
+      for (const key of HA_KEYS) {
+        expect(typeof ns[key], `${locale}.helpAssistant.${key} should be a string`).toBe('string');
+        expect(
+          (ns[key] as string).length,
+          `${locale}.helpAssistant.${key} should not be empty`,
+        ).toBeGreaterThan(0);
+      }
+    });
+  }
+
+  it('non-en locales do not use English placeholder values for critical keys', () => {
+    const enNs = (ALL_DICTS['en']?.['helpAssistant'] ?? {}) as Record<string, string>;
+    // Keys whose value in non-en locales MUST differ from English
+    // (these are natural-language strings, not symbols like closePanel)
+    const naturalKeys: Array<(typeof HA_KEYS)[number]> = [
+      'panelTitle',
+      'startLabel',
+      'stopLabel',
+      'connecting',
+      'listening',
+      'speaking',
+      'capacityFull',
+      'creditsExhausted',
+      'micDenied',
+    ];
+    for (const locale of LOCALES) {
+      if (locale === 'en') continue;
+      const ns = (ALL_DICTS[locale]?.['helpAssistant'] ?? {}) as Record<string, string>;
+      let differentCount = 0;
+      for (const key of naturalKeys) {
+        if (ns[key] !== enNs[key]) differentCount++;
+      }
+      // At least half of the natural-language keys should differ from English
+      expect(
+        differentCount,
+        `${locale}.helpAssistant appears to have English placeholders (only ${differentCount}/${naturalKeys.length} keys differ)`,
+      ).toBeGreaterThan(naturalKeys.length / 2);
+    }
   });
 });

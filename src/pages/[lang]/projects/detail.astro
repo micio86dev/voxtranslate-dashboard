@@ -128,6 +128,51 @@ const link = (p: string) => localizePath(lang, p);
     <button type="submit" class="btn-primary text-sm">{t('search.run')}</button>
   </form>
 
+  <!-- Voice assistant for this project (eligible users only) -->
+  <div id="va-section" class="mt-4 hidden">
+    <div class="flex flex-wrap items-center gap-3">
+      <button
+        id="va-btn"
+        type="button"
+        class="btn-ghost hidden items-center gap-2"
+        title={t('voiceAssistant.startLabel')}
+        aria-label={t('voiceAssistant.startLabel')}
+      >
+        <svg
+          id="va-icon"
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          class="h-4 w-4"
+          aria-hidden="true"
+        >
+          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+          <line x1="12" y1="19" x2="12" y2="23"></line>
+          <line x1="8" y1="23" x2="16" y2="23"></line>
+        </svg>
+        <span id="va-btn-label" class="text-sm"></span>
+      </button>
+      <div id="va-cost" class="hidden text-xs text-muted">
+        <span id="va-cost-label"></span><span id="va-cost-value"></span>
+      </div>
+    </div>
+    <canvas id="va-waveform" class="mt-2 hidden h-10 w-full rounded" aria-hidden="true"></canvas>
+    <div id="va-transcript" class="mt-3 hidden">
+      <h2 id="va-transcript-header" class="text-sm font-semibold text-muted"></h2>
+      <div
+        id="va-transcript-body"
+        class="mt-2 max-h-48 space-y-1 overflow-y-auto rounded border border-line p-3 text-sm"
+      >
+      </div>
+    </div>
+    <p id="va-msg" class="mt-2 text-sm text-muted"></p>
+  </div>
+
   <!-- Project voice notes: record a note onto the project (no call); it's
        transcribed + translated and feeds the project's insights. Shown only for
        orgs with an active subscription. -->
@@ -167,6 +212,7 @@ const link = (p: string) => localizePath(lang, p);
 </BaseLayout>
 
 <script>
+  import { onPage } from '../../../scripts/nav';
   import { boot } from '../../../scripts/app-boot';
   import {
     deleteProject,
@@ -182,12 +228,212 @@ const link = (p: string) => localizePath(lang, p);
     type ProjectVoiceMessage,
   } from '../../../lib/api';
   import { useTranslations, type Locale } from '../../../lib/i18n';
+  import { VoiceAssistant, VoiceAssistantState } from '../../../scripts/voice-assistant';
 
   function esc(s: string): string {
     return s.replace(
       /[&<>"]/g,
       (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c] || c,
     );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Waveform animation (shared with voice assistant)
+  // ---------------------------------------------------------------------------
+
+  let waveformFrame: number | null = null;
+
+  function startWaveform(analyser: AnalyserNode, canvas: HTMLCanvasElement): void {
+    const rawCtx = canvas.getContext('2d');
+    if (!rawCtx) return;
+    const ctx2d: CanvasRenderingContext2D = rawCtx;
+    const data = new Uint8Array(analyser.frequencyBinCount);
+    function draw() {
+      waveformFrame = requestAnimationFrame(draw);
+      analyser.getByteTimeDomainData(data);
+      ctx2d.clearRect(0, 0, canvas.width, canvas.height);
+      ctx2d.beginPath();
+      const sliceWidth = canvas.width / data.length;
+      let x = 0;
+      for (let i = 0; i < data.length; i++) {
+        const v = data[i] / 128.0;
+        const y = (v * canvas.height) / 2;
+        if (i === 0) ctx2d.moveTo(x, y);
+        else ctx2d.lineTo(x, y);
+        x += sliceWidth;
+      }
+      ctx2d.lineTo(canvas.width, canvas.height / 2);
+      ctx2d.strokeStyle = '#6366f1';
+      ctx2d.lineWidth = 1.5;
+      ctx2d.stroke();
+    }
+    draw();
+  }
+
+  function stopWaveform(): void {
+    if (waveformFrame !== null) {
+      cancelAnimationFrame(waveformFrame);
+      waveformFrame = null;
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Voice assistant controller (project-scoped)
+  // ---------------------------------------------------------------------------
+
+  function setupVoiceAssistant(
+    orgId: string,
+    projectId: string,
+    t: (k: string, v?: Record<string, string | number>) => string,
+  ): () => void {
+    const vaBtn = document.getElementById('va-btn') as HTMLButtonElement;
+    const vaBtnLabel = document.getElementById('va-btn-label') as HTMLSpanElement;
+    const vaIcon = document.getElementById('va-icon') as unknown as SVGElement;
+    const vaWaveform = document.getElementById('va-waveform') as HTMLCanvasElement;
+    const vaCost = document.getElementById('va-cost')!;
+    const vaCostLabel = document.getElementById('va-cost-label')!;
+    const vaCostValue = document.getElementById('va-cost-value')!;
+    const vaTranscript = document.getElementById('va-transcript')!;
+    const vaTranscriptHeader = document.getElementById('va-transcript-header')!;
+    const vaTranscriptBody = document.getElementById('va-transcript-body')!;
+    const vaMsg = document.getElementById('va-msg')!;
+
+    let va: VoiceAssistant | null = null;
+    let isActive = false;
+
+    function setButtonState(state: VoiceAssistantState): void {
+      vaBtn.classList.remove('btn-ghost', 'btn-primary', 'text-red-500');
+      vaBtn.disabled = false;
+      vaIcon.classList.remove('animate-pulse');
+      switch (state) {
+        case VoiceAssistantState.Idle:
+          vaBtn.classList.add('btn-ghost');
+          vaBtnLabel.textContent = t('voiceAssistant.startLabel');
+          vaBtn.title = t('voiceAssistant.startLabel');
+          vaBtn.setAttribute('aria-label', t('voiceAssistant.startLabel'));
+          vaWaveform.classList.add('hidden');
+          stopWaveform();
+          break;
+        case VoiceAssistantState.Connecting:
+          vaBtn.classList.add('btn-ghost');
+          vaBtn.disabled = true;
+          vaBtnLabel.textContent = t('voiceAssistant.connecting');
+          vaIcon.classList.add('animate-pulse');
+          break;
+        case VoiceAssistantState.Listening:
+          vaBtn.classList.add('btn-primary');
+          vaBtnLabel.textContent = t('voiceAssistant.listening');
+          vaBtn.title = t('voiceAssistant.stopLabel');
+          vaBtn.setAttribute('aria-label', t('voiceAssistant.stopLabel'));
+          vaWaveform.classList.remove('hidden');
+          if (va?.analyserNode) startWaveform(va.analyserNode, vaWaveform);
+          break;
+        case VoiceAssistantState.Speaking:
+          vaBtn.classList.add('btn-primary');
+          vaBtnLabel.textContent = t('voiceAssistant.speaking');
+          vaIcon.classList.add('animate-pulse');
+          break;
+        case VoiceAssistantState.Error:
+          vaBtn.classList.add('text-red-500', 'btn-ghost');
+          vaBtnLabel.textContent = t('voiceAssistant.errorLabel');
+          vaWaveform.classList.add('hidden');
+          stopWaveform();
+          break;
+      }
+    }
+
+    function appendTranscript(role: 'user' | 'assistant', delta: string): void {
+      vaTranscript.classList.remove('hidden');
+      vaTranscriptHeader.textContent = t('voiceAssistant.transcriptHeader');
+      const last = vaTranscriptBody.lastElementChild as HTMLElement | null;
+      if (last && last.dataset['role'] === role) {
+        last.textContent = (last.textContent ?? '') + delta;
+      } else {
+        const bubble = document.createElement('p');
+        bubble.dataset['role'] = role;
+        bubble.className = role === 'user' ? 'text-muted text-xs' : 'font-medium text-sm';
+        bubble.textContent = delta;
+        vaTranscriptBody.appendChild(bubble);
+      }
+      vaTranscriptBody.scrollTop = vaTranscriptBody.scrollHeight;
+    }
+
+    vaBtn.classList.remove('hidden');
+    vaBtn.classList.add('flex');
+    setButtonState(VoiceAssistantState.Idle);
+
+    vaBtn.addEventListener('click', async () => {
+      if (isActive && va) {
+        va.stop();
+        va = null;
+        isActive = false;
+        setButtonState(VoiceAssistantState.Idle);
+        return;
+      }
+      if (va?.currentState === VoiceAssistantState.Error) {
+        va = null;
+        setButtonState(VoiceAssistantState.Idle);
+        return;
+      }
+      vaTranscriptBody.innerHTML = '';
+      vaTranscript.classList.add('hidden');
+      vaMsg.textContent = '';
+      vaCost.classList.add('hidden');
+
+      va = new VoiceAssistant(
+        { orgId, projectId },
+        {
+          onStateChange(state) {
+            setButtonState(state);
+            if (state === VoiceAssistantState.Listening) isActive = true;
+            if (state === VoiceAssistantState.Idle || state === VoiceAssistantState.Error)
+              isActive = false;
+          },
+          onTranscript(role, delta) {
+            appendTranscript(role, delta);
+          },
+          onCostTick(_durationS, _creditsSoFar, costDisplay) {
+            vaCost.classList.remove('hidden');
+            vaCostLabel.textContent = t('voiceAssistant.costLabel') + ': ';
+            vaCostValue.textContent = costDisplay;
+          },
+          onSessionEnd(_durationS, _creditsUsed, costDisplay) {
+            vaCost.classList.remove('hidden');
+            vaCostLabel.textContent = t('voiceAssistant.sessionEnded') + ' · ';
+            vaCostValue.textContent = costDisplay;
+            isActive = false;
+            va = null;
+          },
+          onError(code, message) {
+            isActive = false;
+            if (code === 'capacity_full') {
+              vaMsg.textContent = t('voiceAssistant.capacityFull');
+            } else if (code === 'credits_exhausted') {
+              vaMsg.textContent = t('voiceAssistant.creditsExhausted');
+            } else if (code === 'mic_denied') {
+              vaMsg.textContent = t('voiceAssistant.micDenied');
+            } else if (code === 'ws_error') {
+              vaMsg.textContent = t('voiceAssistant.wsError');
+            } else {
+              vaMsg.textContent = message;
+            }
+          },
+        },
+      );
+
+      await va.start();
+    });
+
+    // Cleanup for client-side navigation away: stop any live voice session (mic +
+    // WebSocket + AudioContext) and the waveform animation frame so they don't leak.
+    return () => {
+      if (va) {
+        va.stop();
+        va = null;
+      }
+      isActive = false;
+      stopWaveform();
+    };
   }
 
   /** Minimal, safe Markdown → HTML: escape first, then headings, bold, lists,
@@ -272,7 +518,7 @@ const link = (p: string) => localizePath(lang, p);
     return `<ol class="relative before:absolute before:bottom-2 before:left-[11px] before:top-2 before:w-px before:bg-line">${nodes}</ol>`;
   }
 
-  void (async () => {
+  onPage('proj-name', async () => {
     const ctx = await boot();
     if (!ctx) return;
     const t = useTranslations(ctx.lang as Locale);
@@ -378,6 +624,20 @@ const link = (p: string) => localizePath(lang, p);
 
     // Calls linked to this project (same data the History page shows, pre-scoped).
     void loadCalls(ctx.activeOrg.id, p.id, ctx.lang as Locale);
+
+    // Cleanups registered by the voice assistant + voice notes controllers, run on
+    // client-side navigation away (ClientRouter) to release mic/WS/AudioContext/timers.
+    let cleanupVa: (() => void) | undefined;
+    let cleanupVoiceNotes: (() => void) | undefined;
+
+    // Voice assistant (owner/admin/lead with an active subscription).
+    const isVaEligible =
+      ctx.activeOrg.subscription_status === 'active' &&
+      ['owner', 'admin', 'lead'].includes(ctx.activeOrg.role);
+    if (isVaEligible) {
+      document.getElementById('va-section')!.classList.remove('hidden');
+      cleanupVa = setupVoiceAssistant(ctx.activeOrg.id, p.id, t);
+    }
 
     // --- AI storyboard ---
     const isAdmin = ctx.activeOrg.role === 'admin' || ctx.activeOrg.role === 'owner';
@@ -491,9 +751,15 @@ const link = (p: string) => localizePath(lang, p);
     // --- Project voice notes (active-subscription orgs) ---
     if (ctx.activeOrg.subscription_status === 'active') {
       document.getElementById('vn-section')!.classList.remove('hidden');
-      setupVoiceNotes(ctx.activeOrg.id, p.id, ctx.lang, t);
+      cleanupVoiceNotes = setupVoiceNotes(ctx.activeOrg.id, p.id, ctx.lang, t);
     }
-  })();
+
+    // Stop the voice assistant + any in-progress voice note when navigating away.
+    return () => {
+      cleanupVa?.();
+      cleanupVoiceNotes?.();
+    };
+  });
 
   /** Render the calls bound to this project — the same rows the History page
    *  shows, pre-filtered to the project. Each links to the call's transcript. */
@@ -540,7 +806,7 @@ const link = (p: string) => localizePath(lang, p);
     projectId: string,
     lang: string,
     t: (k: string, v?: Record<string, string | number>) => string,
-  ): void {
+  ): () => void {
     const recordBtn = document.getElementById('vn-record') as HTMLButtonElement;
     const bar = document.getElementById('vn-recording')!;
     const timeEl = document.getElementById('vn-time')!;
@@ -690,5 +956,21 @@ const link = (p: string) => localizePath(lang, p);
     document.getElementById('vn-cancel')!.addEventListener('click', () => stop(false));
 
     void loadNotes();
+
+    // Cleanup for client-side navigation away: stop an in-progress recording (mic
+    // stream + MediaRecorder) and the elapsed-time interval so they don't leak.
+    return () => {
+      if (timer !== null) {
+        clearInterval(timer);
+        timer = null;
+      }
+      shouldSend = false;
+      if (recorder && recorder.state !== 'inactive') recorder.stop();
+      recorder = null;
+      if (stream) {
+        stream.getTracks().forEach((tr) => tr.stop());
+        stream = null;
+      }
+    };
   }
 </script>

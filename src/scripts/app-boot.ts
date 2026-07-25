@@ -56,7 +56,14 @@ export async function boot(): Promise<AppCtx | null> {
   const lang = pageLang();
   if (!requireAuth(lang)) return null;
 
-  document.getElementById('signout')?.addEventListener('click', () => logout(`/${lang}/`));
+  // boot() re-runs on every client-side navigation (ClientRouter), and the header
+  // is transition:persist — so guard the one-time listener wiring with a dataset
+  // flag to avoid stacking duplicate listeners on the persisted elements.
+  const signout = document.getElementById('signout');
+  if (signout && !signout.dataset.wired) {
+    signout.dataset.wired = '1';
+    signout.addEventListener('click', () => logout(`/${lang}/`));
+  }
 
   const res = await listOrgs();
   if (res.status === 401) {
@@ -86,13 +93,18 @@ export async function boot(): Promise<AppCtx | null> {
 
   const sw = document.getElementById('org-switcher') as HTMLSelectElement | null;
   if (sw) {
+    // Options/value/visibility are refreshed every call (cheap, idempotent); only
+    // the change listener is guarded so it isn't stacked on the persisted element.
     sw.innerHTML = orgs.map((o) => `<option value="${o.id}">${esc(o.name)}</option>`).join('');
     sw.value = activeId;
     sw.hidden = orgs.length < 2 ? true : false;
-    sw.addEventListener('change', () => {
-      setCurrentOrgId(sw.value);
-      location.reload();
-    });
+    if (!sw.dataset.wired) {
+      sw.dataset.wired = '1';
+      sw.addEventListener('change', () => {
+        setCurrentOrgId(sw.value);
+        location.reload();
+      });
+    }
   }
 
   // Nudge toward a subscription when the active org has none/expired/past-due.

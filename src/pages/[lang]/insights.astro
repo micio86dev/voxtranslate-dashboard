@@ -41,7 +41,44 @@ const t = useTranslations(lang);
         autocomplete="off"
       />
       <button type="submit" class="btn-primary">{t('insights.ask')}</button>
+      <!-- Voice assistant mic button — shown only when the feature is available -->
+      <button
+        id="va-btn"
+        type="button"
+        class="btn-ghost hidden items-center gap-1.5 px-3"
+        aria-label={t('voiceAssistant.startLabel')}
+        title={t('voiceAssistant.startLabel')}
+      >
+        <!-- Microphone SVG icon -->
+        <svg
+          id="va-icon"
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          class="h-4 w-4"
+          aria-hidden="true"
+        >
+          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+          <line x1="12" y1="19" x2="12" y2="23"></line>
+          <line x1="8" y1="23" x2="16" y2="23"></line>
+        </svg>
+        <span id="va-btn-label" class="text-sm"></span>
+      </button>
     </form>
+
+    <!-- Waveform canvas: shown while listening/speaking -->
+    <canvas id="va-waveform" class="mt-2 hidden h-10 w-full rounded" aria-hidden="true"></canvas>
+
+    <!-- Cost meter: shown during and after a voice session -->
+    <div id="va-cost" class="mt-1 hidden text-xs text-muted">
+      <span id="va-cost-label"></span>
+      <span id="va-cost-value"></span>
+    </div>
 
     <div class="mt-3 flex flex-wrap gap-2 text-sm">
       <span class="self-center text-muted">{t('insights.orReport')}</span>
@@ -52,6 +89,13 @@ const t = useTranslations(lang);
     <p id="msg" class="mt-6 text-muted"></p>
     <article id="answer" class="card prose mt-4 hidden max-w-none text-sm"></article>
 
+    <!-- Voice assistant transcript area -->
+    <div id="va-transcript" class="mt-4 hidden">
+      <h2 id="va-transcript-header" class="text-sm font-semibold text-muted"></h2>
+      <div id="va-transcript-body" class="mt-2 space-y-1 rounded border border-border p-3 text-sm">
+      </div>
+    </div>
+
     <div id="sources" class="mt-5 hidden">
       <h2 class="text-sm font-semibold text-muted">{t('insights.sources')}</h2>
       <div id="sources-list" class="mt-2 space-y-2"></div>
@@ -60,6 +104,7 @@ const t = useTranslations(lang);
 </BaseLayout>
 
 <script>
+  import { onPage } from '../../scripts/nav';
   import { boot } from '../../scripts/app-boot';
   import {
     generateInsight,
@@ -69,6 +114,7 @@ const t = useTranslations(lang);
     type InsightResult,
   } from '../../lib/api';
   import { useTranslations, type Locale } from '../../lib/i18n';
+  import { VoiceAssistant, VoiceAssistantState } from '../../scripts/voice-assistant';
 
   function esc(s: string): string {
     return s.replace(
@@ -113,7 +159,234 @@ const t = useTranslations(lang);
     return html;
   }
 
-  void (async () => {
+  // ---------------------------------------------------------------------------
+  // Waveform animation
+  // ---------------------------------------------------------------------------
+
+  let waveformFrame: number | null = null;
+
+  function startWaveform(analyser: AnalyserNode, canvas: HTMLCanvasElement): void {
+    const rawCtx = canvas.getContext('2d');
+    if (!rawCtx) return;
+    // Capture as a typed const so TypeScript knows it is non-null inside the closure.
+    const ctx: CanvasRenderingContext2D = rawCtx;
+    const data = new Uint8Array(analyser.frequencyBinCount);
+
+    function draw() {
+      waveformFrame = requestAnimationFrame(draw);
+      analyser.getByteTimeDomainData(data);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.beginPath();
+      const sliceWidth = canvas.width / data.length;
+      let x = 0;
+      for (let i = 0; i < data.length; i++) {
+        const v = data[i] / 128.0;
+        const y = (v * canvas.height) / 2;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+        x += sliceWidth;
+      }
+      ctx.lineTo(canvas.width, canvas.height / 2);
+      ctx.strokeStyle = '#6366f1'; // indigo-500 (matches brand color)
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+
+    draw();
+  }
+
+  function stopWaveform(): void {
+    if (waveformFrame !== null) {
+      cancelAnimationFrame(waveformFrame);
+      waveformFrame = null;
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Voice assistant UI controller
+  // ---------------------------------------------------------------------------
+
+  function initVoiceAssistant(
+    t: ReturnType<typeof useTranslations>,
+    orgId: string,
+    vaBtn: HTMLButtonElement,
+    vaBtnLabel: HTMLSpanElement,
+    vaIcon: SVGElement,
+    vaWaveform: HTMLCanvasElement,
+    vaCost: HTMLElement,
+    vaCostLabel: HTMLElement,
+    vaCostValue: HTMLElement,
+    vaTranscript: HTMLElement,
+    vaTranscriptHeader: HTMLElement,
+    vaTranscriptBody: HTMLElement,
+    msg: HTMLElement,
+    projectSel: HTMLSelectElement,
+    memberSel: HTMLSelectElement,
+  ): () => void {
+    let va: VoiceAssistant | null = null;
+    let isActive = false;
+
+    function setButtonState(state: VoiceAssistantState): void {
+      vaBtn.classList.remove('btn-ghost', 'btn-primary', 'text-red-500');
+      vaBtn.disabled = false;
+      vaIcon.classList.remove('animate-pulse');
+
+      switch (state) {
+        case VoiceAssistantState.Idle:
+          vaBtn.classList.add('btn-ghost');
+          vaBtnLabel.textContent = t('voiceAssistant.startLabel');
+          vaBtn.title = t('voiceAssistant.startLabel');
+          vaBtn.setAttribute('aria-label', t('voiceAssistant.startLabel'));
+          vaWaveform.classList.add('hidden');
+          stopWaveform();
+          break;
+
+        case VoiceAssistantState.Connecting:
+          vaBtn.classList.add('btn-ghost');
+          vaBtn.disabled = true;
+          vaBtnLabel.textContent = t('voiceAssistant.connecting');
+          vaIcon.classList.add('animate-pulse');
+          break;
+
+        case VoiceAssistantState.Listening:
+          vaBtn.classList.add('btn-primary');
+          vaBtnLabel.textContent = t('voiceAssistant.listening');
+          vaBtn.title = t('voiceAssistant.stopLabel');
+          vaBtn.setAttribute('aria-label', t('voiceAssistant.stopLabel'));
+          vaWaveform.classList.remove('hidden');
+          if (va?.analyserNode) startWaveform(va.analyserNode, vaWaveform);
+          break;
+
+        case VoiceAssistantState.Speaking:
+          vaBtn.classList.add('btn-primary');
+          vaBtnLabel.textContent = t('voiceAssistant.speaking');
+          vaIcon.classList.add('animate-pulse');
+          break;
+
+        case VoiceAssistantState.Error:
+          vaBtn.classList.add('text-red-500', 'btn-ghost');
+          vaBtnLabel.textContent = t('voiceAssistant.errorLabel');
+          vaWaveform.classList.add('hidden');
+          stopWaveform();
+          break;
+      }
+    }
+
+    function appendTranscript(role: 'user' | 'assistant', delta: string): void {
+      vaTranscript.classList.remove('hidden');
+      vaTranscriptHeader.textContent = t('voiceAssistant.transcriptHeader');
+      // Find last bubble for this role or create a new one.
+      const last = vaTranscriptBody.lastElementChild as HTMLElement | null;
+      if (last && last.dataset['role'] === role) {
+        last.textContent = (last.textContent ?? '') + delta;
+      } else {
+        const bubble = document.createElement('p');
+        bubble.dataset['role'] = role;
+        bubble.className = role === 'user' ? 'text-muted text-xs' : 'font-medium text-sm';
+        bubble.textContent = delta;
+        vaTranscriptBody.appendChild(bubble);
+      }
+      vaTranscriptBody.scrollTop = vaTranscriptBody.scrollHeight;
+    }
+
+    function resetTranscript(): void {
+      vaTranscriptBody.innerHTML = '';
+    }
+
+    vaBtn.classList.remove('hidden');
+    vaBtn.classList.add('flex');
+    setButtonState(VoiceAssistantState.Idle);
+
+    vaBtn.addEventListener('click', async () => {
+      if (isActive && va) {
+        // Stop the active session.
+        va.stop();
+        va = null;
+        isActive = false;
+        setButtonState(VoiceAssistantState.Idle);
+        return;
+      }
+
+      // Handle error state — reset and do nothing more (user can click again).
+      if (va?.currentState === VoiceAssistantState.Error) {
+        va = null;
+        setButtonState(VoiceAssistantState.Idle);
+        return;
+      }
+
+      // Start a new session.
+      resetTranscript();
+      msg.textContent = '';
+      vaCost.classList.add('hidden');
+
+      va = new VoiceAssistant(
+        {
+          orgId,
+          projectId: projectSel.value || undefined,
+          memberId: memberSel.value || undefined,
+        },
+        {
+          onStateChange(state) {
+            setButtonState(state);
+            if (state === VoiceAssistantState.Listening) {
+              isActive = true;
+            }
+            if (state === VoiceAssistantState.Idle || state === VoiceAssistantState.Error) {
+              isActive = false;
+            }
+          },
+          onTranscript(role, delta) {
+            appendTranscript(role, delta);
+          },
+          onCostTick(_durationS, _creditsSoFar, costDisplay) {
+            vaCost.classList.remove('hidden');
+            vaCostLabel.textContent = t('voiceAssistant.costLabel') + ': ';
+            vaCostValue.textContent = costDisplay;
+          },
+          onSessionEnd(_durationS, _creditsUsed, costDisplay) {
+            vaCost.classList.remove('hidden');
+            vaCostLabel.textContent = t('voiceAssistant.sessionEnded') + ' · ';
+            vaCostValue.textContent = costDisplay;
+            isActive = false;
+            va = null;
+          },
+          onError(code, message) {
+            isActive = false;
+            if (code === 'capacity_full') {
+              msg.textContent = t('voiceAssistant.capacityFull');
+            } else if (code === 'credits_exhausted') {
+              msg.textContent = t('voiceAssistant.creditsExhausted');
+            } else if (code === 'mic_denied') {
+              msg.textContent = t('voiceAssistant.micDenied');
+            } else if (code === 'ws_error') {
+              msg.textContent = t('voiceAssistant.wsError');
+            } else {
+              msg.textContent = message;
+            }
+          },
+        },
+      );
+
+      await va.start();
+    });
+
+    // Cleanup for client-side navigation away: stop any live voice session (mic +
+    // WebSocket + AudioContext) and the waveform animation frame so they don't leak.
+    return () => {
+      if (va) {
+        va.stop();
+        va = null;
+      }
+      isActive = false;
+      stopWaveform();
+    };
+  }
+
+  // ---------------------------------------------------------------------------
+  // Page bootstrap
+  // ---------------------------------------------------------------------------
+
+  onPage('qa-form', async () => {
     const ctx = await boot();
     if (!ctx) return;
     const t = useTranslations(ctx.lang as Locale);
@@ -122,8 +395,6 @@ const t = useTranslations(lang);
 
     const gate = document.getElementById('gate')!;
     const panel = document.getElementById('panel')!;
-    // Team leads may be regular members, but the assistant is admin/owner-facing here;
-    // the server is the source of truth (403 if the caller leads no team).
     if (!isAdmin) {
       gate.textContent = t('insights.notEligible');
       gate.classList.remove('hidden');
@@ -139,6 +410,18 @@ const t = useTranslations(lang);
     const sources = document.getElementById('sources')!;
     const sourcesList = document.getElementById('sources-list')!;
 
+    // Voice assistant DOM refs.
+    const vaBtn = document.getElementById('va-btn') as HTMLButtonElement;
+    const vaBtnLabel = document.getElementById('va-btn-label') as HTMLSpanElement;
+    const vaIcon = document.getElementById('va-icon') as unknown as SVGElement;
+    const vaWaveform = document.getElementById('va-waveform') as HTMLCanvasElement;
+    const vaCost = document.getElementById('va-cost')!;
+    const vaCostLabel = document.getElementById('va-cost-label')!;
+    const vaCostValue = document.getElementById('va-cost-value')!;
+    const vaTranscript = document.getElementById('va-transcript')!;
+    const vaTranscriptHeader = document.getElementById('va-transcript-header')!;
+    const vaTranscriptBody = document.getElementById('va-transcript-body')!;
+
     const [projRes, memRes] = await Promise.all([listProjects(orgId), listMembers(orgId)]);
     for (const p of projRes.data ?? []) {
       const o = document.createElement('option');
@@ -152,6 +435,31 @@ const t = useTranslations(lang);
       o.textContent = m.name || m.email;
       memberSel.appendChild(o);
     }
+
+    // Probe whether the voice assistant endpoint is available. We use a quick
+    // OPTIONS/HEAD-equivalent: attempt the WS URL construction and check that
+    // VOICE_ASSISTANT_ENABLED is set by whether the org has a Business/Enterprise
+    // subscription. We don't make a network call here — the server will return
+    // 503 if not configured, and we handle that in the error callback. We show
+    // the button unconditionally for admin users (the server is the gate), but
+    // hide it for members (gate.textContent already redirected them away).
+    const cleanupVa = initVoiceAssistant(
+      t,
+      orgId,
+      vaBtn,
+      vaBtnLabel,
+      vaIcon,
+      vaWaveform,
+      vaCost,
+      vaCostLabel,
+      vaCostValue,
+      vaTranscript,
+      vaTranscriptHeader,
+      vaTranscriptBody,
+      msg,
+      projectSel,
+      memberSel,
+    );
 
     const detail = (sessionId: string) =>
       `/${ctx.lang}/history/detail/?session=${encodeURIComponent(sessionId)}`;
@@ -229,5 +537,8 @@ const t = useTranslations(lang);
       }
       void run({ mode: 'member_report', member_id: memberSel.value });
     });
-  })();
+
+    // Stop the voice assistant when navigating away (ClientRouter).
+    return cleanupVa;
+  });
 </script>

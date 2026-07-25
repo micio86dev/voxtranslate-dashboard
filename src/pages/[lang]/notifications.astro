@@ -87,12 +87,13 @@ const CHANNELS = ['push', 'email', 'in_app'];
 </BaseLayout>
 
 <script>
+  import { onPage } from '../../scripts/nav';
   import { boot } from '../../scripts/app-boot';
   import { getNotifPreferences, patchNotifPreferences } from '../../lib/api';
   import { enablePush, disablePush, isPushSubscribed, pushPermission } from '../../lib/push';
   import { useTranslations, type Locale } from '../../lib/i18n';
 
-  void (async () => {
+  onPage('q-tz', async () => {
     const ctx = await boot();
     if (!ctx) return;
     const t = useTranslations(ctx.lang as Locale);
@@ -199,5 +200,5 @@ const CHANNELS = ['push', 'email', 'in_app'];
       saved.classList.remove('hidden');
       window.setTimeout(() => saved.classList.add('hidden'), 2000);
     });
-  })();
+  });
 </script>

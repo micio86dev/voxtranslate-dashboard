@@ -43,6 +43,7 @@ const t = useTranslations(lang);
 </BaseLayout>
 
 <script>
+  import { onPage } from '../../scripts/nav';
   import { boot } from '../../scripts/app-boot';
   import { listAudit, type AuditEntry } from '../../lib/api';
   import { useTranslations, type Locale } from '../../lib/i18n';
@@ -65,7 +66,7 @@ const t = useTranslations(lang);
     return bits.length ? bits.join(' · ') : `${e.resource_type} ${e.resource_id.slice(0, 8)}`;
   }
 
-  void (async () => {
+  onPage('refresh', async () => {
     const ctx = await boot();
     if (!ctx) return;
     const lang = ctx.lang as Locale;
@@ -131,5 +132,5 @@ const t = useTranslations(lang);
     });
 
     await load(true);
-  })();
+  });
 </script>

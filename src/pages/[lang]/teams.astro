@@ -25,6 +25,7 @@ const t = useTranslations(lang);
 </BaseLayout>
 
 <script>
+  import { onPage } from '../../scripts/nav';
   import { boot } from '../../scripts/app-boot';
   import {
     addTeamMember,
@@ -49,7 +50,7 @@ const t = useTranslations(lang);
     );
   }
 
-  void (async () => {
+  onPage('create-row', async () => {
     const ctx = await boot();
     if (!ctx) return;
     const t = useTranslations(ctx.lang as Locale);
@@ -219,5 +220,5 @@ const t = useTranslations(lang);
       const card = teamsEl.querySelector(`[data-team="${teamId}"] .text-muted`);
       if (card) card.textContent = `${n} ${t('teams.members')}`;
     };
-  })();
+  });
 </script>

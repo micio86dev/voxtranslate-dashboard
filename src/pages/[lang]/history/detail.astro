@@ -44,6 +44,7 @@ const TRANSLATE_LANGS = ['it', 'en', 'es', 'de', 'fr', 'pt', 'ja', 'zh', 'ar', '
 </BaseLayout>
 
 <script>
+  import { onPage } from '../../../scripts/nav';
   import { boot } from '../../../scripts/app-boot';
   import {
     downloadTranscript,
@@ -61,7 +62,7 @@ const TRANSLATE_LANGS = ['it', 'en', 'es', 'de', 'fr', 'pt', 'ja', 'zh', 'ar', '
     );
   }
 
-  void (async () => {
+  onPage('tools', async () => {
     const ctx = await boot();
     if (!ctx) return;
     const t = useTranslations(ctx.lang as Locale);
@@ -153,5 +154,5 @@ const TRANSLATE_LANGS = ['it', 'en', 'es', 'de', 'fr', 'pt', 'ja', 'zh', 'ar', '
         alert(t('transcript.noRecording'));
       }
     });
-  })();
+  });
 </script>

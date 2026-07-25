@@ -41,11 +41,12 @@ const link = (p: string) => localizePath(lang, p);
 </BaseLayout>
 
 <script>
+  import { onPage } from '../../../scripts/nav';
   import { boot } from '../../../scripts/app-boot';
   import { createProject } from '../../../lib/api';
   import { useTranslations, type Locale } from '../../../lib/i18n';
 
-  void (async () => {
+  onPage('proj-form', async () => {
     const ctx = await boot();
     if (!ctx) return;
     const t = useTranslations(ctx.lang as Locale);
@@ -79,5 +80,5 @@ const link = (p: string) => localizePath(lang, p);
       submit.disabled = false;
       submit.textContent = t('projects.submit');
     });
-  })();
+  });
 </script>
