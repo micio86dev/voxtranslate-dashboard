@@ -26,11 +26,12 @@ const t = useTranslations(lang);
 </BaseLayout>
 
 <script>
+  import { onPage } from '../../scripts/nav';
   import { acceptInvite, getInvite, setCurrentOrgId } from '../../lib/api';
   import { isLoggedIn, renderGoogleButton } from '../../lib/auth';
   import { useTranslations, type Locale } from '../../lib/i18n';
 
-  void (async () => {
+  onPage('accept', async () => {
     const lang = (document.documentElement.lang || 'en') as Locale;
     const t = useTranslations(lang);
     const msg = document.getElementById('msg')!;
@@ -88,5 +89,5 @@ const t = useTranslations(lang);
         void doAccept();
       });
     }
-  })();
+  });
 </script>

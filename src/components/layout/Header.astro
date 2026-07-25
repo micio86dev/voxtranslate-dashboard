@@ -12,7 +12,7 @@ const link = (p: string) => localizePath(lang, p);
 const APP_URL = 'https://voxtranslate.app';
 ---
 
-<header class="border-b border-line bg-surface">
+<header class="border-b border-line bg-surface" transition:persist="app-header">
   <div class="mx-auto flex w-full max-w-5xl flex-wrap items-center gap-3 px-4 py-3">
     <a href={link('dashboard')} class="flex items-center gap-2 text-lg font-bold text-brand">
       <img src="/favicon-32.png" alt="" width="28" height="28" class="rounded-md" />
@@ -28,6 +28,9 @@ const APP_URL = 'https://voxtranslate.app';
       <a href={link('teams')} class="rounded px-3 py-1.5 hover:bg-base">{t('nav.teams')}</a>
       <a href={link('projects')} class="rounded px-3 py-1.5 hover:bg-base">{t('nav.projects')}</a>
       <a href={link('history')} class="rounded px-3 py-1.5 hover:bg-base">{t('nav.history')}</a>
+      <a href={link('webinars')} class="rounded px-3 py-1.5 hover:bg-base">{t('nav.webinars')}</a>
+      <a href={link('search')} class="rounded px-3 py-1.5 hover:bg-base">{t('nav.search')}</a>
+      <a href={link('insights')} class="rounded px-3 py-1.5 hover:bg-base">{t('nav.insights')}</a>
       <a href={link('activity')} class="rounded px-3 py-1.5 hover:bg-base">{t('nav.activity')}</a>
       <a href={link('credits')} class="rounded px-3 py-1.5 hover:bg-base">{t('nav.credits')}</a>
       <a href={link('settings')} class="rounded px-3 py-1.5 hover:bg-base">{t('nav.settings')}</a>
@@ -76,7 +79,7 @@ const APP_URL = 'https://voxtranslate.app';
           >
           </div>
           <div class="flex items-center justify-between border-t border-line px-3 py-2">
-            <button id="notif-enable" class="text-xs text-brand">{t('notif.enable')}</button>
+            <button id="notif-enable" class="hidden text-xs text-brand">{t('notif.enable')}</button>
             <a href={link('notifications')} class="text-xs text-muted">{t('notif.settings')}</a>
           </div>
         </div>
@@ -169,7 +172,7 @@ const APP_URL = 'https://voxtranslate.app';
     markAllNotificationsRead,
     type NotificationItem,
   } from '../../lib/api';
-  import { enablePush } from '../../lib/push';
+  import { enablePush, isPushSubscribed, pushSupported } from '../../lib/push';
   import { getToken } from '../../lib/auth';
 
   function esc(s: string): string {
@@ -231,9 +234,21 @@ const APP_URL = 'https://voxtranslate.app';
       await markAllNotificationsRead();
       void refresh();
     });
-    document.getElementById('notif-enable')?.addEventListener('click', async () => {
+
+    // The "Enable push" CTA only makes sense when this browser can do push AND
+    // isn't already subscribed — otherwise it wrongly nags a user who already
+    // turned push on. Defaults to hidden in the markup; revealed only here.
+    const enableBtn = document.getElementById('notif-enable');
+    async function syncPushCta() {
+      if (!enableBtn) return;
+      const offer = pushSupported() && !(await isPushSubscribed());
+      enableBtn.classList.toggle('hidden', !offer);
+    }
+    enableBtn?.addEventListener('click', async () => {
       await enablePush();
+      void syncPushCta();
     });
+    void syncPushCta();
 
     await refresh();
     // Light polling so the badge stays roughly current without a socket.

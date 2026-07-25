@@ -153,6 +153,71 @@ export const patchProject = (
 export const deleteProject = (orgId: string, projectId: string) =>
   request<null>('DELETE', `/api/business/organizations/${orgId}/projects/${projectId}`);
 
+// --- Project voice messages --------------------------------------------------
+
+export interface ProjectVoiceMessage {
+  id: string;
+  session_id: string;
+  transcript_id: string | null;
+  created_by_name: string;
+  file_name: string;
+  content_type: string;
+  size_bytes: number;
+  duration_seconds: number | null;
+  source_language: string;
+  word_count: number | null;
+  translated: boolean;
+  created_at: string;
+}
+
+export interface VoiceMessageCreated {
+  id: string;
+  translated: boolean;
+  /** 'credits' (org out of credits, saved untranslated) | 'error' (Groq failed). */
+  translate_blocked: string | null;
+}
+
+export const listVoiceMessages = (orgId: string, projectId: string) =>
+  request<{ voice_messages: ProjectVoiceMessage[] }>(
+    'GET',
+    `/api/business/organizations/${orgId}/projects/${projectId}/voice-messages`,
+  );
+
+export const voiceMessageAudioUrl = (orgId: string, projectId: string, voiceMessageId: string) =>
+  request<{ url: string }>(
+    'GET',
+    `/api/business/organizations/${orgId}/projects/${projectId}/voice-messages/${voiceMessageId}/audio-url`,
+  );
+
+/** Upload a recorded voice note to a project (multipart — the JSON `request`
+ *  helper can't carry a file). The server transcribes + translates + persists it
+ *  into the project's insights data. */
+export async function uploadVoiceMessage(
+  orgId: string,
+  projectId: string,
+  file: File,
+  durationSeconds: number | null,
+): Promise<ApiResult<VoiceMessageCreated>> {
+  try {
+    const form = new FormData();
+    form.append('file', file, file.name);
+    if (durationSeconds != null)
+      form.append('duration_seconds', String(Math.round(durationSeconds)));
+    // No Content-Type header — the browser sets the multipart boundary itself.
+    const res = await fetch(
+      `${API_BASE}/api/business/organizations/${orgId}/projects/${projectId}/voice-messages`,
+      { method: 'POST', headers: { ...authHeaders() }, body: form },
+    );
+    const data =
+      res.status !== 204
+        ? ((await res.json().catch(() => null)) as VoiceMessageCreated | null)
+        : null;
+    return { ok: res.ok, status: res.status, data };
+  } catch {
+    return { ok: false, status: 0, data: null };
+  }
+}
+
 // --- Call history ------------------------------------------------------------
 
 export interface RoomRow {
@@ -161,6 +226,7 @@ export interface RoomRow {
   started_at: string;
   ended_at: string | null;
   project_id: string | null;
+  project_name: string | null;
   transcript_status: string;
   has_recording: boolean;
 }
@@ -177,6 +243,8 @@ export interface HistoryQuery {
   limit?: number;
   from?: string;
   to?: string;
+  /** Comma-separated participant user-ids (OR filter). */
+  member_ids?: string;
 }
 
 export const listOrgRooms = (orgId: string, q: HistoryQuery = {}) => {
@@ -186,12 +254,122 @@ export const listOrgRooms = (orgId: string, q: HistoryQuery = {}) => {
   if (q.limit) params.set('limit', String(q.limit));
   if (q.from) params.set('from', q.from);
   if (q.to) params.set('to', q.to);
+  if (q.member_ids) params.set('member_ids', q.member_ids);
   const qs = params.toString();
   return request<HistoryPage>(
     'GET',
     `/api/business/organizations/${orgId}/rooms${qs ? `?${qs}` : ''}`,
   );
 };
+
+// --- Webinar history ---------------------------------------------------------
+
+export interface WebinarRow {
+  id: string;
+  code: string;
+  title: string;
+  /** 'scheduled' | 'live' | 'ended' | 'archived' (server-defined status). */
+  status: string;
+  tier: string;
+  project_id: string | null;
+  project_name: string | null;
+  scheduled_start: string | null;
+  actual_start: string | null;
+  actual_end: string | null;
+  duration_seconds: number | null;
+  peak_viewers: number | null;
+  cost_credits: number | null;
+  has_report: boolean;
+}
+
+export interface WebinarsPage {
+  webinars: WebinarRow[];
+  page: number;
+  limit: number;
+}
+
+export interface WebinarsQuery {
+  project_id?: string;
+  page?: number;
+  limit?: number;
+  from?: string;
+  to?: string;
+  status?: string;
+  include_archived?: boolean;
+}
+
+export const listOrgWebinars = (orgId: string, q: WebinarsQuery = {}) => {
+  const params = new URLSearchParams();
+  if (q.project_id) params.set('project_id', q.project_id);
+  if (q.page) params.set('page', String(q.page));
+  if (q.limit) params.set('limit', String(q.limit));
+  if (q.from) params.set('from', q.from);
+  if (q.to) params.set('to', q.to);
+  if (q.status) params.set('status', q.status);
+  if (q.include_archived) params.set('include_archived', 'true');
+  const qs = params.toString();
+  return request<WebinarsPage>(
+    'GET',
+    `/api/business/organizations/${orgId}/webinars${qs ? `?${qs}` : ''}`,
+  );
+};
+
+export interface WebinarInfo {
+  id: string;
+  code: string;
+  title: string;
+  description: string | null;
+  status: string;
+  tier: string;
+  source_language: string | null;
+  project_id: string | null;
+  project_name: string | null;
+  host_user_id: string | null;
+  scheduled_start: string | null;
+  scheduled_end: string | null;
+  actual_start: string | null;
+  actual_end: string | null;
+  archived_at: string | null;
+  created_at: string;
+}
+
+export interface WebinarSession {
+  actual_start: string | null;
+  actual_end: string | null;
+  scheduled_start: string | null;
+  scheduled_end: string | null;
+  duration_seconds: number | null;
+  host_online_seconds: number | null;
+  peak_viewers: number | null;
+  translated_language_count: number | null;
+  cost_credits: number | null;
+}
+
+export interface WebinarParticipant {
+  name: string;
+  language_code: string | null;
+  total_watch_seconds: number | null;
+  joined_at: string | null;
+  last_seen: string | null;
+  approx_country: string | null;
+}
+
+export interface WebinarEmailStatus {
+  status: string;
+  count: number;
+}
+
+export interface WebinarDetail {
+  webinar: WebinarInfo;
+  /** null until the webinar is finalized (no session row yet). */
+  session: WebinarSession | null;
+  participants: WebinarParticipant[];
+  report: { available: boolean; languages: string[] };
+  emails: { total: number; by_status: WebinarEmailStatus[] };
+}
+
+export const getWebinarDetail = (orgId: string, webinarId: string) =>
+  request<WebinarDetail>('GET', `/api/business/organizations/${orgId}/webinars/${webinarId}`);
 
 // --- Transcripts -------------------------------------------------------------
 
@@ -205,6 +383,9 @@ export interface Segment {
 
 export interface TranscriptDoc {
   status: string;
+  /** 'recording' = diarized from the cloud recording; 'live' = reconstructed from
+   *  the realtime transcript captured during the call (no recording was made). */
+  source?: 'recording' | 'live';
   source_language?: string;
   segments: Segment[];
   duration_seconds?: number | null;
@@ -259,6 +440,45 @@ export async function downloadTranscript(
     return false;
   }
 }
+
+// --- Semantic transcript search ----------------------------------------------
+
+export interface SearchResult {
+  session_id: string;
+  project_id: string | null;
+  project_name: string | null;
+  room: string;
+  started_at: string;
+  /** Matched transcript chunk, shown as the result snippet. */
+  snippet: string;
+  speaker_name: string | null;
+  start_ms: number | null;
+  /** Cosine similarity (0–1); higher is closer. */
+  score: number;
+}
+
+export interface SearchQuery {
+  q: string;
+  /** Narrow to one project; omit to search every project the caller may see. */
+  project_id?: string;
+  limit?: number;
+}
+
+/**
+ * Semantic search over the org's diarized transcripts, scoped server-side to the
+ * caller's role (members: own/participated projects; admins: all). 503 when the
+ * backend has no embeddings provider configured.
+ */
+export const searchTranscripts = (orgId: string, q: SearchQuery) => {
+  const params = new URLSearchParams();
+  params.set('q', q.q);
+  if (q.project_id) params.set('project_id', q.project_id);
+  if (q.limit) params.set('limit', String(q.limit));
+  return request<{ results: SearchResult[] }>(
+    'GET',
+    `/api/business/organizations/${orgId}/search?${params.toString()}`,
+  );
+};
 
 // --- Org billing -------------------------------------------------------------
 
@@ -339,6 +559,8 @@ export interface TeamMember {
   email: string;
   avatar_url: string | null;
   joined_at: string;
+  /** 'lead' | 'member' — leads can run the insights assistant for this team. */
+  role: string;
 }
 
 export const listTeams = (orgId: string) =>
@@ -363,6 +585,44 @@ export const addTeamMember = (orgId: string, teamId: string, user_id: string) =>
 
 export const removeTeamMember = (orgId: string, teamId: string, userId: string) =>
   request<null>('DELETE', `/api/business/organizations/${orgId}/teams/${teamId}/members/${userId}`);
+
+export const setTeamMemberRole = (orgId: string, teamId: string, userId: string, role: string) =>
+  request<{ user_id: string; role: string }>(
+    'PATCH',
+    `/api/business/organizations/${orgId}/teams/${teamId}/members/${userId}`,
+    { role },
+  );
+
+// --- Insights assistant (team-lead / owner) ----------------------------------
+
+export interface InsightSource {
+  session_id: string;
+  room: string;
+  project_name: string | null;
+  speaker_name: string | null;
+  snippet: string;
+}
+
+export interface InsightResult {
+  answer_markdown: string;
+  sources: InsightSource[];
+  model: string;
+}
+
+export interface InsightBody {
+  mode: 'qa' | 'project_report' | 'member_report';
+  question?: string;
+  project_id?: string;
+  member_id?: string;
+}
+
+/**
+ * Generate an insight (Q&A or structured report) over the caller's team scope.
+ * 403 if the caller leads no team and isn't the owner; 503 if embeddings aren't
+ * configured.
+ */
+export const generateInsight = (orgId: string, body: InsightBody) =>
+  request<InsightResult>('POST', `/api/business/organizations/${orgId}/insights`, body);
 
 // --- Analytics ---------------------------------------------------------------
 
@@ -392,12 +652,23 @@ export interface AnalyticsProject {
   minutes: number;
 }
 
+/** Webinar KPI block within the org analytics summary. */
+export interface AnalyticsWebinars {
+  webinars_hosted: number;
+  peak_viewers_max: number;
+  total_broadcast_hours: number;
+  total_watch_hours: number;
+  webinar_spend: number;
+}
+
 export interface AnalyticsSummary {
   range_days: number;
   kpis: AnalyticsKpis;
   credits_by_type: AnalyticsTypeSpend[];
   calls_by_day: AnalyticsDay[];
   top_projects: AnalyticsProject[];
+  /** Webinar KPIs (webinar-analytics epic). May be absent on older servers. */
+  webinars?: AnalyticsWebinars;
 }
 
 export const getAnalytics = (orgId: string, days = 30) =>
@@ -634,6 +905,69 @@ export const generateStoryboard = (
     `/api/business/organizations/${orgId}/projects/${projectId}/storyboard`,
     body,
   );
+
+// --- Voice Assistant (B2B) ---------------------------------------------------
+
+/**
+ * Build the WebSocket URL for the voice-assistant endpoint from an explicit
+ * API base URL. The protocol swap (https→wss, http→ws) is applied here.
+ *
+ * Accepting `apiBase` as a parameter makes this function unit-testable without
+ * mocking the module-level `API_BASE` constant. It is re-exported from
+ * `voice-assistant.ts` so consumers import from a single source.
+ */
+export function buildWsUrl(
+  apiBase: string,
+  orgId: string,
+  opts: { project_id?: string; member_id?: string } = {},
+): string {
+  const base = apiBase
+    .replace(/\/+$/, '')
+    .replace(/^https:\/\//, 'wss://')
+    .replace(/^http:\/\//, 'ws://');
+  const path = `${base}/api/business/organizations/${orgId}/voice-assistant`;
+  const params = new URLSearchParams();
+  if (opts.project_id) params.set('project_id', opts.project_id);
+  if (opts.member_id) params.set('member_id', opts.member_id);
+  const qs = params.toString();
+  return qs ? `${path}?${qs}` : path;
+}
+
+/**
+ * Build the WebSocket URL for the voice-assistant endpoint using the
+ * module-level `API_BASE`. Convenience wrapper around `buildWsUrl`.
+ */
+export function voiceAssistantWsUrl(
+  orgId: string,
+  opts: { project_id?: string; member_id?: string } = {},
+): string {
+  return buildWsUrl(API_BASE, orgId, opts);
+}
+
+// --- Help Assistant (B2B) ----------------------------------------------------
+
+/**
+ * Build the WebSocket URL for the help-assistant endpoint from an explicit
+ * API base URL. Protocol swap (https→wss, http→ws) is applied here.
+ *
+ * Parameterised for unit-testability (no dependency on module-level API_BASE).
+ * The caller is responsible for appending `?token=` before connecting.
+ */
+export function buildHelpAssistantWsUrl(apiBase: string, orgId: string): string {
+  const base = apiBase
+    .replace(/\/+$/, '')
+    .replace(/^https:\/\//, 'wss://')
+    .replace(/^http:\/\//, 'ws://');
+  return `${base}/api/business/organizations/${orgId}/help-assistant`;
+}
+
+/**
+ * Build the WebSocket URL for the help-assistant endpoint using the
+ * module-level `API_BASE`. Convenience wrapper around `buildHelpAssistantWsUrl`.
+ */
+export function helpAssistantWsUrl(orgId: string): string {
+  return buildHelpAssistantWsUrl(API_BASE, orgId);
+}
 
 // --- Current-org helper (persisted selection) --------------------------------
 

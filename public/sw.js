@@ -14,8 +14,14 @@ self.addEventListener('push', (event) => {
   event.waitUntil(
     self.registration.showNotification(title, {
       body: payload.body || '',
-      icon: '/favicon-32.png',
-      badge: '/favicon-32.png',
+      // Full-colour image, rendered at ~64dp — the 32px favicon is far too small,
+      // and the 512px app icon (238 KB) too heavy to fetch reliably on mobile.
+      icon: '/icon-192.png',
+      // `badge` is NOT drawn as a picture: Android uses its ALPHA channel as a
+      // stencil, tints it, and places it in circular chrome. An opaque image (the
+      // favicon, the app icon) therefore renders as a solid square. Must stay a
+      // transparent, monochrome glyph — see public/badge.svg for the source art.
+      badge: '/badge-96.png',
       data,
     }),
   );

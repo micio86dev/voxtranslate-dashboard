@@ -68,8 +68,12 @@ export function logout(redirectTo = '/'): void {
 /** Redirect to the login page (locale-aware) if there's no session. */
 export function requireAuth(lang: string): boolean {
   if (isLoggedIn()) return true;
-  const next = encodeURIComponent(location.pathname + location.search);
-  location.href = `/${lang}/?next=${next}`;
+  // Strip any existing ?next= to prevent compounding redirects if this fires on the login page.
+  const params = new URLSearchParams(location.search);
+  params.delete('next');
+  const qs = params.toString();
+  const target = location.pathname + (qs ? `?${qs}` : '');
+  location.href = `/${lang}/?next=${encodeURIComponent(target)}`;
   return false;
 }
 

@@ -44,6 +44,7 @@ const TRANSLATE_LANGS = ['it', 'en', 'es', 'de', 'fr', 'pt', 'ja', 'zh', 'ar', '
 </BaseLayout>
 
 <script>
+  import { onPage } from '../../../scripts/nav';
   import { boot } from '../../../scripts/app-boot';
   import {
     downloadTranscript,
@@ -61,7 +62,7 @@ const TRANSLATE_LANGS = ['it', 'en', 'es', 'de', 'fr', 'pt', 'ja', 'zh', 'ar', '
     );
   }
 
-  void (async () => {
+  onPage('tools', async () => {
     const ctx = await boot();
     if (!ctx) return;
     const t = useTranslations(ctx.lang as Locale);
@@ -90,8 +91,17 @@ const TRANSLATE_LANGS = ['it', 'en', 'es', 'de', 'fr', 'pt', 'ja', 'zh', 'ar', '
       return;
     }
 
-    msg.classList.add('hidden');
-    document.getElementById('tools')!.classList.replace('hidden', 'flex');
+    // A 'live' transcript is reconstructed from the realtime call transcript (no
+    // cloud recording). Translate/export/playback all need the recording-derived
+    // transcript, so for live we show just the text plus a one-line explainer.
+    const isLive = doc.source === 'live';
+    if (isLive) {
+      msg.textContent = t('transcript.liveOnly');
+      msg.className = 'mt-4 text-sm text-muted';
+    } else {
+      msg.classList.add('hidden');
+      document.getElementById('tools')!.classList.replace('hidden', 'flex');
+    }
 
     const renderSegments = (segs: Segment[]) => {
       body.innerHTML = segs
@@ -144,5 +154,5 @@ const TRANSLATE_LANGS = ['it', 'en', 'es', 'de', 'fr', 'pt', 'ja', 'zh', 'ar', '
         alert(t('transcript.noRecording'));
       }
     });
-  })();
+  });
 </script>

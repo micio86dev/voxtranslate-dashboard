@@ -1,5 +1,6 @@
 ---
 import '../styles/global.css';
+import { ClientRouter } from 'astro:transitions';
 import Header from '../components/layout/Header.astro';
 import { type Locale } from '../lib/i18n';
 
@@ -15,7 +16,7 @@ const { lang, title, description = '', chrome = false } = Astro.props;
 ---
 
 <!doctype html>
-<html lang={lang}>
+<html lang={lang} data-chrome={chrome ? 'true' : undefined}>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -38,6 +39,12 @@ const { lang, title, description = '', chrome = false } = Astro.props;
     <!-- Brand favicon + app icon — same marks as the consumer app (client/public). -->
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    {
+      /* Client-side navigation (no full reload) so the global Help Assistant — its
+        WebSocket, SharedWorker, mic, and audio — survives page changes. Pages
+        re-init via the `astro:page-load` event; #ha-container is transition:persist. */
+    }
+    <ClientRouter />
   </head>
   <body>
     {chrome && <Header lang={lang} />}
@@ -46,5 +53,342 @@ const { lang, title, description = '', chrome = false } = Astro.props;
     <main class={chrome ? 'mx-auto w-full max-w-5xl px-4 py-8' : ''}>
       <slot />
     </main>
+
+    <!-- Help assistant floating panel (hidden until auth + subscription check passes).
+         transition:persist keeps this element (and its live session, listeners, and
+         audio) across client-side navigations instead of swapping it per page. -->
+    <div id="ha-container" class="hidden" transition:persist="ha-container">
+      <!-- Avatar trigger button: round, fixed bottom-right -->
+      <button
+        id="ha-trigger"
+        type="button"
+        aria-label="Dashboard Help"
+        class="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-brand text-white shadow-lg transition-transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2"
+      >
+        <!-- Headphones icon -->
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          class="h-6 w-6"
+          aria-hidden="true"
+        >
+          <path d="M3 18v-6a9 9 0 0 1 18 0v6"></path>
+          <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3z"></path>
+          <path d="M3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"></path>
+        </svg>
+      </button>
+
+      <!-- Chat panel: hidden until trigger is clicked -->
+      <div
+        id="ha-panel"
+        class="fixed bottom-24 right-6 z-50 hidden w-80 max-w-[calc(100vw-3rem)] rounded-xl border border-line bg-surface shadow-2xl"
+      >
+        <!-- Panel header -->
+        <div class="flex items-center justify-between border-b border-line px-4 py-3">
+          <h2 id="ha-panel-title" class="text-sm font-semibold"></h2>
+          <button id="ha-close" type="button" class="btn-ghost text-xs" aria-label="Close"></button>
+        </div>
+
+        <!-- Waveform canvas (shown while active) -->
+        <canvas id="ha-waveform" class="hidden h-10 w-full" aria-hidden="true"></canvas>
+
+        <!-- Cost meter -->
+        <div id="ha-cost" class="hidden border-b border-line px-4 py-1 text-xs text-muted">
+          <span id="ha-cost-label"></span><span id="ha-cost-value"></span>
+        </div>
+
+        <!-- Transcript area -->
+        <div id="ha-transcript" class="hidden max-h-48 overflow-y-auto px-4 py-2">
+          <div id="ha-transcript-body" class="space-y-1 text-sm"></div>
+        </div>
+
+        <!-- Panel footer: mic button + status -->
+        <div class="flex items-center gap-2 border-t border-line px-4 py-3">
+          <button
+            id="ha-mic"
+            type="button"
+            class="btn-ghost hidden items-center gap-2 text-sm"
+            aria-label=""
+          >
+            <svg
+              id="ha-mic-icon"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              class="h-4 w-4"
+              aria-hidden="true"
+            >
+              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+              <line x1="12" y1="19" x2="12" y2="23"></line>
+              <line x1="8" y1="23" x2="16" y2="23"></line>
+            </svg>
+            <span id="ha-mic-label" class="text-sm"></span>
+          </button>
+          <p id="ha-msg" class="text-xs text-muted"></p>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      import { boot } from '../scripts/app-boot';
+      import { createHelpAssistant } from '../scripts/help-assistant';
+      import { useTranslations, type Locale } from '../lib/i18n';
+      import { VoiceAssistantState } from '../scripts/voice-assistant';
+      import {
+        buildMicState,
+        buildTranscriptBubble,
+        togglePanelState,
+        resolveHaErrorKey,
+      } from './help-assistant-panel';
+
+      void (async () => {
+        if (document.documentElement.dataset.chrome !== 'true') return;
+        const ctx = await boot();
+        if (!ctx) return;
+        if (ctx.activeOrg?.subscription_status !== 'active') return;
+
+        const t = useTranslations(ctx.lang as Locale);
+
+        // DOM refs
+        const container = document.getElementById('ha-container')!;
+        const trigger = document.getElementById('ha-trigger') as HTMLButtonElement;
+        const panel = document.getElementById('ha-panel')!;
+        const panelTitle = document.getElementById('ha-panel-title')!;
+        const closeBtn = document.getElementById('ha-close') as HTMLButtonElement;
+        const waveformCanvas = document.getElementById('ha-waveform') as HTMLCanvasElement;
+        const cost = document.getElementById('ha-cost')!;
+        const costLabel = document.getElementById('ha-cost-label')!;
+        const costValue = document.getElementById('ha-cost-value')!;
+        const transcript = document.getElementById('ha-transcript')!;
+        const transcriptBody = document.getElementById('ha-transcript-body')!;
+        const mic = document.getElementById('ha-mic') as HTMLButtonElement;
+        const micLabel = document.getElementById('ha-mic-label')!;
+        const micIcon = document.getElementById('ha-mic-icon') as unknown as SVGElement;
+        const msg = document.getElementById('ha-msg')!;
+
+        // Populate i18n strings
+        panelTitle.textContent = t('helpAssistant.panelTitle');
+        closeBtn.textContent = t('helpAssistant.closePanel');
+        costLabel.textContent = t('helpAssistant.costLabel') + ': ';
+        trigger.setAttribute('aria-label', t('helpAssistant.panelTitle'));
+
+        // Reveal the container now that auth + subscription checks passed
+        container.classList.remove('hidden');
+
+        let isPanelOpen = false;
+        let isSessionActive = false;
+        let waveformFrame: number | null = null;
+
+        // -----------------------------------------------------------------
+        // Waveform helpers
+        // -----------------------------------------------------------------
+
+        function startWaveform(analyser: AnalyserNode): void {
+          const rawCtx = waveformCanvas.getContext('2d');
+          if (!rawCtx) return;
+          const ctx2d: CanvasRenderingContext2D = rawCtx;
+          const data = new Uint8Array(analyser.frequencyBinCount);
+          function draw() {
+            waveformFrame = requestAnimationFrame(draw);
+            analyser.getByteTimeDomainData(data);
+            ctx2d.clearRect(0, 0, waveformCanvas.width, waveformCanvas.height);
+            ctx2d.beginPath();
+            const sliceWidth = waveformCanvas.width / data.length;
+            let x = 0;
+            for (let i = 0; i < data.length; i++) {
+              const v = data[i] / 128.0;
+              const y = (v * waveformCanvas.height) / 2;
+              if (i === 0) ctx2d.moveTo(x, y);
+              else ctx2d.lineTo(x, y);
+              x += sliceWidth;
+            }
+            ctx2d.lineTo(waveformCanvas.width, waveformCanvas.height / 2);
+            ctx2d.strokeStyle = '#6366f1';
+            ctx2d.lineWidth = 1.5;
+            ctx2d.stroke();
+          }
+          draw();
+        }
+
+        function stopWaveform(): void {
+          if (waveformFrame !== null) {
+            cancelAnimationFrame(waveformFrame);
+            waveformFrame = null;
+          }
+        }
+
+        // -----------------------------------------------------------------
+        // Apply MicStateDescriptor to DOM
+        // -----------------------------------------------------------------
+
+        function setMicState(state: string): void {
+          const desc = buildMicState(state);
+          mic.classList.remove('btn-ghost', 'btn-primary', 'text-red-500');
+          mic.disabled = desc.disabled;
+          micIcon.classList.remove('animate-pulse');
+
+          // Apply classes from descriptor (may be space-separated)
+          for (const cls of desc.primaryClass.split(' ')) {
+            if (cls) mic.classList.add(cls);
+          }
+
+          if (desc.pulse) micIcon.classList.add('animate-pulse');
+
+          micLabel.textContent = t(desc.labelKey);
+          mic.setAttribute('aria-label', t(desc.labelKey));
+
+          // Show/hide waveform canvas
+          if (state === VoiceAssistantState.Listening) {
+            waveformCanvas.classList.remove('hidden');
+          } else {
+            waveformCanvas.classList.add('hidden');
+            stopWaveform();
+          }
+        }
+
+        // -----------------------------------------------------------------
+        // Append transcript bubble
+        // -----------------------------------------------------------------
+
+        function appendTranscript(role: 'user' | 'assistant', delta: string): void {
+          transcript.classList.remove('hidden');
+          const last = transcriptBody.lastElementChild as HTMLElement | null;
+          if (last && last.dataset['role'] === role) {
+            last.textContent = (last.textContent ?? '') + delta;
+          } else {
+            const bubble = buildTranscriptBubble(role, delta);
+            const p = document.createElement('p');
+            p.dataset['role'] = bubble.role;
+            p.className = bubble.className;
+            p.textContent = bubble.text;
+            transcriptBody.appendChild(p);
+          }
+          transcriptBody.scrollTop = transcriptBody.scrollHeight;
+        }
+
+        // -----------------------------------------------------------------
+        // Create the controller
+        // -----------------------------------------------------------------
+
+        const ha = createHelpAssistant(ctx.activeOrg.id, {
+          onStateChange(state) {
+            setMicState(state);
+            if (state === VoiceAssistantState.Listening) {
+              isSessionActive = true;
+              // Waveform is started when Listening is reached and we have the analyser
+              if (ha.analyserNode) startWaveform(ha.analyserNode);
+            }
+            if (state === VoiceAssistantState.Idle || state === VoiceAssistantState.Error) {
+              isSessionActive = false;
+            }
+          },
+          onTranscript(role, delta) {
+            appendTranscript(role as 'user' | 'assistant', delta);
+          },
+          onCostTick(_durationS, _creditsSoFar, costDisplay) {
+            cost.classList.remove('hidden');
+            costValue.textContent = costDisplay;
+          },
+          onSessionEnd(_durationS, _creditsUsed, costDisplay) {
+            cost.classList.remove('hidden');
+            costValue.textContent = costDisplay;
+            msg.textContent = t('helpAssistant.sessionEnded');
+            isSessionActive = false;
+          },
+          onError(code, _message) {
+            const key = resolveHaErrorKey(code);
+            msg.textContent = t(key);
+            setMicState(VoiceAssistantState.Error);
+            isSessionActive = false;
+          },
+          onSync(state, syncTranscript, costDisplay) {
+            // Restore state from a session the SharedWorker already holds (e.g. the
+            // Help Assistant running in another open tab of the same org). Under
+            // ClientRouter this tab's own session persists across navigation without
+            // any resume — same document, so the controller + WS stay alive.
+            setMicState(state);
+            transcriptBody.innerHTML = '';
+            for (const entry of syncTranscript) {
+              appendTranscript(entry.role, entry.text);
+            }
+            if (costDisplay) {
+              cost.classList.remove('hidden');
+              costValue.textContent = costDisplay;
+            }
+          },
+        });
+
+        // Connect to the SharedWorker on load so cross-tab state (onSync) is
+        // available before the first mic click. This whole HA script runs once
+        // (module) and #ha-container is transition:persist, so the assistant and
+        // its listeners survive client-side navigation with no per-page re-init.
+        ha.attach();
+
+        // -----------------------------------------------------------------
+        // Panel open / close
+        // -----------------------------------------------------------------
+
+        trigger.addEventListener('click', () => {
+          isPanelOpen = togglePanelState(isPanelOpen);
+          panel.classList.toggle('hidden', !isPanelOpen);
+          if (isPanelOpen) {
+            mic.classList.remove('hidden');
+            mic.classList.add('flex');
+          }
+        });
+
+        closeBtn.addEventListener('click', () => {
+          isPanelOpen = false;
+          panel.classList.add('hidden');
+        });
+
+        // Show mic button and set initial state
+        mic.classList.remove('hidden');
+        mic.classList.add('flex');
+        setMicState(VoiceAssistantState.Idle);
+
+        // -----------------------------------------------------------------
+        // Mic button click
+        // -----------------------------------------------------------------
+
+        mic.addEventListener('click', async () => {
+          if (isSessionActive) {
+            ha.stop();
+            isSessionActive = false;
+            setMicState(VoiceAssistantState.Idle);
+            return;
+          }
+
+          // Reset on error state — user must click again to start fresh
+          if (ha.analyserNode === null && mic.classList.contains('text-red-500')) {
+            setMicState(VoiceAssistantState.Idle);
+            msg.textContent = '';
+            return;
+          }
+
+          // Clear previous session UI
+          transcriptBody.innerHTML = '';
+          transcript.classList.add('hidden');
+          cost.classList.add('hidden');
+          msg.textContent = '';
+
+          setMicState(VoiceAssistantState.Connecting);
+          const ok = await ha.start();
+          if (!ok) {
+            setMicState(VoiceAssistantState.Idle);
+          }
+        });
+      })();
+    </script>
   </body>
 </html>

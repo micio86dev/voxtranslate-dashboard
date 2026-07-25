@@ -1,0 +1,266 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { localePaths, isLocale, DEFAULT_LOCALE, useTranslations } from '../../lib/i18n';
+
+export function getStaticPaths() {
+  return localePaths();
+}
+
+const lang = isLocale(Astro.params.lang) ? Astro.params.lang : DEFAULT_LOCALE;
+const t = useTranslations(lang);
+---
+
+<BaseLayout lang={lang} title={t('webinars.title')} chrome>
+  <h1 class="text-2xl font-bold">{t('webinars.title')}</h1>
+
+  <!-- Webinar KPI cards (admins/owners only; hidden until loaded) -->
+  <div id="kpis" class="mt-6 hidden grid gap-3 sm:grid-cols-3 lg:grid-cols-5">
+    <div class="card">
+      <div class="text-xs text-muted">{t('webinars.kpiWebinars')}</div>
+      <div id="kpi-webinars" class="mt-1 text-2xl font-bold">—</div>
+    </div>
+    <div class="card">
+      <div class="text-xs text-muted">{t('webinars.kpiPeakViewers')}</div>
+      <div id="kpi-peak" class="mt-1 text-2xl font-bold">—</div>
+    </div>
+    <div class="card">
+      <div class="text-xs text-muted">{t('webinars.kpiBroadcastHours')}</div>
+      <div id="kpi-broadcast" class="mt-1 text-2xl font-bold">—</div>
+    </div>
+    <div class="card">
+      <div class="text-xs text-muted">{t('webinars.kpiWatchHours')}</div>
+      <div id="kpi-watch" class="mt-1 text-2xl font-bold">—</div>
+    </div>
+    <div class="card">
+      <div class="text-xs text-muted">{t('webinars.kpiWebinarSpend')}</div>
+      <div id="kpi-spend" class="mt-1 text-2xl font-bold">—</div>
+    </div>
+  </div>
+
+  <!-- Filters: project, date range, status, include-archived -->
+  <div class="mt-6 flex flex-wrap items-end gap-3">
+    <div>
+      <label class="label" for="f-project">{t('webinars.project')}</label>
+      <select id="f-project" class="field text-sm">
+        <option value="">{t('webinars.allProjects')}</option>
+      </select>
+    </div>
+    <div>
+      <label class="label" for="f-status">{t('webinars.status')}</label>
+      <select id="f-status" class="field text-sm">
+        <option value="">{t('webinars.allStatuses')}</option>
+        <option value="scheduled">{t('webinars.statusScheduled')}</option>
+        <option value="live">{t('webinars.statusLive')}</option>
+        <option value="ended">{t('webinars.statusEnded')}</option>
+        <option value="archived">{t('webinars.statusArchived')}</option>
+      </select>
+    </div>
+    <div>
+      <label class="label" for="f-from">{t('webinars.from')}</label>
+      <input id="f-from" type="date" class="field text-sm" />
+    </div>
+    <div>
+      <label class="label" for="f-to">{t('webinars.to')}</label>
+      <input id="f-to" type="date" class="field text-sm" />
+    </div>
+    <label class="flex items-center gap-2 pb-2 text-sm text-muted">
+      <input id="f-archived" type="checkbox" />
+      {t('webinars.includeArchived')}
+    </label>
+    <button id="f-clear" class="btn-ghost text-sm">{t('webinars.clearFilters')}</button>
+  </div>
+
+  <div class="card mt-4 overflow-x-auto p-0">
+    <table class="w-full text-sm">
+      <thead class="border-b border-line text-left text-muted">
+        <tr>
+          <th class="px-4 py-3">{t('webinars.webinar')}</th>
+          <th class="px-4 py-3">{t('webinars.status')}</th>
+          <th class="px-4 py-3">{t('webinars.tier')}</th>
+          <th class="px-4 py-3">{t('webinars.project')}</th>
+          <th class="px-4 py-3">{t('webinars.started')}</th>
+          <th class="px-4 py-3">{t('webinars.duration')}</th>
+          <th class="px-4 py-3">{t('webinars.peakViewers')}</th>
+          <th class="px-4 py-3">{t('webinars.cost')}</th>
+          <th class="px-4 py-3">{t('webinars.report')}</th>
+          <th class="px-4 py-3"></th>
+        </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <p id="empty" class="hidden px-4 py-6 text-center text-muted">{t('webinars.empty')}</p>
+  </div>
+
+  <div class="mt-4 flex justify-between">
+    <button id="prev" class="btn-ghost text-sm" disabled>{t('webinars.prev')}</button>
+    <button id="next" class="btn-ghost text-sm">{t('webinars.next')}</button>
+  </div>
+</BaseLayout>
+
+<script>
+  import { onPage } from '../../scripts/nav';
+  import { boot } from '../../scripts/app-boot';
+  import { listOrgWebinars, listProjects, getAnalytics } from '../../lib/api';
+  import { useTranslations, type Locale } from '../../lib/i18n';
+
+  function esc(s: string): string {
+    return s.replace(
+      /[&<>"]/g,
+      (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c] || c,
+    );
+  }
+
+  onPage('f-project', async () => {
+    const ctx = await boot();
+    if (!ctx) return;
+    const t = useTranslations(ctx.lang as Locale);
+    const orgId = ctx.activeOrg.id;
+    const limit = 20;
+
+    let page = 1;
+    let projectId = '';
+    let status = '';
+    let from = ''; // YYYY-MM-DD from the date input
+    let to = '';
+    let includeArchived = false;
+
+    const rows = document.getElementById('rows')!;
+    const empty = document.getElementById('empty')!;
+    const prev = document.getElementById('prev') as HTMLButtonElement;
+    const next = document.getElementById('next') as HTMLButtonElement;
+    const fProject = document.getElementById('f-project') as HTMLSelectElement;
+    const fStatus = document.getElementById('f-status') as HTMLSelectElement;
+    const fFrom = document.getElementById('f-from') as HTMLInputElement;
+    const fTo = document.getElementById('f-to') as HTMLInputElement;
+    const fArchived = document.getElementById('f-archived') as HTMLInputElement;
+    const fClear = document.getElementById('f-clear') as HTMLButtonElement;
+
+    const fmt = (iso: string | null) => (iso ? new Date(iso).toLocaleString(ctx.lang) : '—');
+    const statusLabel = (s: string) =>
+      t(`webinars.status${s.charAt(0).toUpperCase()}${s.slice(1)}`);
+    const detail = (id: string) =>
+      `/${ctx.lang}/webinars/detail/?webinar=${encodeURIComponent(id)}`;
+    // The API wants RFC3339; widen a day-input to cover the whole day in UTC.
+    const rfc = (d: string, end: boolean) =>
+      d ? `${d}T${end ? '23:59:59' : '00:00:00'}Z` : undefined;
+    const dur = (secs: number | null) => {
+      if (secs == null) return '—';
+      const m = Math.round(secs / 60);
+      if (m < 60) return `${m} ${t('analytics.minutes')}`;
+      const h = Math.floor(m / 60);
+      return `${h}h ${m % 60}m`;
+    };
+    const num = (n: number | null) => (n == null ? '—' : String(n));
+
+    // KPI cards — financial, so admins/owners only (matches the analytics gate).
+    if (ctx.activeOrg.role === 'admin' || ctx.activeOrg.role === 'owner') {
+      void (async () => {
+        const r = await getAnalytics(orgId, 30);
+        const w = r.data?.webinars;
+        if (!w) return;
+        const set = (id: string, v: string) => (document.getElementById(id)!.textContent = v);
+        set('kpi-webinars', String(w.webinars_hosted));
+        set('kpi-peak', String(w.peak_viewers_max));
+        set('kpi-broadcast', w.total_broadcast_hours.toFixed(1));
+        set('kpi-watch', w.total_watch_hours.toFixed(1));
+        set('kpi-spend', String(w.webinar_spend));
+        document.getElementById('kpis')!.classList.remove('hidden');
+      })();
+    }
+
+    // Populate the project filter (best-effort; stays empty on failure).
+    const projRes = await listProjects(orgId);
+    for (const p of (projRes.data ?? []).filter((p) => !p.archived_at)) {
+      const opt = document.createElement('option');
+      opt.value = p.id;
+      opt.textContent = p.name;
+      fProject.appendChild(opt);
+    }
+
+    async function render() {
+      const res = await listOrgWebinars(orgId, {
+        page,
+        limit,
+        project_id: projectId || undefined,
+        status: status || undefined,
+        from: rfc(from, false),
+        to: rfc(to, true),
+        include_archived: includeArchived || undefined,
+      });
+      const list = res.data?.webinars ?? [];
+      empty.classList.toggle('hidden', list.length > 0 || page > 1);
+      rows.innerHTML = list
+        .map(
+          (w) => `<tr class="border-b border-line last:border-0">
+            <td class="px-4 py-3">
+              <div class="font-medium">${esc(w.title || w.code)}</div>
+              <div class="text-xs text-muted">${esc(w.code)}</div>
+            </td>
+            <td class="px-4 py-3"><span class="badge">${esc(statusLabel(w.status))}</span></td>
+            <td class="px-4 py-3">${esc(w.tier)}</td>
+            <td class="px-4 py-3">${w.project_name ? `<span class="badge">${esc(w.project_name)}</span>` : '<span class="text-muted">—</span>'}</td>
+            <td class="px-4 py-3 text-muted">${esc(fmt(w.actual_start ?? w.scheduled_start))}</td>
+            <td class="px-4 py-3 text-muted">${esc(dur(w.duration_seconds))}</td>
+            <td class="px-4 py-3">${esc(num(w.peak_viewers))}</td>
+            <td class="px-4 py-3">${esc(num(w.cost_credits))}</td>
+            <td class="px-4 py-3">${w.has_report ? '📄' : '—'}</td>
+            <td class="px-4 py-3 text-right"><a href="${detail(w.id)}" class="btn-ghost text-xs">${esc(t('webinars.open'))}</a></td>
+          </tr>`,
+        )
+        .join('');
+      prev.disabled = page <= 1;
+      next.disabled = list.length < limit;
+    }
+
+    const reset = () => {
+      page = 1;
+      void render();
+    };
+
+    fProject.addEventListener('change', () => {
+      projectId = fProject.value;
+      reset();
+    });
+    fStatus.addEventListener('change', () => {
+      status = fStatus.value;
+      reset();
+    });
+    fFrom.addEventListener('change', () => {
+      from = fFrom.value;
+      reset();
+    });
+    fTo.addEventListener('change', () => {
+      to = fTo.value;
+      reset();
+    });
+    fArchived.addEventListener('change', () => {
+      includeArchived = fArchived.checked;
+      reset();
+    });
+    fClear.addEventListener('click', () => {
+      projectId = '';
+      status = '';
+      from = '';
+      to = '';
+      includeArchived = false;
+      fProject.value = '';
+      fStatus.value = '';
+      fFrom.value = '';
+      fTo.value = '';
+      fArchived.checked = false;
+      reset();
+    });
+
+    prev.addEventListener('click', () => {
+      if (page > 1) {
+        page--;
+        void render();
+      }
+    });
+    next.addEventListener('click', () => {
+      page++;
+      void render();
+    });
+    void render();
+  });
+</script>

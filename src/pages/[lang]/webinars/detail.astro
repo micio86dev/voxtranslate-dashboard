@@ -1,0 +1,246 @@
+---
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import {
+  localePaths,
+  isLocale,
+  DEFAULT_LOCALE,
+  useTranslations,
+  localizePath,
+} from '../../../lib/i18n';
+
+export function getStaticPaths() {
+  return localePaths();
+}
+
+const lang = isLocale(Astro.params.lang) ? Astro.params.lang : DEFAULT_LOCALE;
+const t = useTranslations(lang);
+const link = (p: string) => localizePath(lang, p);
+---
+
+<BaseLayout lang={lang} title={t('webinars.title')} chrome>
+  <a href={link('webinars')} class="text-sm text-muted hover:text-ink"
+    >← {t('webinars.backToList')}</a
+  >
+
+  <span id="page-webinar-detail" hidden></span>
+  <p id="msg" class="mt-4 text-muted">{t('common.loading')}</p>
+
+  <div id="content" class="mt-2 hidden space-y-6">
+    <!-- Header -->
+    <div>
+      <div class="flex flex-wrap items-center gap-2">
+        <h1 id="w-title" class="text-2xl font-bold"></h1>
+        <span id="w-status" class="badge"></span>
+      </div>
+      <div id="w-meta" class="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted"></div>
+      <p id="w-desc" class="mt-3 hidden max-w-2xl text-sm"></p>
+    </div>
+
+    <!-- Session KPI panel -->
+    <div>
+      <div class="text-sm font-semibold">{t('webinars.sessionTitle')}</div>
+      <p id="w-notfinal" class="mt-2 hidden text-sm text-muted">{t('webinars.notFinalized')}</p>
+      <div id="w-session" class="mt-3 hidden grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        <div class="card">
+          <div class="text-xs text-muted">{t('webinars.duration')}</div>
+          <div id="s-duration" class="mt-1 text-xl font-bold">—</div>
+        </div>
+        <div class="card">
+          <div class="text-xs text-muted">{t('webinars.actualVsScheduled')}</div>
+          <div id="s-avss" class="mt-1 text-xl font-bold">—</div>
+        </div>
+        <div class="card">
+          <div class="text-xs text-muted">{t('webinars.hostOnline')}</div>
+          <div id="s-hostonline" class="mt-1 text-xl font-bold">—</div>
+        </div>
+        <div class="card">
+          <div class="text-xs text-muted">{t('webinars.peakViewers')}</div>
+          <div id="s-peak" class="mt-1 text-xl font-bold">—</div>
+        </div>
+        <div class="card">
+          <div class="text-xs text-muted">{t('webinars.translatedLanguages')}</div>
+          <div id="s-langs" class="mt-1 text-xl font-bold">—</div>
+        </div>
+        <div class="card">
+          <div class="text-xs text-muted">{t('webinars.cost')}</div>
+          <div id="s-cost" class="mt-1 text-xl font-bold">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Participants -->
+    <div>
+      <div class="text-sm font-semibold">{t('webinars.participantsTitle')}</div>
+      <div class="card mt-3 overflow-x-auto p-0">
+        <table class="w-full text-sm">
+          <thead class="border-b border-line text-left text-muted">
+            <tr>
+              <th class="px-4 py-3">{t('webinars.participant')}</th>
+              <th class="px-4 py-3">{t('webinars.language')}</th>
+              <th class="px-4 py-3">{t('webinars.watchTime')}</th>
+              <th class="px-4 py-3">{t('webinars.joined')}</th>
+              <th class="px-4 py-3">{t('webinars.lastSeen')}</th>
+              <th class="px-4 py-3">{t('webinars.country')}</th>
+            </tr>
+          </thead>
+          <tbody id="p-rows"></tbody>
+        </table>
+        <p id="p-empty" class="hidden px-4 py-6 text-center text-muted">
+          {t('webinars.noParticipants')}
+        </p>
+      </div>
+    </div>
+
+    <!-- Report + emails -->
+    <div class="grid gap-4 lg:grid-cols-2">
+      <div class="card">
+        <div class="text-sm font-semibold">{t('webinars.reportTitle')}</div>
+        <div id="w-report" class="mt-3 text-sm"></div>
+      </div>
+      <div class="card">
+        <div class="text-sm font-semibold">{t('webinars.emailsTitle')}</div>
+        <div id="w-emails" class="mt-3 text-sm"></div>
+      </div>
+    </div>
+  </div>
+</BaseLayout>
+
+<script>
+  import { onPage } from '../../../scripts/nav';
+  import { boot } from '../../../scripts/app-boot';
+  import { getWebinarDetail, type WebinarParticipant } from '../../../lib/api';
+  import { useTranslations, type Locale } from '../../../lib/i18n';
+
+  function esc(s: string): string {
+    return s.replace(
+      /[&<>"]/g,
+      (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c] || c,
+    );
+  }
+
+  onPage('page-webinar-detail', async () => {
+    const ctx = await boot();
+    if (!ctx) return;
+    const t = useTranslations(ctx.lang as Locale);
+    const orgId = ctx.activeOrg.id;
+    const webinarId = new URLSearchParams(location.search).get('webinar') ?? '';
+    const msg = document.getElementById('msg')!;
+    const content = document.getElementById('content')!;
+
+    if (!webinarId) {
+      location.href = `/${ctx.lang}/webinars/`;
+      return;
+    }
+
+    const fmt = (iso: string | null) => (iso ? new Date(iso).toLocaleString(ctx.lang) : '—');
+    const dur = (secs: number | null | undefined) => {
+      if (secs == null) return '—';
+      const m = Math.round(secs / 60);
+      if (m < 60) return `${m} ${t('analytics.minutes')}`;
+      const h = Math.floor(m / 60);
+      return `${h}h ${m % 60}m`;
+    };
+    const num = (n: number | null | undefined) => (n == null ? '—' : String(n));
+
+    const res = await getWebinarDetail(orgId, webinarId);
+    if (!res.ok || !res.data) {
+      msg.textContent = res.status === 404 ? t('webinars.empty') : t('common.error');
+      return;
+    }
+    const { webinar: w, session, participants, report, emails } = res.data;
+
+    // Header.
+    document.getElementById('w-title')!.textContent = w.title || w.code;
+    const statusLabel = t(`webinars.status${w.status.charAt(0).toUpperCase()}${w.status.slice(1)}`);
+    document.getElementById('w-status')!.textContent = statusLabel;
+
+    const meta: string[] = [];
+    meta.push(`${t('webinars.code')}: ${esc(w.code)}`);
+    meta.push(`${t('webinars.tier')}: ${esc(w.tier)}`);
+    if (w.project_name) meta.push(`${t('webinars.project')}: ${esc(w.project_name)}`);
+    if (w.host_user_id) meta.push(`${t('webinars.host')}: ${esc(w.host_user_id)}`);
+    if (w.source_language) meta.push(`${t('webinars.sourceLanguage')}: ${esc(w.source_language)}`);
+    document.getElementById('w-meta')!.innerHTML = meta.map((m) => `<span>${m}</span>`).join('');
+
+    if (w.description) {
+      const desc = document.getElementById('w-desc')!;
+      desc.textContent = w.description;
+      desc.classList.remove('hidden');
+    }
+
+    // Session KPI panel — graceful "not finalized" when there's no session row.
+    if (!session) {
+      document.getElementById('w-notfinal')!.classList.remove('hidden');
+    } else {
+      document.getElementById('w-session')!.classList.remove('hidden');
+      const set = (id: string, v: string) => (document.getElementById(id)!.textContent = v);
+      set('s-duration', dur(session.duration_seconds));
+      // Actual vs scheduled: delta between actual and scheduled start (minutes).
+      let avss = '—';
+      if (session.actual_start && session.scheduled_start) {
+        const deltaMin = Math.round(
+          (new Date(session.actual_start).getTime() - new Date(session.scheduled_start).getTime()) /
+            60000,
+        );
+        const sign = deltaMin > 0 ? '+' : '';
+        avss = `${sign}${deltaMin} ${t('analytics.minutes')}`;
+      }
+      set('s-avss', avss);
+      set('s-hostonline', dur(session.host_online_seconds));
+      set('s-peak', num(session.peak_viewers));
+      set('s-langs', num(session.translated_language_count));
+      set('s-cost', num(session.cost_credits));
+    }
+
+    // Participants.
+    const pRows = document.getElementById('p-rows')!;
+    const pEmpty = document.getElementById('p-empty')!;
+    pEmpty.classList.toggle('hidden', participants.length > 0);
+    pRows.innerHTML = participants
+      .map(
+        (p: WebinarParticipant) => `<tr class="border-b border-line last:border-0">
+          <td class="px-4 py-3 font-medium">${esc(p.name)}</td>
+          <td class="px-4 py-3">${p.language_code ? esc(p.language_code) : '<span class="text-muted">—</span>'}</td>
+          <td class="px-4 py-3 text-muted">${esc(dur(p.total_watch_seconds))}</td>
+          <td class="px-4 py-3 text-muted">${esc(fmt(p.joined_at))}</td>
+          <td class="px-4 py-3 text-muted">${esc(fmt(p.last_seen))}</td>
+          <td class="px-4 py-3">${p.approx_country ? esc(p.approx_country) : '<span class="text-muted">—</span>'}</td>
+        </tr>`,
+      )
+      .join('');
+
+    // Report availability + languages.
+    const reportEl = document.getElementById('w-report')!;
+    if (report.available) {
+      const langs = report.languages.length
+        ? `<div class="mt-2 flex flex-wrap gap-1">${report.languages
+            .map((l) => `<span class="badge">${esc(l)}</span>`)
+            .join('')}</div>`
+        : '';
+      reportEl.innerHTML = `<div class="font-medium">${esc(t('webinars.reportAvailable'))}</div>${
+        langs
+          ? `<div class="text-xs text-muted mt-2">${esc(t('webinars.reportLanguages'))}</div>${langs}`
+          : ''
+      }`;
+    } else {
+      reportEl.innerHTML = `<span class="text-muted">${esc(t('webinars.reportUnavailable'))}</span>`;
+    }
+
+    // Emails-sent summary.
+    const emailsEl = document.getElementById('w-emails')!;
+    if (emails.total > 0) {
+      const byStatus = emails.by_status
+        .map(
+          (b) =>
+            `<div class="flex justify-between border-b border-line py-1.5 last:border-0"><span class="text-muted">${esc(b.status)}</span><span class="font-medium">${b.count}</span></div>`,
+        )
+        .join('');
+      emailsEl.innerHTML = `<div class="flex justify-between font-medium"><span>${esc(t('webinars.emailsTotal'))}</span><span>${emails.total}</span></div><div class="mt-2">${byStatus}</div>`;
+    } else {
+      emailsEl.innerHTML = `<span class="text-muted">${esc(t('webinars.noEmails'))}</span>`;
+    }
+
+    msg.classList.add('hidden');
+    content.classList.remove('hidden');
+  });
+</script>

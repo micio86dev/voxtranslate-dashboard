@@ -118,6 +118,7 @@ const t = useTranslations(lang);
 </BaseLayout>
 
 <script>
+  import { onPage } from '../../scripts/nav';
   import { boot } from '../../scripts/app-boot';
   import {
     listMeetings,
@@ -142,7 +143,7 @@ const t = useTranslations(lang);
   /** Local-time `YYYY-MM-DD` key for a Date. */
   const dayKey = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 
-  void (async () => {
+  onPage('weekdays', async () => {
     const ctx = await boot();
     if (!ctx) return;
     const lang = ctx.lang as Locale;
@@ -387,5 +388,5 @@ const t = useTranslations(lang);
     });
 
     void load();
-  })();
+  });
 </script>
