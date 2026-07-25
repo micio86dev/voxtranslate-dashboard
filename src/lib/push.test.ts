@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 // The push module talks to the backend through ./api — mock those three calls.
@@ -186,5 +188,45 @@ describe('isPushSubscribed', () => {
       existingSub: makeSub({ endpoint: 'e', keys: { p256dh: 'p', auth: 'a' } }),
     });
     expect(await isPushSubscribed()).toBe(true);
+  });
+});
+
+// ---- notification assets (Android silhouette regression) --------------------
+//
+// Symptom this pins against: Android showed an empty square inside a circle
+// instead of the VoxTranslate mark. `badge` pointed at an OPAQUE png — Android
+// uses the badge's ALPHA channel as a stencil and tints it, so a fully opaque
+// image becomes a solid square. The badge must be a transparent monochrome glyph;
+// `icon` is the full-colour image and must stay light enough to fetch on mobile.
+describe('notification assets', () => {
+  // jsdom env: import.meta.url is an http URL, so resolve from the vitest root (dashboard/).
+  const publicFile = (p: string) => join(process.cwd(), 'public', p);
+  const sw = readFileSync(publicFile('sw.js'), 'utf8');
+  const badge = /badge:\s*'([^']+)'/.exec(sw)?.[1];
+  const icon = /icon:\s*'([^']+)'/.exec(sw)?.[1];
+
+  function png(publicPath: string): { colourType: number; w: number; bytes: number } {
+    const buf = readFileSync(publicFile(publicPath));
+    expect(buf.subarray(12, 16).toString('ascii')).toBe('IHDR');
+    return { colourType: buf.readUInt8(25), w: buf.readUInt32BE(16), bytes: buf.byteLength };
+  }
+
+  it('uses a dedicated badge, never the opaque icon (the original bug)', () => {
+    expect(badge).toBeTruthy();
+    expect(badge).not.toBe(icon);
+    expect(badge).not.toBe('/favicon-32.png');
+  });
+
+  it('ships a badge with an alpha channel Android can use as a stencil', () => {
+    const { colourType, w } = png(badge!);
+    expect([4, 6]).toContain(colourType); // 4 = gray+alpha, 6 = RGBA
+    expect(w).toBeLessThanOrEqual(96);
+  });
+
+  it('serves a lightweight notification icon', () => {
+    const { w, bytes } = png(icon!);
+    expect(w).toBeGreaterThanOrEqual(128); // 32px favicon was unreadable at ~64dp
+    expect(w).toBeLessThanOrEqual(192);
+    expect(bytes).toBeLessThan(60_000);
   });
 });
