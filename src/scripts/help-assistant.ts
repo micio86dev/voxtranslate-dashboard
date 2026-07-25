@@ -64,7 +64,6 @@ export function detectSharedWorkerSupport(): boolean {
   return typeof SharedWorker !== 'undefined';
 }
 
-
 /**
  * Append ?token= (or &token=) to a WebSocket URL.
  * Returns the URL unchanged when token is null.

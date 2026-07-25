@@ -39,9 +39,11 @@ const { lang, title, description = '', chrome = false } = Astro.props;
     <!-- Brand favicon + app icon — same marks as the consumer app (client/public). -->
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    {/* Client-side navigation (no full reload) so the global Help Assistant — its
+    {
+      /* Client-side navigation (no full reload) so the global Help Assistant — its
         WebSocket, SharedWorker, mic, and audio — survives page changes. Pages
-        re-init via the `astro:page-load` event; #ha-container is transition:persist. */}
+        re-init via the `astro:page-load` event; #ha-container is transition:persist. */
+    }
     <ClientRouter />
   </head>
   <body>
