@@ -511,6 +511,7 @@
     "micDenied": "Mikrofonzugriff verweigert."
   },
   "voiceAssistant": {
+    "aiDisclosure": "Du sprichst mit einem KI-Assistenten. Seine Antworten werden automatisch generiert und können Fehler enthalten.",
     "startLabel": "Per Sprache fragen",
     "stopLabel": "Stopp",
     "connecting": "Verbindung wird hergestellt…",
@@ -528,6 +529,7 @@
     "notEligible": "Der Sprachassistent steht nur Teamleitern und Inhabern zur Verfügung."
   },
   "helpAssistant": {
+    "aiDisclosure": "Du sprichst mit einem KI-Assistenten. Seine Antworten werden automatisch generiert und können Fehler enthalten.",
     "panelTitle": "Dashboard-Hilfe",
     "startLabel": "Per Sprache fragen",
     "stopLabel": "Stopp",

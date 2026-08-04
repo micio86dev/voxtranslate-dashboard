@@ -511,6 +511,7 @@
     "micDenied": "Microphone access denied."
   },
   "voiceAssistant": {
+    "aiDisclosure": "You are talking to an AI assistant. Its answers are generated automatically and may be inaccurate.",
     "startLabel": "Ask with voice",
     "stopLabel": "Stop",
     "connecting": "Connecting…",
@@ -528,6 +529,7 @@
     "notEligible": "Voice assistant is available to team leads and owners only."
   },
   "helpAssistant": {
+    "aiDisclosure": "You are talking to an AI assistant. Its answers are generated automatically and may be inaccurate.",
     "panelTitle": "Dashboard Help",
     "startLabel": "Ask with voice",
     "stopLabel": "Stop",

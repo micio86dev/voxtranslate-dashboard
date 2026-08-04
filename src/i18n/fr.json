@@ -511,6 +511,7 @@
     "micDenied": "Accès au microphone refusé."
   },
   "voiceAssistant": {
+    "aiDisclosure": "Vous parlez à un assistant IA. Ses réponses sont générées automatiquement et peuvent contenir des erreurs.",
     "startLabel": "Poser une question vocalement",
     "stopLabel": "Arrêter",
     "connecting": "Connexion…",
@@ -528,6 +529,7 @@
     "notEligible": "L'assistant vocal est réservé aux responsables d'équipe et aux propriétaires."
   },
   "helpAssistant": {
+    "aiDisclosure": "Vous parlez à un assistant IA. Ses réponses sont générées automatiquement et peuvent contenir des erreurs.",
     "panelTitle": "Aide du tableau de bord",
     "startLabel": "Poser une question vocalement",
     "stopLabel": "Arrêter",
