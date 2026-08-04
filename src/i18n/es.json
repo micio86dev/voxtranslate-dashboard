@@ -511,6 +511,7 @@
     "micDenied": "Acceso al micrófono denegado."
   },
   "voiceAssistant": {
+    "aiDisclosure": "Estás hablando con un asistente de IA. Sus respuestas se generan automáticamente y pueden contener errores.",
     "startLabel": "Preguntar con voz",
     "stopLabel": "Detener",
     "connecting": "Conectando…",
@@ -528,6 +529,7 @@
     "notEligible": "El asistente de voz está disponible solo para líderes de equipo y propietarios."
   },
   "helpAssistant": {
+    "aiDisclosure": "Estás hablando con un asistente de IA. Sus respuestas se generan automáticamente y pueden contener errores.",
     "panelTitle": "Ayuda del panel",
     "startLabel": "Preguntar con voz",
     "stopLabel": "Detener",

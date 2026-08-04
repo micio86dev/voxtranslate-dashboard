@@ -511,6 +511,7 @@
     "micDenied": "Accesso al microfono negato."
   },
   "voiceAssistant": {
+    "aiDisclosure": "Stai parlando con un assistente AI. Le risposte sono generate automaticamente e possono contenere errori.",
     "startLabel": "Chiedi con la voce",
     "stopLabel": "Ferma",
     "connecting": "Connessione…",
@@ -528,6 +529,7 @@
     "notEligible": "L'assistente vocale è disponibile solo per i team lead e i proprietari."
   },
   "helpAssistant": {
+    "aiDisclosure": "Stai parlando con un assistente AI. Le risposte sono generate automaticamente e possono contenere errori.",
     "panelTitle": "Assistenza dashboard",
     "startLabel": "Chiedi con la voce",
     "stopLabel": "Ferma",

@@ -71,6 +71,13 @@ const t = useTranslations(lang);
       </button>
     </form>
 
+    <!--
+      AI Act Art. 50(1)+(5): rendered server-side and never gated on feature
+      availability or session state, so the disclosure is on screen before the first
+      interaction — both for the typed question and for the voice assistant.
+    -->
+    <p class="mt-2 text-xs text-muted">{t('voiceAssistant.aiDisclosure')}</p>
+
     <!-- Waveform canvas: shown while listening/speaking -->
     <canvas id="va-waveform" class="mt-2 hidden h-10 w-full rounded" aria-hidden="true"></canvas>
 

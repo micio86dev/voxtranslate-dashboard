@@ -161,6 +161,12 @@ const link = (p: string) => localizePath(lang, p);
         <span id="va-cost-label"></span><span id="va-cost-value"></span>
       </div>
     </div>
+    <!--
+      AI Act Art. 50(1)+(5): inside `va-section`, which is revealed together with the
+      assistant itself, so the disclosure is visible before the first interaction and
+      never shown for users who do not have the feature.
+    -->
+    <p class="mt-2 text-xs text-muted">{t('voiceAssistant.aiDisclosure')}</p>
     <canvas id="va-waveform" class="mt-2 hidden h-10 w-full rounded" aria-hidden="true"></canvas>
     <div id="va-transcript" class="mt-3 hidden">
       <h2 id="va-transcript-header" class="text-sm font-semibold text-muted"></h2>
