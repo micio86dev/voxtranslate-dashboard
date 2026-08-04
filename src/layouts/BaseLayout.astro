@@ -94,6 +94,14 @@ const { lang, title, description = '', chrome = false } = Astro.props;
           <button id="ha-close" type="button" class="btn-ghost text-xs" aria-label="Close"></button>
         </div>
 
+        <!--
+          AI Act Art. 50(1)+(5): the person must be told they are interacting with an AI
+          system in a clear and distinguishable manner, at the latest at the time of the
+          first interaction. It sits above the fold of the panel and is never hidden by
+          state changes — do not move it below the transcript or gate it on a session.
+        -->
+        <p id="ha-ai-notice" class="border-b border-line px-4 py-2 text-xs text-muted"></p>
+
         <!-- Waveform canvas (shown while active) -->
         <canvas id="ha-waveform" class="hidden h-10 w-full" aria-hidden="true"></canvas>
 
@@ -164,6 +172,7 @@ const { lang, title, description = '', chrome = false } = Astro.props;
         const trigger = document.getElementById('ha-trigger') as HTMLButtonElement;
         const panel = document.getElementById('ha-panel')!;
         const panelTitle = document.getElementById('ha-panel-title')!;
+        const aiNotice = document.getElementById('ha-ai-notice')!;
         const closeBtn = document.getElementById('ha-close') as HTMLButtonElement;
         const waveformCanvas = document.getElementById('ha-waveform') as HTMLCanvasElement;
         const cost = document.getElementById('ha-cost')!;
@@ -178,6 +187,7 @@ const { lang, title, description = '', chrome = false } = Astro.props;
 
         // Populate i18n strings
         panelTitle.textContent = t('helpAssistant.panelTitle');
+        aiNotice.textContent = t('helpAssistant.aiDisclosure');
         closeBtn.textContent = t('helpAssistant.closePanel');
         costLabel.textContent = t('helpAssistant.costLabel') + ': ';
         trigger.setAttribute('aria-label', t('helpAssistant.panelTitle'));
