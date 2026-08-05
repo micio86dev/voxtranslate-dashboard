@@ -2,7 +2,10 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    # `develop` is here because merging a feature into it triggers the staging deploy:
+    # without it, integration reached staging with no gate at all, and a red build only
+    # surfaced later on the release push to main.
+    branches: [main, develop]
   pull_request:
 
 jobs:

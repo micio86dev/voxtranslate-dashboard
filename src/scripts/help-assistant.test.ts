@@ -124,11 +124,11 @@ describe('handleWorkerMessage', () => {
       type: 'cost_tick',
       duration_s: 10,
       credits_so_far: 6,
-      cost_display: '€0.06',
+      cost_display: '$0.06',
     };
     handleWorkerMessage(msg, cb);
     expect(cb.calls['onCostTick']).toHaveLength(1);
-    expect(cb.calls['onCostTick'][0]).toEqual([10, 6, '€0.06']);
+    expect(cb.calls['onCostTick'][0]).toEqual([10, 6, '$0.06']);
   });
 
   it('calls onSessionEnd for session_end events', () => {
@@ -137,11 +137,11 @@ describe('handleWorkerMessage', () => {
       type: 'session_end',
       duration_s: 60,
       credits_used: 38,
-      cost_display: '€0.38',
+      cost_display: '$0.38',
     };
     handleWorkerMessage(msg, cb);
     expect(cb.calls['onSessionEnd']).toHaveLength(1);
-    expect(cb.calls['onSessionEnd'][0]).toEqual([60, 38, '€0.38']);
+    expect(cb.calls['onSessionEnd'][0]).toEqual([60, 38, '$0.38']);
   });
 
   it('calls onError for error events', () => {
@@ -163,11 +163,11 @@ describe('handleWorkerMessage', () => {
       type: 'sync',
       state: 'listening',
       transcript,
-      cost_display: '€0.10',
+      cost_display: '$0.10',
     };
     handleWorkerMessage(msg, cb);
     expect(cb.calls['onSync']).toHaveLength(1);
-    expect(cb.calls['onSync'][0]).toEqual(['listening', transcript, '€0.10']);
+    expect(cb.calls['onSync'][0]).toEqual(['listening', transcript, '$0.10']);
   });
 
   it('does not throw or call any callback for unknown event types', () => {
