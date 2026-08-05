@@ -1,9 +1,9 @@
 {
   "name": "voxtranslate-dashboard",
   "type": "module",
-  "version": "0.8.6",
+  "version": "0.8.7",
   "private": true,
-  "description": "VoxTranslate for Business — organization dashboard (Astro 5)",
+  "description": "VoxTranslate for Business \u2014 organization dashboard (Astro 5)",
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
