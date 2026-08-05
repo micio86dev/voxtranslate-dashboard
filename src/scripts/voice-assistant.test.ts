@@ -165,16 +165,16 @@ describe('pcm16FromFloat32', () => {
 // ---------------------------------------------------------------------------
 
 describe('formatCostDisplay', () => {
-  it('formats 0 credits as €0.00', () => {
-    expect(formatCostDisplay(0)).toBe('€0.00');
+  it('formats 0 credits as $0.00', () => {
+    expect(formatCostDisplay(0)).toBe('$0.00');
   });
 
-  it('formats 38 credits as €0.38', () => {
-    expect(formatCostDisplay(38)).toBe('€0.38');
+  it('formats 38 credits as $0.38', () => {
+    expect(formatCostDisplay(38)).toBe('$0.38');
   });
 
-  it('formats 100 credits as €1.00', () => {
-    expect(formatCostDisplay(100)).toBe('€1.00');
+  it('formats 100 credits as $1.00', () => {
+    expect(formatCostDisplay(100)).toBe('$1.00');
   });
 });
 
@@ -188,7 +188,7 @@ describe('VoiceAssistantInboundEvent type guards', () => {
       type: 'cost_tick',
       duration_s: 10,
       credits_so_far: 6,
-      cost_display: '€0.06',
+      cost_display: '$0.06',
     };
     expect(ev.type).toBe('cost_tick');
   });
@@ -198,7 +198,7 @@ describe('VoiceAssistantInboundEvent type guards', () => {
       type: 'session_end',
       duration_s: 60,
       credits_used: 38,
-      cost_display: '€0.38',
+      cost_display: '$0.38',
     };
     expect(ev.type).toBe('session_end');
   });

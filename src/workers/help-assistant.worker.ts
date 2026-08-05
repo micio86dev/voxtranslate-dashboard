@@ -144,7 +144,7 @@ if (typeof self !== 'undefined' && 'onconnect' in self) {
   let ws: WebSocket | null = null;
   let workerState: WorkerState = 'idle';
   const transcript: TranscriptEntry[] = [];
-  let costDisplay = '€0.00';
+  let costDisplay = '$0.00';
   let activePort: MessagePort | null = null;
   let gracePeriodTimer: ReturnType<typeof setTimeout> | null = null;
 

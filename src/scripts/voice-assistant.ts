@@ -117,11 +117,15 @@ export function pcm16FromFloat32(float32: Float32Array): ArrayBuffer {
 // ---------------------------------------------------------------------------
 
 /**
- * Format an integer credit amount as a euro display string.
- * Assumes 100 credits = €1 (matches the server's `format_cost_display`).
+ * Format an integer credit amount as a USD display string.
+ *
+ * Assumes 100 credits = $1, matching the server's `format_cost_display`. Billing is
+ * USD end to end (`stripe_handler` opens Checkout with `currency: "usd"`), so this
+ * must not drift back to a euro symbol — the server sends the authoritative
+ * `cost_display` string and this is only the local mirror of it.
  */
 export function formatCostDisplay(credits: number): string {
-  return `€${(credits / 100).toFixed(2)}`;
+  return `$${(credits / 100).toFixed(2)}`;
 }
 
 // ---------------------------------------------------------------------------

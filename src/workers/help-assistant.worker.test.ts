@@ -77,27 +77,27 @@ describe('buildSyncMessage', () => {
       { role: 'user', text: 'Hello' },
       { role: 'assistant', text: 'Hi there!' },
     ];
-    const msg = buildSyncMessage('listening', transcript, '€0.06');
+    const msg = buildSyncMessage('listening', transcript, '$0.06');
 
     expect(msg.type).toBe('sync');
     expect(msg.state).toBe('listening');
     expect(msg.transcript).toHaveLength(2);
     expect(msg.transcript[0]).toEqual({ role: 'user', text: 'Hello' });
     expect(msg.transcript[1]).toEqual({ role: 'assistant', text: 'Hi there!' });
-    expect(msg.cost_display).toBe('€0.06');
+    expect(msg.cost_display).toBe('$0.06');
   });
 
   it('builds a sync message with empty transcript when no conversation yet', () => {
-    const msg = buildSyncMessage('idle', [], '€0.00');
+    const msg = buildSyncMessage('idle', [], '$0.00');
     expect(msg.type).toBe('sync');
     expect(msg.state).toBe('idle');
     expect(msg.transcript).toEqual([]);
-    expect(msg.cost_display).toBe('€0.00');
+    expect(msg.cost_display).toBe('$0.00');
   });
 
   it('produces a fresh copy of the transcript array (not the original reference)', () => {
     const transcript: TranscriptEntry[] = [{ role: 'user', text: 'test' }];
-    const msg = buildSyncMessage('listening', transcript, '€0.01');
+    const msg = buildSyncMessage('listening', transcript, '$0.01');
     // Mutating the original must not affect the snapshot
     transcript.push({ role: 'assistant', text: 'extra' });
     expect(msg.transcript).toHaveLength(1);
