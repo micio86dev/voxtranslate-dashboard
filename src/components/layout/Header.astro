@@ -10,8 +10,13 @@ const t = useTranslations(lang);
 const link = (p: string) => localizePath(lang, p);
 // Consumer call app (separate origin). It moved off the apex when the marketing
 // site took voxtranslate.app — the apex now 301s the app's own paths, but not `/`,
-// so this link would have landed on the marketing home rather than the app.
-const APP_URL = 'https://app.voxtranslate.app';
+// so a stale value here lands users on the marketing home rather than the app.
+// Overridable at build time; the default is production, never localhost, because a
+// missing variable must not bake a dead URL into the shipped HTML.
+const APP_URL = (import.meta.env.PUBLIC_APP_URL || 'https://app.voxtranslate.app').replace(
+  /\/$/,
+  '',
+);
 ---
 
 <header class="border-b border-line bg-surface" transition:persist="app-header">

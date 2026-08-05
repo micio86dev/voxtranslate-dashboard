@@ -3,7 +3,11 @@ import { defineConfig } from 'astro/config';
 import tailwindcss from '@tailwindcss/vite';
 
 // Canonical origin (authenticated B2B app). Served on Vercel.
-const SITE = 'https://dashboard.voxtranslate.app';
+// `import.meta.env` does not exist in the Astro config, so read process.env here.
+const SITE = (process.env.PUBLIC_SITE_ORIGIN || 'https://dashboard.voxtranslate.app').replace(
+  /\/$/,
+  '',
+);
 
 // 5 app locales. Keep in sync with src/i18n/*.json and src/lib/i18n.ts.
 export const LOCALES = ['en', 'it', 'es', 'de', 'fr'];
