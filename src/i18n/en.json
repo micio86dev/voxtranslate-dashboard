@@ -275,6 +275,25 @@
     "noTxns": "No transactions yet.",
     "subscribeHint": "Subscriptions renew automatically. Cancel anytime from the billing portal."
   },
+  "invoices": {
+    "title": "Invoices",
+    "subtitle": "Every subscription renewal and credit top-up, grouped by month.",
+    "empty": "No invoices yet. They appear here after your first payment.",
+    "loadError": "Invoices could not be loaded.",
+    "downloadError": "That invoice could not be downloaded. Please try again.",
+    "number": "Number",
+    "status": "Status",
+    "total": "Total",
+    "download": "Document",
+    "pdf": "Download PDF",
+    "st": {
+      "paid": "Paid",
+      "open": "Unpaid",
+      "draft": "Draft",
+      "void": "Void",
+      "uncollectible": "Uncollectible"
+    }
+  },
   "banner": {
     "none": {
       "title": "You don't have an active subscription",

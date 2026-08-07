@@ -275,6 +275,25 @@
     "noTxns": "Noch keine Transaktionen.",
     "subscribeHint": "Abos verlängern sich automatisch. Jederzeit über das Abrechnungsportal kündbar."
   },
+  "invoices": {
+    "title": "Rechnungen",
+    "subtitle": "Jede Abo-Verlängerung und jede Guthabenaufladung, nach Monat gruppiert.",
+    "empty": "Noch keine Rechnungen. Sie erscheinen hier nach der ersten Zahlung.",
+    "loadError": "Rechnungen konnten nicht geladen werden.",
+    "downloadError": "Die Rechnung konnte nicht heruntergeladen werden. Bitte erneut versuchen.",
+    "number": "Nummer",
+    "status": "Status",
+    "total": "Gesamt",
+    "download": "Dokument",
+    "pdf": "PDF herunterladen",
+    "st": {
+      "paid": "Bezahlt",
+      "open": "Offen",
+      "draft": "Entwurf",
+      "void": "Storniert",
+      "uncollectible": "Uneinbringlich"
+    }
+  },
   "banner": {
     "none": {
       "title": "Du hast kein aktives Abo",
