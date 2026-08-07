@@ -275,6 +275,25 @@
     "noTxns": "Aún no hay transacciones.",
     "subscribeHint": "Las suscripciones se renuevan automáticamente. Cancela cuando quieras desde el portal de facturación."
   },
+  "invoices": {
+    "title": "Facturas",
+    "subtitle": "Cada renovación de la suscripción y cada recarga de créditos, agrupadas por mes.",
+    "empty": "Todavía no hay facturas. Aparecerán aquí tras el primer pago.",
+    "loadError": "No se han podido cargar las facturas.",
+    "downloadError": "No se ha podido descargar la factura. Inténtalo de nuevo.",
+    "number": "Número",
+    "status": "Estado",
+    "total": "Total",
+    "download": "Documento",
+    "pdf": "Descargar PDF",
+    "st": {
+      "paid": "Pagada",
+      "open": "Pendiente",
+      "draft": "Borrador",
+      "void": "Anulada",
+      "uncollectible": "Incobrable"
+    }
+  },
   "banner": {
     "none": {
       "title": "No tienes una suscripción activa",

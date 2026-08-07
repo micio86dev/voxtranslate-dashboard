@@ -138,6 +138,20 @@ const plans = [
     </div>
   </section>
 
+  <!-- Invoices — the documents accounting actually needs, grouped by month. -->
+  <section class="mt-8">
+    <h2 class="text-lg font-semibold">{t('invoices.title')}</h2>
+    <p class="mt-0.5 text-sm text-muted">{t('invoices.subtitle')}</p>
+    <div id="invoices" class="mt-3 flex flex-col gap-4"></div>
+    <p id="invoices-loading" class="card mt-3 text-center text-muted">{t('common.loading')}</p>
+    <p id="invoices-empty" class="card mt-3 hidden text-center text-muted">
+      {t('invoices.empty')}
+    </p>
+    <p id="invoices-error" class="card mt-3 hidden text-center text-warn">
+      {t('invoices.loadError')}
+    </p>
+  </section>
+
   <h2 class="mt-8 text-lg font-semibold">{t('credits.transactions')}</h2>
   <div class="card mt-3 overflow-x-auto p-0">
     <table class="w-full text-sm">
@@ -160,9 +174,12 @@ const plans = [
   import {
     billingPortal,
     getCredits,
+    getOrgInvoicePdf,
+    getOrgInvoices,
     getSubscription,
     purchaseCredits,
     subscribe,
+    type InvoiceMonth,
     type SubscriptionDetail,
   } from '../../lib/api';
   import { useTranslations, type Locale } from '../../lib/i18n';
@@ -382,6 +399,96 @@ const plans = [
           </tr>`,
         )
         .join('');
+    }
+
+    // --- Invoices ------------------------------------------------------------
+    const invoicesEl = document.getElementById('invoices')!;
+    const loadingEl = document.getElementById('invoices-loading')!;
+    const emptyEl = document.getElementById('invoices-empty')!;
+    const errorEl = document.getElementById('invoices-error')!;
+
+    // `2026-08` → the month name in the viewer's locale. Parsed as UTC (the
+    // server groups in UTC) so a negative-offset locale cannot shift the label
+    // back into the previous month.
+    const monthLabel = (ym: string) => {
+      const [y, m] = ym.split('-').map(Number);
+      return new Date(Date.UTC(y, m - 1, 1)).toLocaleDateString(ctx.lang, {
+        year: 'numeric',
+        month: 'long',
+        timeZone: 'UTC',
+      });
+    };
+
+    const INVOICE_BADGE: Record<string, string> = {
+      paid: 'border-ok text-ok',
+      open: 'border-warn text-warn',
+      void: 'border-danger text-danger',
+      uncollectible: 'border-danger text-danger',
+    };
+
+    const renderInvoices = (months: InvoiceMonth[]) => {
+      invoicesEl.innerHTML = months
+        .map(
+          (m) => `<div class="card p-0 overflow-x-auto">
+            <div class="border-b border-line px-4 py-3 text-sm font-semibold">${esc(monthLabel(m.month))}</div>
+            <table class="w-full text-sm">
+              <thead class="border-b border-line text-left text-muted">
+                <tr>
+                  <th class="px-4 py-2">${esc(t('invoices.number'))}</th>
+                  <th class="px-4 py-2">${esc(t('credits.date'))}</th>
+                  <th class="px-4 py-2">${esc(t('invoices.status'))}</th>
+                  <th class="px-4 py-2 text-right">${esc(t('invoices.total'))}</th>
+                  <th class="px-4 py-2 text-right">${esc(t('invoices.download'))}</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${m.invoices
+                  .map(
+                    (inv) => `<tr class="border-b border-line last:border-0">
+                      <td class="px-4 py-3 font-medium">${esc(inv.number ?? '—')}</td>
+                      <td class="px-4 py-3 text-muted">${esc(fmt(inv.issued_at))}</td>
+                      <td class="px-4 py-3">
+                        <span class="badge ${INVOICE_BADGE[inv.status] ?? ''}">${esc(t(`invoices.st.${inv.status}`))}</span>
+                      </td>
+                      <td class="px-4 py-3 text-right">${esc(fmtMoney(inv.total_cents, inv.currency))}</td>
+                      <td class="px-4 py-3 text-right">
+                        <button class="inv-dl btn-ghost text-xs" data-id="${esc(inv.id)}">${esc(t('invoices.pdf'))}</button>
+                      </td>
+                    </tr>`,
+                  )
+                  .join('')}
+              </tbody>
+            </table>
+          </div>`,
+        )
+        .join('');
+
+      // The URL is resolved on demand, never rendered into the DOM: the issuer's
+      // links expire, so a href baked at render time would rot on the page.
+      for (const btn of invoicesEl.querySelectorAll<HTMLButtonElement>('.inv-dl')) {
+        btn.addEventListener('click', async () => {
+          const label = btn.textContent;
+          btn.disabled = true;
+          btn.textContent = t('common.loading');
+          const r = await getOrgInvoicePdf(orgId, btn.dataset.id!);
+          btn.disabled = false;
+          btn.textContent = label;
+          if (r.data?.url) window.open(r.data.url, '_blank', 'noopener');
+          else alert(t('invoices.downloadError'));
+        });
+      }
+    };
+
+    {
+      const r = await getOrgInvoices(orgId);
+      loadingEl.classList.add('hidden');
+      if (!r.ok || !r.data) {
+        errorEl.classList.remove('hidden');
+      } else if (r.data.months.length === 0) {
+        emptyEl.classList.remove('hidden');
+      } else {
+        renderInvoices(r.data.months);
+      }
     }
 
     document.getElementById('buy')!.addEventListener('click', async () => {
