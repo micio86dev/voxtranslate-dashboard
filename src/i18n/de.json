@@ -315,8 +315,8 @@
     "business": {
       "name": "Business",
       "tagline": "Für wachsende Teams, die sich über Sprachen hinweg treffen.",
-      "priceMonth": "49 €",
-      "priceYear": "490 €",
+      "priceMonth": "49 $",
+      "priceYear": "490 $",
       "points": [
         "Monatliche Credits inklusive",
         "Bis zu 20 Mitglieder",
@@ -328,8 +328,8 @@
     "enterprise": {
       "name": "Enterprise",
       "tagline": "Für größere Organisationen mit Compliance-Anforderungen.",
-      "priceMonth": "199 €",
-      "priceYear": "1.990 €",
+      "priceMonth": "199 $",
+      "priceYear": "1.990 $",
       "points": [
         "Mehr Credits inklusive",
         "Unbegrenzte Mitglieder",
