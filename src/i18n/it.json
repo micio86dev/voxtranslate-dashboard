@@ -275,6 +275,25 @@
     "noTxns": "Ancora nessuna transazione.",
     "subscribeHint": "Gli abbonamenti si rinnovano automaticamente. Annulla quando vuoi dal portale di fatturazione."
   },
+  "invoices": {
+    "title": "Fatture",
+    "subtitle": "Ogni rinnovo dell'abbonamento e ogni ricarica di crediti, raggruppati per mese.",
+    "empty": "Nessuna fattura. Compariranno qui dopo il primo pagamento.",
+    "loadError": "Impossibile caricare le fatture.",
+    "downloadError": "Impossibile scaricare la fattura. Riprova.",
+    "number": "Numero",
+    "status": "Stato",
+    "total": "Totale",
+    "download": "Documento",
+    "pdf": "Scarica PDF",
+    "st": {
+      "paid": "Pagata",
+      "open": "Da pagare",
+      "draft": "Bozza",
+      "void": "Annullata",
+      "uncollectible": "Inesigibile"
+    }
+  },
   "banner": {
     "none": {
       "title": "Non hai un abbonamento attivo",
@@ -315,8 +334,8 @@
     "business": {
       "name": "Business",
       "tagline": "Per team in crescita che si incontrano in più lingue.",
-      "priceMonth": "€49",
-      "priceYear": "€490",
+      "priceMonth": "$49",
+      "priceYear": "$490",
       "points": [
         "Crediti mensili inclusi",
         "Fino a 20 membri",
@@ -328,8 +347,8 @@
     "enterprise": {
       "name": "Enterprise",
       "tagline": "Per organizzazioni più grandi con esigenze di compliance.",
-      "priceMonth": "€199",
-      "priceYear": "€1.990",
+      "priceMonth": "$199",
+      "priceYear": "$1.990",
       "points": [
         "Più crediti inclusi",
         "Membri illimitati",

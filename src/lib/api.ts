@@ -544,6 +544,43 @@ export const getSubscription = (orgId: string) =>
 export const billingPortal = (orgId: string) =>
   request<{ url: string }>('POST', `/api/business/organizations/${orgId}/subscription/portal`);
 
+// --- Invoices (spec 0109) ----------------------------------------------------
+
+/** One billing document. Amounts are integer minor units (cents). */
+export interface Invoice {
+  id: string;
+  /** Issuer's invoice number; null only for a document not yet numbered. */
+  number: string | null;
+  /** ISO-8601 issue date — what the monthly grouping is keyed on. */
+  issued_at: string;
+  period_start: string | null;
+  period_end: string | null;
+  subtotal_cents: number;
+  tax_cents: number;
+  total_cents: number;
+  currency: string;
+  /** Issuer status, e.g. 'paid' | 'open' | 'void' | 'uncollectible'. */
+  status: string;
+  hosted_invoice_url: string | null;
+}
+
+/** Invoices for one calendar month (`YYYY-MM`, UTC), newest month first. */
+export interface InvoiceMonth {
+  month: string;
+  invoices: Invoice[];
+}
+
+export const getOrgInvoices = (orgId: string) =>
+  request<{ months: InvoiceMonth[] }>('GET', `/api/business/organizations/${orgId}/invoices`);
+
+/**
+ * Resolve an invoice's download URL. The server re-fetches it from the issuer on
+ * every call because those links expire — so never cache the result, just open
+ * it straight away.
+ */
+export const getOrgInvoicePdf = (orgId: string, invoiceId: string) =>
+  request<{ url: string }>('GET', `/api/business/organizations/${orgId}/invoices/${invoiceId}/pdf`);
+
 // --- Teams -------------------------------------------------------------------
 
 export interface Team {

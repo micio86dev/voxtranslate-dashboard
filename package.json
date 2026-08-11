@@ -1,9 +1,9 @@
 {
   "name": "voxtranslate-dashboard",
   "type": "module",
-  "version": "0.8.8",
+  "version": "0.8.9",
   "private": true,
-  "description": "VoxTranslate for Business \u2014 organization dashboard (Astro 5)",
+  "description": "VoxTranslate for Business — organization dashboard (Astro 5)",
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
@@ -12,7 +12,8 @@
     "test:unit": "vitest run --coverage",
     "format": "prettier --write \"src/**/*.{astro,ts,js,json,css}\"",
     "lint": "prettier --check \"src/**/*.{astro,ts,js,json,css}\"",
-    "astro": "astro"
+    "astro": "astro",
+    "prepare": "husky"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.1",
@@ -23,7 +24,9 @@
     "@astrojs/check": "^0.9.9",
     "@types/node": "^26.0.0",
     "@vitest/coverage-v8": "^4.1.9",
+    "husky": "^9.1.7",
     "jsdom": "^25.0.1",
+    "lint-staged": "^17.3.0",
     "prettier": "^3.8.4",
     "prettier-plugin-astro": "^0.14.1",
     "typescript": "^5.9.3",

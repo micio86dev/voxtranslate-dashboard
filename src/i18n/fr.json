@@ -275,6 +275,25 @@
     "noTxns": "Aucune transaction pour l'instant.",
     "subscribeHint": "Les abonnements se renouvellent automatiquement. Annulez à tout moment depuis le portail de facturation."
   },
+  "invoices": {
+    "title": "Factures",
+    "subtitle": "Chaque renouvellement d'abonnement et chaque recharge de crédits, regroupés par mois.",
+    "empty": "Aucune facture pour l'instant. Elles apparaîtront ici après le premier paiement.",
+    "loadError": "Impossible de charger les factures.",
+    "downloadError": "Impossible de télécharger la facture. Veuillez réessayer.",
+    "number": "Numéro",
+    "status": "Statut",
+    "total": "Total",
+    "download": "Document",
+    "pdf": "Télécharger le PDF",
+    "st": {
+      "paid": "Payée",
+      "open": "Impayée",
+      "draft": "Brouillon",
+      "void": "Annulée",
+      "uncollectible": "Irrécouvrable"
+    }
+  },
   "banner": {
     "none": {
       "title": "Vous n'avez pas d'abonnement actif",
@@ -315,8 +334,8 @@
     "business": {
       "name": "Business",
       "tagline": "Pour les équipes en croissance qui se réunissent en plusieurs langues.",
-      "priceMonth": "49 €",
-      "priceYear": "490 €",
+      "priceMonth": "49 $",
+      "priceYear": "490 $",
       "points": [
         "Crédits mensuels inclus",
         "Jusqu'à 20 membres",
@@ -328,8 +347,8 @@
     "enterprise": {
       "name": "Enterprise",
       "tagline": "Pour les grandes organisations avec des besoins de conformité.",
-      "priceMonth": "199 €",
-      "priceYear": "1 990 €",
+      "priceMonth": "199 $",
+      "priceYear": "1 990 $",
       "points": [
         "Plus de crédits inclus",
         "Membres illimités",
