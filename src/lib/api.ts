@@ -571,10 +571,7 @@ export interface InvoiceMonth {
 }
 
 export const getOrgInvoices = (orgId: string) =>
-  request<{ months: InvoiceMonth[] }>(
-    'GET',
-    `/api/business/organizations/${orgId}/invoices`,
-  );
+  request<{ months: InvoiceMonth[] }>('GET', `/api/business/organizations/${orgId}/invoices`);
 
 /**
  * Resolve an invoice's download URL. The server re-fetches it from the issuer on
@@ -582,10 +579,7 @@ export const getOrgInvoices = (orgId: string) =>
  * it straight away.
  */
 export const getOrgInvoicePdf = (orgId: string, invoiceId: string) =>
-  request<{ url: string }>(
-    'GET',
-    `/api/business/organizations/${orgId}/invoices/${invoiceId}/pdf`,
-  );
+  request<{ url: string }>('GET', `/api/business/organizations/${orgId}/invoices/${invoiceId}/pdf`);
 
 // --- Teams -------------------------------------------------------------------
 
