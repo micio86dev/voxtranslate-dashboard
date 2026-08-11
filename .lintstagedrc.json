@@ -1,0 +1,3 @@
+{
+  "src/**/*.{astro,ts,js,json,css}": "prettier --write"
+}
