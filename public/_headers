@@ -5,6 +5,7 @@
 # highest-value gaps (script/object injection, clickjacking, base-tag hijack).
 /*
   X-Content-Type-Options: nosniff
+  Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
   X-Frame-Options: DENY
   Referrer-Policy: strict-origin-when-cross-origin
   X-Robots-Tag: noindex
