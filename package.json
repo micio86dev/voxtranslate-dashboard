@@ -1,7 +1,7 @@
 {
   "name": "voxtranslate-dashboard",
   "type": "module",
-  "version": "0.8.9",
+  "version": "0.9.0",
   "private": true,
   "description": "VoxTranslate for Business — organization dashboard (Astro 5)",
   "scripts": {
@@ -17,11 +17,11 @@
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.1",
-    "astro": "^5.18.2",
+    "astro": "^7.2.9",
     "tailwindcss": "^4.3.1"
   },
   "devDependencies": {
-    "@astrojs/check": "^0.9.9",
+    "@astrojs/check": "^0.9.10",
     "@types/node": "^26.0.0",
     "@vitest/coverage-v8": "^4.1.9",
     "husky": "^9.1.7",
