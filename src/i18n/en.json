@@ -62,7 +62,8 @@
       "meeting_invited": "Meeting invitation",
       "meeting_reminder": "Meeting reminder",
       "meeting_updated": "Meeting updated",
-      "meeting_cancelled": "Meeting cancelled"
+      "meeting_cancelled": "Meeting cancelled",
+      "subscription_expiring": "Subscription expiring"
     },
     "channel": {
       "push": "Push",

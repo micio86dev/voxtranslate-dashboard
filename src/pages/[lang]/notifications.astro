@@ -9,7 +9,13 @@ export function getStaticPaths() {
 const lang = isLocale(Astro.params.lang) ? Astro.params.lang : DEFAULT_LOCALE;
 const t = useTranslations(lang);
 
-const TYPES = ['meeting_invited', 'meeting_reminder', 'meeting_updated', 'meeting_cancelled'];
+const TYPES = [
+  'meeting_invited',
+  'meeting_reminder',
+  'meeting_updated',
+  'meeting_cancelled',
+  'subscription_expiring',
+];
 const CHANNELS = ['push', 'email', 'in_app'];
 ---
 

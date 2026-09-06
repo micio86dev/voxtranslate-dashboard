@@ -62,7 +62,8 @@
       "meeting_invited": "Meeting-Einladung",
       "meeting_reminder": "Meeting-Erinnerung",
       "meeting_updated": "Meeting aktualisiert",
-      "meeting_cancelled": "Meeting abgesagt"
+      "meeting_cancelled": "Meeting abgesagt",
+      "subscription_expiring": "Abonnement läuft ab"
     },
     "channel": {
       "push": "Push",
