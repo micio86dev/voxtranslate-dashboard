@@ -9,6 +9,8 @@ function org(over: Partial<OrgSummary> = {}): OrgSummary {
     slug: 'acme',
     plan: 'business',
     subscription_status: 'none',
+    subscription_active: false,
+    current_period_end: null,
     credits_balance: 0,
     role: 'owner',
     ...over,
@@ -36,11 +38,36 @@ describe('renderSubBanner', () => {
     expect(() => renderSubBanner(org(), 'en')).not.toThrow();
   });
 
-  it('clears the host and shows nothing for an active subscription', () => {
+  it('clears the host and shows nothing for a live subscription', () => {
     const el = host();
     el.innerHTML = '<span>stale</span>';
-    renderSubBanner(org({ subscription_status: 'active' }), 'en');
+    renderSubBanner(org({ subscription_status: 'active', subscription_active: true }), 'en');
     expect(el.children).toHaveLength(0);
+  });
+
+  // A gifted subscription lapses by date with no Stripe webhook to flip its
+  // status, so the row still reads 'active' while the period is long past. The
+  // banner used to key off that status alone and therefore stayed silent — the
+  // user was unsubscribed and never told.
+  it('nudges when the stored status still says active but the period has ended', () => {
+    const el = host();
+    renderSubBanner(
+      org({
+        subscription_status: 'active',
+        subscription_active: false,
+        current_period_end: '2026-08-29T00:00:00Z',
+        role: 'owner',
+      }),
+      'en',
+    );
+    expect(el.children).toHaveLength(1);
+    expect(el.querySelector('a')?.getAttribute('href')).toBe('/en/credits/#plans');
+  });
+
+  it('keeps nudging a never-subscribed org even though it is also not active', () => {
+    const el = host();
+    renderSubBanner(org({ subscription_status: 'none', subscription_active: false }), 'en');
+    expect(el.children).toHaveLength(1);
   });
 
   it('renders the "none" nudge for an owner with a CTA to #plans', () => {

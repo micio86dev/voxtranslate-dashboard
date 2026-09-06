@@ -16,6 +16,7 @@ import {
   buildMicState,
   buildTranscriptBubble,
   togglePanelState,
+  resolveHaErrorCta,
   resolveHaErrorKey,
   type MicStateDescriptor,
   type TranscriptBubble,
@@ -134,6 +135,17 @@ describe('resolveHaErrorKey', () => {
     expect(resolveHaErrorKey('credits_exhausted')).toBe('helpAssistant.creditsExhausted');
   });
 
+  // The two refusals the user can actually DO something about. They arrive as
+  // in-band frames now precisely so they can be told apart from a dead network;
+  // falling back to wsError here would throw that away again.
+  it('maps subscription_required to its own message, not the generic ws error', () => {
+    expect(resolveHaErrorKey('subscription_required')).toBe('helpAssistant.subscriptionRequired');
+  });
+
+  it('maps insufficient_credits to its own message', () => {
+    expect(resolveHaErrorKey('insufficient_credits')).toBe('helpAssistant.insufficientCredits');
+  });
+
   it('maps mic_denied to helpAssistant.micDenied', () => {
     expect(resolveHaErrorKey('mic_denied')).toBe('helpAssistant.micDenied');
   });
@@ -144,5 +156,33 @@ describe('resolveHaErrorKey', () => {
 
   it('maps any unknown code to helpAssistant.wsError as a safe fallback', () => {
     expect(resolveHaErrorKey('some_unknown_code')).toBe('helpAssistant.wsError');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// resolveHaErrorCta
+// ---------------------------------------------------------------------------
+
+describe('resolveHaErrorCta', () => {
+  it('sends a lapsed subscription to the plan comparison', () => {
+    const cta = resolveHaErrorCta('subscription_required');
+    expect(cta).toEqual({
+      path: 'credits',
+      hash: '#plans',
+      labelKey: 'helpAssistant.ctaSubscribe',
+    });
+  });
+
+  it('sends an empty pool to the credits page without the plans anchor', () => {
+    const cta = resolveHaErrorCta('insufficient_credits');
+    expect(cta).toEqual({ path: 'credits', hash: '', labelKey: 'helpAssistant.ctaBuyCredits' });
+  });
+
+  it('offers nothing for failures the user cannot act on', () => {
+    // Retrying is the only move for these — a button to the billing page would
+    // be a wrong turn.
+    expect(resolveHaErrorCta('ws_error')).toBeNull();
+    expect(resolveHaErrorCta('capacity_full')).toBeNull();
+    expect(resolveHaErrorCta('mic_denied')).toBeNull();
   });
 });

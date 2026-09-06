@@ -564,7 +564,11 @@
     "costLabel": "Session cost",
     "sessionEnded": "Session ended",
     "closePanel": "✕",
-    "unavailable": "Voice assistant is not available for your plan."
+    "unavailable": "Voice assistant is not available for your plan.",
+    "subscriptionRequired": "Your Business plan is no longer active, so the voice assistant is unavailable. Reactivate it to keep using it.",
+    "insufficientCredits": "Your organization doesn't have enough credits to start a session.",
+    "ctaSubscribe": "See plans",
+    "ctaBuyCredits": "Top up credits"
   },
   "webinars": {
     "title": "Webinars",

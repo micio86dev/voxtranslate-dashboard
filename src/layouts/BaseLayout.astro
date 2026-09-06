@@ -150,12 +150,13 @@ const { lang, title, description = '', chrome = false } = Astro.props;
     <script>
       import { boot } from '../scripts/app-boot';
       import { createHelpAssistant } from '../scripts/help-assistant';
-      import { useTranslations, type Locale } from '../lib/i18n';
+      import { useTranslations, localizePath, type Locale } from '../lib/i18n';
       import { VoiceAssistantState } from '../scripts/voice-assistant';
       import {
         buildMicState,
         buildTranscriptBubble,
         togglePanelState,
+        resolveHaErrorCta,
         resolveHaErrorKey,
       } from './help-assistant-panel';
 
@@ -316,8 +317,18 @@ const { lang, title, description = '', chrome = false } = Astro.props;
             isSessionActive = false;
           },
           onError(code, _message) {
-            const key = resolveHaErrorKey(code);
-            msg.textContent = t(key);
+            msg.replaceChildren(document.createTextNode(t(resolveHaErrorKey(code))));
+            // Some refusals are the user's to fix — a lapsed plan, an empty credit
+            // pool. Those arrive as their own codes precisely so we can offer the
+            // way out instead of leaving them to press "retry" forever.
+            const cta = resolveHaErrorCta(code);
+            if (cta) {
+              const link = document.createElement('a');
+              link.href = localizePath(ctx.lang as Locale, cta.path) + cta.hash;
+              link.className = 'btn-primary mt-2 inline-flex text-xs';
+              link.textContent = t(cta.labelKey);
+              msg.appendChild(link);
+            }
             setMicState(VoiceAssistantState.Error);
             isSessionActive = false;
           },

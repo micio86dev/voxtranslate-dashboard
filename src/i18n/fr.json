@@ -564,7 +564,11 @@
     "costLabel": "Coût de la session",
     "sessionEnded": "Session terminée",
     "closePanel": "✕",
-    "unavailable": "L'assistant vocal n'est pas disponible pour votre abonnement."
+    "unavailable": "L'assistant vocal n'est pas disponible pour votre abonnement.",
+    "subscriptionRequired": "Votre offre Business n'est plus active, l'assistant vocal est donc indisponible. Réactivez-la pour continuer à l'utiliser.",
+    "insufficientCredits": "Votre organisation n'a pas assez de crédits pour démarrer une session.",
+    "ctaSubscribe": "Voir les offres",
+    "ctaBuyCredits": "Recharger des crédits"
   },
   "webinars": {
     "title": "Webinaires",

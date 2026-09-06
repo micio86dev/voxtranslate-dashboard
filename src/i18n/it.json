@@ -564,7 +564,11 @@
     "costLabel": "Costo sessione",
     "sessionEnded": "Sessione terminata",
     "closePanel": "✕",
-    "unavailable": "L'assistente vocale non è disponibile per il tuo piano."
+    "unavailable": "L'assistente vocale non è disponibile per il tuo piano.",
+    "subscriptionRequired": "Il tuo piano Business non è più attivo, quindi l'assistente vocale non è disponibile. Riattivalo per continuare a usarlo.",
+    "insufficientCredits": "L'organizzazione non ha crediti sufficienti per avviare una sessione.",
+    "ctaSubscribe": "Vedi i piani",
+    "ctaBuyCredits": "Ricarica crediti"
   },
   "webinars": {
     "title": "Webinar",

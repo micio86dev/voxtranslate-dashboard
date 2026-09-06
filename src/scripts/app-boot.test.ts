@@ -29,6 +29,8 @@ function orgSummary(over: Partial<OrgSummary> = {}): OrgSummary {
     slug: 'acme',
     plan: 'business',
     subscription_status: 'active',
+    subscription_active: true,
+    current_period_end: null,
     credits_balance: 100,
     role: 'owner',
     ...over,

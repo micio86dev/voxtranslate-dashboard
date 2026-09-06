@@ -8,6 +8,11 @@
  *   past_due  → payment overdue    → "Fix payment" (Billing Portal)
  *   canceled  → expired            → "Reactivate subscription"
  *
+ * The trigger is `OrgSummary.subscription_active` — the server's own gating rule
+ * (status AND an unexpired period), not the raw `subscription_status`. A
+ * subscription that ran out without a Stripe cancellation still stores 'active',
+ * and is folded into the `canceled` copy, which already says "expired".
+ *
  * When the subscription is `active` the bar stays empty. The bar is dismissable;
  * a dismissal is snoozed per (org, state) for SNOOZE_MS so it keeps nudging but
  * isn't naggy within a session — and it always reappears when the state worsens
@@ -93,9 +98,14 @@ export function renderSubBanner(org: OrgSummary, lang: Locale): void {
   if (!host) return;
   host.replaceChildren();
 
-  const status = org.subscription_status;
-  if (status !== 'none' && status !== 'past_due' && status !== 'canceled') return;
-  const state: BannerState = status;
+  // Gate on the DERIVED state, never on `subscription_status` alone. A gifted
+  // subscription has no Stripe behind it, so nothing flips its status to
+  // 'canceled' when the paid period runs out: the row reads 'active' forever.
+  // Keying off that status meant the bar stayed silent for exactly the users who
+  // most needed the nudge — unsubscribed, and never told.
+  if (org.subscription_active) return;
+  const raw = org.subscription_status;
+  const state: BannerState = raw === 'none' ? 'none' : raw === 'past_due' ? 'past_due' : 'canceled';
   if (isSnoozed(org.id, state)) return;
 
   const t = useTranslations(lang);

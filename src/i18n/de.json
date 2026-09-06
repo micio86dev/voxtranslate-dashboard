@@ -564,7 +564,11 @@
     "costLabel": "Sitzungskosten",
     "sessionEnded": "Sitzung beendet",
     "closePanel": "✕",
-    "unavailable": "Der Sprachassistent ist für dein Abonnement nicht verfügbar."
+    "unavailable": "Der Sprachassistent ist für dein Abonnement nicht verfügbar.",
+    "subscriptionRequired": "Ihr Business-Tarif ist nicht mehr aktiv, daher steht der Sprachassistent nicht zur Verfügung. Reaktivieren Sie ihn, um ihn weiter zu nutzen.",
+    "insufficientCredits": "Ihre Organisation hat nicht genügend Guthaben, um eine Sitzung zu starten.",
+    "ctaSubscribe": "Tarife ansehen",
+    "ctaBuyCredits": "Guthaben aufladen"
   },
   "webinars": {
     "title": "Webinare",
