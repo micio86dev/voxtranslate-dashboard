@@ -183,6 +183,7 @@ const plans = [
     type SubscriptionDetail,
   } from '../../lib/api';
   import { useTranslations, type Locale } from '../../lib/i18n';
+  import { isSubscriptionLive } from '../../lib/subscription';
 
   function esc(s: string): string {
     return s.replace(
@@ -243,7 +244,14 @@ const plans = [
         : '';
 
     const renderSubBox = (d: SubscriptionDetail) => {
-      const st = d.status || 'none';
+      const raw = d.status || 'none';
+      // A plan can lapse by DATE alone — a gifted subscription has no Stripe to
+      // cancel it, so the stored status reads 'active' forever. Showing that
+      // verbatim told users their plan was live while the server was already
+      // refusing them, and the renewal line below said "cancels on <a date that
+      // has passed>". Present the DERIVED state instead.
+      const live = isSubscriptionLive(raw, d.current_period_end);
+      const st = raw === 'active' && !live ? 'canceled' : raw;
       statusEl.textContent = t(`sub.status.${st}`);
       statusEl.className = `badge ${STATUS_BADGE[st] ?? ''}`;
 
@@ -289,7 +297,7 @@ const plans = [
         }
       }
 
-      const warnTone = d.cancel_at_period_end || st !== 'active';
+      const warnTone = d.cancel_at_period_end || !live;
       bodyEl.innerHTML =
         '<dl>' +
         row(t('sub.plan'), planName) +

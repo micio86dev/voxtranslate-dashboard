@@ -38,8 +38,18 @@ export interface OrgSummary {
   name: string;
   slug: string;
   plan: string;
-  /** 'none' | 'active' | 'past_due' | 'canceled'. */
+  /** 'none' | 'active' | 'past_due' | 'canceled', exactly as stored. */
   subscription_status: string;
+  /**
+   * Whether the subscription is live RIGHT NOW — the stored status AND an
+   * unexpired period, the same rule the server gates on. Gate on THIS, not on
+   * `subscription_status`: a gifted subscription lapses by date with no Stripe
+   * webhook to change its status, so the row still says 'active' long after the
+   * period ended and the two disagree.
+   */
+  subscription_active: boolean;
+  /** End of the paid period — when it lapsed, or when it renews. */
+  current_period_end: string | null;
   credits_balance: number;
   role: string;
 }

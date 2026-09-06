@@ -62,7 +62,8 @@
       "meeting_invited": "Invitation à une réunion",
       "meeting_reminder": "Rappel de réunion",
       "meeting_updated": "Réunion mise à jour",
-      "meeting_cancelled": "Réunion annulée"
+      "meeting_cancelled": "Réunion annulée",
+      "subscription_expiring": "Abonnement bientôt expiré"
     },
     "channel": {
       "push": "Push",
@@ -564,7 +565,11 @@
     "costLabel": "Coût de la session",
     "sessionEnded": "Session terminée",
     "closePanel": "✕",
-    "unavailable": "L'assistant vocal n'est pas disponible pour votre abonnement."
+    "unavailable": "L'assistant vocal n'est pas disponible pour votre abonnement.",
+    "subscriptionRequired": "Votre offre Business n'est plus active, l'assistant vocal est donc indisponible. Réactivez-la pour continuer à l'utiliser.",
+    "insufficientCredits": "Votre organisation n'a pas assez de crédits pour démarrer une session.",
+    "ctaSubscribe": "Voir les offres",
+    "ctaBuyCredits": "Recharger des crédits"
   },
   "webinars": {
     "title": "Webinaires",
