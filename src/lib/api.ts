@@ -518,6 +518,25 @@ export const purchaseCredits = (orgId: string, credits_amount: number) =>
     credits_amount,
   });
 
+/** One row of the public plan catalogue (`GET /api/business/plans`). */
+export interface OrgPlanOffer {
+  plan: 'business' | 'enterprise';
+  interval: 'month' | 'year';
+  unit_amount: number;
+  currency: string;
+  active: boolean;
+  /**
+   * Credits each paid invoice grants, from `ORG_CREDITS_*` on the server. Read
+   * it, never restate it: a copy here would be one more number to drift, which
+   * is exactly how the marketing site once advertised prices in the wrong
+   * currency for two months.
+   */
+  credits: number;
+}
+
+/** The plan catalogue. Public — no org, no auth. */
+export const getPlans = () => request<{ plans: OrgPlanOffer[] }>('GET', '/api/business/plans');
+
 export const subscribe = (orgId: string, plan: string, interval: string) =>
   request<{ url: string }>('POST', `/api/business/organizations/${orgId}/subscription`, {
     plan,
