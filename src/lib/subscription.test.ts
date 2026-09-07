@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isSubscriptionLive, subscriptionActions } from './subscription';
+import { isSubscriptionLive, subscriptionActions, subscriptionEnding } from './subscription';
 
 const NOW = new Date('2026-09-06T12:00:00Z');
 
@@ -67,5 +67,43 @@ describe('subscriptionActions', () => {
     for (const active of [true, false]) {
       expect(subscriptionActions(org({ subscription_active: active })).canManage).toBe(false);
     }
+  });
+});
+
+describe('subscriptionEnding', () => {
+  const sub = (over: Record<string, unknown> = {}) =>
+    ({
+      status: 'active',
+      cancel_at_period_end: false,
+      current_period_end: '2026-10-07T00:00:00Z',
+      ...over,
+    }) as Parameters<typeof subscriptionEnding>[0];
+
+  it('says nothing about a subscription that is simply renewing', () => {
+    expect(subscriptionEnding(sub())).toBeNull();
+  });
+
+  it('reports the end date when Stripe sets cancel_at_period_end', () => {
+    expect(subscriptionEnding(sub({ cancel_at_period_end: true }))).toBe('2026-10-07T00:00:00Z');
+  });
+
+  // The bug this exists for: a cancellation came back with `cancel_at` set and
+  // `cancel_at_period_end` absent, so the page read only the flag it knew, found
+  // nothing, and cheerfully announced "Renews on 07/10/2026" to a customer who
+  // had just cancelled. Stripe has moved three separate fields on us now; read
+  // every place the answer can live.
+  it('reports it from cancel_at when the flag is missing entirely', () => {
+    const s = sub({ cancel_at_period_end: undefined, cancel_at: '2026-10-07T00:00:00Z' });
+    expect(subscriptionEnding(s)).toBe('2026-10-07T00:00:00Z');
+  });
+
+  it('prefers the explicit cancel date over the period end', () => {
+    const s = sub({ cancel_at_period_end: true, cancel_at: '2026-09-30T00:00:00Z' });
+    expect(subscriptionEnding(s)).toBe('2026-09-30T00:00:00Z');
+  });
+
+  it('reports an already-cancelled subscription from canceled_at', () => {
+    const s = sub({ status: 'canceled', canceled_at: '2026-08-29T00:00:00Z' });
+    expect(subscriptionEnding(s)).toBe('2026-08-29T00:00:00Z');
   });
 });
