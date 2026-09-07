@@ -357,7 +357,9 @@
         "Retención de datos configurable",
         "SLA y soporte prioritario"
       ]
-    }
+    },
+    "creditsMonth": "{credits} créditos incluidos cada mes",
+    "creditsYear": "{credits} créditos incluidos, acreditados de una vez"
   },
   "sub": {
     "title": "Suscripción",

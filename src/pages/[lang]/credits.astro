@@ -90,6 +90,7 @@ const plans = [
               <span class="plan-per text-sm text-muted">{t('plans.perMonth')}</span>
             </div>
             <p class="plan-alt mt-1 text-xs text-muted" />
+            <p class="plan-credits mt-2 hidden text-sm font-medium text-brand" />
             <ul class="mt-4 flex flex-1 flex-col gap-2 text-sm">
               {p.points.map((point) => (
                 <li class="flex items-start gap-2">
@@ -179,6 +180,8 @@ const plans = [
     getSubscription,
     purchaseCredits,
     subscribe,
+    getPlans,
+    type OrgPlanOffer,
     type InvoiceMonth,
     type SubscriptionDetail,
   } from '../../lib/api';
@@ -324,6 +327,15 @@ const plans = [
 
     const monthBtn = document.getElementById('int-month')!;
     const yearBtn = document.getElementById('int-year')!;
+    // The credit allowance shown on each card comes from the public plan
+    // catalogue, which reads it off `ORG_CREDITS_*`. The page never holds its own
+    // copy of the number — the same reason the prices moved out of the i18n files.
+    let offers: OrgPlanOffer[] = [];
+    void getPlans().then((r) => {
+      offers = r.data?.plans ?? [];
+      applyInterval();
+    });
+
     const applyInterval = () => {
       for (const p of PLANS) {
         const card = document.querySelector(`[data-plan="${p}"]`)!;
@@ -337,6 +349,17 @@ const plans = [
         card.querySelector('.plan-alt')!.textContent = monthly
           ? t('plans.altYear', { price: priceYear })
           : t('plans.altMonth', { price: priceMonth });
+
+        // Credits included, for the interval on screen. Hidden until the
+        // catalogue answers, so a failed fetch shows nothing rather than a zero.
+        const creditsEl = card.querySelector('.plan-credits') as HTMLElement;
+        const offer = offers.find((o) => o.plan === p && o.interval === interval);
+        creditsEl.textContent = offer
+          ? t(monthly ? 'plans.creditsMonth' : 'plans.creditsYear', {
+              credits: offer.credits.toLocaleString(ctx.lang),
+            })
+          : '';
+        creditsEl.classList.toggle('hidden', !offer);
       }
       for (const [btn, on] of [
         [monthBtn, interval === 'month'],

@@ -357,7 +357,9 @@
         "Konfigurierbare Datenaufbewahrung",
         "SLA und priorisierter Support"
       ]
-    }
+    },
+    "creditsMonth": "{credits} Guthaben monatlich inklusive",
+    "creditsYear": "{credits} Guthaben inklusive, sofort gutgeschrieben"
   },
   "sub": {
     "title": "Abo",
