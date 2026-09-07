@@ -11,6 +11,7 @@ function org(over: Partial<OrgSummary> = {}): OrgSummary {
     subscription_status: 'none',
     subscription_active: false,
     current_period_end: null,
+    has_stripe_customer: false,
     credits_balance: 0,
     role: 'owner',
     ...over,
