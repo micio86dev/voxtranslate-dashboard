@@ -54,3 +54,33 @@ export function subscriptionActions(org: {
     canSubscribe: !org.subscription_active,
   };
 }
+
+/**
+ * When a subscription is scheduled to stop — or `null` if it is simply renewing.
+ *
+ * Stripe expresses "this is ending" in more than one way, and has moved which
+ * one it populates: the `cancel_at_period_end` flag, an explicit `cancel_at`
+ * timestamp, or `canceled_at` once it is over. Reading only the flag meant a
+ * customer who had just cancelled was told **"Renews on 07/10/2026"** — the
+ * flag came back absent, the code found nothing to object to, and fell through
+ * to the reassuring branch.
+ *
+ * That is the third field Stripe has relocated under this codebase (the
+ * subscription link on an invoice, then the price id, now this). The lesson is
+ * the same every time: check every place the answer can live, and let the
+ * absence of one signal mean nothing rather than mean "no".
+ *
+ * Returns the most specific date available: an explicit cancellation date beats
+ * the end of the paid period, because a cancellation can be scheduled earlier.
+ */
+export function subscriptionEnding(sub: {
+  status: string;
+  cancel_at_period_end?: boolean;
+  current_period_end?: string | null;
+  cancel_at?: string | null;
+  canceled_at?: string | null;
+}): string | null {
+  const ending = sub.status === 'canceled' || sub.cancel_at_period_end === true || !!sub.cancel_at;
+  if (!ending) return null;
+  return sub.canceled_at ?? sub.cancel_at ?? sub.current_period_end ?? null;
+}

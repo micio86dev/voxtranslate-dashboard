@@ -186,7 +186,11 @@ const plans = [
     type SubscriptionDetail,
   } from '../../lib/api';
   import { useTranslations, type Locale } from '../../lib/i18n';
-  import { isSubscriptionLive, subscriptionActions } from '../../lib/subscription';
+  import {
+    isSubscriptionLive,
+    subscriptionActions,
+    subscriptionEnding,
+  } from '../../lib/subscription';
 
   function esc(s: string): string {
     return s.replace(
@@ -268,14 +272,17 @@ const plans = [
       const amount = fmtMoney(d.amount, d.currency);
       const planName = t(`plans.${d.plan}.name`);
 
-      // Renewal / end line depends on where we are in the lifecycle.
+      // Renewal / end line. "Is this ending?" is asked of `subscriptionEnding`,
+      // which checks every field Stripe expresses a cancellation in — this line
+      // once told a customer who had just cancelled that their plan would renew,
+      // because it read only `cancel_at_period_end` and that came back absent.
       let renew = '';
-      if (st === 'canceled') {
-        const end = fmtDate(d.canceled_at || d.current_period_end);
-        renew = end ? t('sub.endedOn', { date: end }) : '';
-      } else if (d.cancel_at_period_end) {
-        const end = fmtDate(d.cancel_at || d.current_period_end);
-        renew = end ? t('sub.cancelsOn', { date: end }) : '';
+      const endsOn = subscriptionEnding(d);
+      if (endsOn) {
+        const end = fmtDate(endsOn);
+        // Past tense once the date is behind us, future tense while it is ahead.
+        const over = Date.parse(endsOn) <= Date.now();
+        renew = end ? t(over ? 'sub.endedOn' : 'sub.cancelsOn', { date: end }) : '';
       } else if (st === 'past_due') {
         renew = t('sub.pastDueNote');
       } else {
