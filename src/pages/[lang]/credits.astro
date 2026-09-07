@@ -183,7 +183,7 @@ const plans = [
     type SubscriptionDetail,
   } from '../../lib/api';
   import { useTranslations, type Locale } from '../../lib/i18n';
-  import { isSubscriptionLive } from '../../lib/subscription';
+  import { isSubscriptionLive, subscriptionActions } from '../../lib/subscription';
 
   function esc(s: string): string {
     return s.replace(
@@ -202,12 +202,10 @@ const plans = [
     const status = ctx.activeOrg.subscription_status;
     const currentPlan = ctx.activeOrg.plan;
     const isOwner = ctx.activeOrg.role === 'owner';
-    // A live Stripe customer exists once subscribed (incl. past_due) — plan switches
-    // and card updates then go through the Billing Portal, not a fresh checkout.
-    const hasCustomer = status === 'active' || status === 'past_due';
-    // "Choose" starts a brand-new subscription: offer it only when there's no live
-    // customer (never subscribed, or expired).
-    const canChoose = status === 'none' || status === 'canceled';
+    // Which billing routes to offer. Both used to be inferred from
+    // `subscription_status`, which lies for a gifted plan — see
+    // `subscriptionActions`, where the rule now lives and is tested.
+    const { canManage: hasCustomer, canSubscribe: canChoose } = subscriptionActions(ctx.activeOrg);
 
     const go = (url?: string | null) => {
       if (url) window.location.href = url;
@@ -215,8 +213,9 @@ const plans = [
     };
 
     // The Billing Portal only exists once there's a customer, so hide "Manage
-    // subscription" until then (it would otherwise 409).
-    document.getElementById('manage')!.classList.toggle('hidden', status === 'none');
+    // subscription" until then — otherwise it 409s and the user is told only
+    // that "something went wrong".
+    document.getElementById('manage')!.classList.toggle('hidden', !hasCustomer);
 
     // --- Subscription box: status + all details (DB + live Stripe overlay) ---
     const statusEl = document.getElementById('sub-status')!;
@@ -370,7 +369,7 @@ const plans = [
       badge.classList.toggle('hidden', !(hasCustomer && currentPlan === p));
 
       if (!canChoose) {
-        // Has a customer (active/past_due): manage from the portal instead.
+        // A live subscription: plan switches go through the portal, not checkout.
         choose.classList.add('hidden');
         note.textContent = t('plans.manageHint');
         note.classList.remove('hidden');

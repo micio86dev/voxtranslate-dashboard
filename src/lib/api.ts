@@ -50,6 +50,12 @@ export interface OrgSummary {
   subscription_active: boolean;
   /** End of the paid period — when it lapsed, or when it renews. */
   current_period_end: string | null;
+  /**
+   * Whether Stripe knows this org. The Billing Portal exists only for a customer
+   * and 409s without one, so this — not the subscription status — decides
+   * between "manage your subscription" and "start one".
+   */
+  has_stripe_customer: boolean;
   credits_balance: number;
   role: string;
 }
