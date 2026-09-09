@@ -403,6 +403,8 @@ export interface TranscriptDoc {
    *  the realtime transcript captured during the call (no recording was made). */
   source?: 'recording' | 'live';
   source_language?: string;
+  /** Live transcripts only: the language each segment's `text` was resolved into. */
+  reading_language?: string;
   segments: Segment[];
   duration_seconds?: number | null;
   word_count?: number | null;
@@ -416,8 +418,15 @@ export interface TranslateResult {
   credits_deducted: number;
 }
 
-export const getTranscript = (sessionId: string) =>
-  request<TranscriptDoc>('GET', `/api/business/rooms/${sessionId}/transcript`);
+// `lang` is the language the reader wants the call in. A call transcript is
+// multilingual, so the server resolves each line to this language — the speaker's own
+// words where they already spoke it, their translation where they did not. Omitting it
+// falls back to the language the reader themselves used in that call.
+export const getTranscript = (sessionId: string, lang?: string) =>
+  request<TranscriptDoc>(
+    'GET',
+    `/api/business/rooms/${sessionId}/transcript${lang ? `?lang=${encodeURIComponent(lang)}` : ''}`,
+  );
 
 export const translateTranscript = (sessionId: string, target_language: string) =>
   request<TranslateResult>('POST', `/api/business/rooms/${sessionId}/transcript/translate`, {

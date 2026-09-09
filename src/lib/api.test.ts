@@ -460,6 +460,25 @@ describe('query-string builders', () => {
     expect(url).toContain('limit=5');
   });
 
+  it("getTranscript: omits lang when unset, sends the reader's locale when given", async () => {
+    // A call transcript is multilingual. `lang` is how the reader tells the server which
+    // language to resolve every line into; without it the server falls back to the
+    // language the reader used in that call, so the bare URL must stay clean.
+    const fn = mockFetch();
+    await api.getTranscript('s1');
+    expect(lastCall(fn).url).toBe(`${BASE}/api/business/rooms/s1/transcript`);
+
+    await api.getTranscript('s1', 'it');
+    expect(lastCall(fn).url).toBe(`${BASE}/api/business/rooms/s1/transcript?lang=it`);
+  });
+
+  it('getTranscript: escapes a locale so it cannot forge query parameters', async () => {
+    const fn = mockFetch();
+    await api.getTranscript('s1', 'pt-BR&admin=1');
+    expect(lastCall(fn).url).toContain('lang=pt-BR%26admin%3D1');
+    expect(lastCall(fn).url).not.toContain('&admin=1');
+  });
+
   it('listMeetings: bare vs from/to', async () => {
     const fn = mockFetch();
     await api.listMeetings('o1');
