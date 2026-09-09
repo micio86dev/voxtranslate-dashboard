@@ -74,7 +74,7 @@ const TRANSLATE_LANGS = ['it', 'en', 'es', 'de', 'fr', 'pt', 'ja', 'zh', 'ar', '
       return;
     }
 
-    const res = await getTranscript(sessionId);
+    const res = await getTranscript(sessionId, ctx.lang);
     if (!res.ok || !res.data) {
       msg.textContent = t('transcript.none');
       return;
