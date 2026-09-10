@@ -1144,6 +1144,14 @@ export interface VoipDialRequest {
 export interface VoipCallCreated {
   call_id: string;
   session_id: string;
+  /**
+   * The room the telephone was joined into, so the caller's browser can join it too.
+   *
+   * A translated phone call is a room with a telephone in it. Without joining, the caller
+   * is not in their own call: the engine translates a speaker into the room's *other*
+   * languages, and a room holding only the phone has none.
+   */
+  room?: string | null;
   status: string;
   reserved_credits: number;
   price_per_minute: string;

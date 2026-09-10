@@ -768,6 +768,8 @@
       "consentDenied": "Einwilligung verweigert",
       "consentTimeout": "Keine Antwort auf die Einwilligungsabfrage",
       "consentPending": "Warten auf Einwilligung"
-    }
+    },
+    "join": "Anruf beitreten",
+    "joinHint": "Öffnet den Anruf in der VoxTranslate-App, wo Ihr Mikrofon und die übersetzte Audioausgabe sind."
   }
 }

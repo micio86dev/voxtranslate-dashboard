@@ -768,6 +768,8 @@
       "consentDenied": "Consentimiento denegado",
       "consentTimeout": "Sin respuesta a la petición de consentimiento",
       "consentPending": "Esperando el consentimiento"
-    }
+    },
+    "join": "Unirse a la llamada",
+    "joinHint": "Abre la llamada en la aplicación VoxTranslate, donde están tu micrófono y el audio traducido."
   }
 }

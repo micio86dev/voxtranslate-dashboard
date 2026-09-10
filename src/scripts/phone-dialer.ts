@@ -227,3 +227,42 @@ export function willAskConsent(quote: {
   if (!quote.recording && !quote.transcription) return false;
   return quote.consent_policy === 'press_key' || quote.consent_policy === 'verbal';
 }
+
+/**
+ * The URL the caller opens to actually be *in* the call.
+ *
+ * A translated phone call is a room with a telephone in it. The dashboard places the call
+ * and shows what it costs; it does not carry audio — microphone capture, the translated
+ * playback and the subtitle stream all live in the app, which has done this for every
+ * other kind of call since the beginning. Duplicating that stack here to save one tab
+ * would mean two implementations of the hardest part of the product.
+ *
+ * Without this link the call is a telephone talking to an empty room: the engine
+ * translates a speaker into the room's *other* languages, and a room containing only the
+ * phone has none — so nothing is translated in either direction and both parties hear
+ * silence.
+ *
+ * Returns `null` when there is no room to join (a call that has already ended, or a server
+ * that did not return one), so a caller is never handed a link into an empty room.
+ */
+export function joinUrl(appBase: string, room: string | null | undefined): string | null {
+  const code = (room ?? '').trim().toLowerCase();
+  // The app's own `parseRoomParam` charset. Validating here too means a malformed value
+  // produces no link rather than a link that silently fails to join.
+  if (!/^[a-z0-9_-]{1,64}$/.test(code)) return null;
+  const base = appBase.trim().replace(/\/+$/, '');
+  if (!base) return null;
+  return `${base}/?room=${encodeURIComponent(code)}`;
+}
+
+/**
+ * Whether the "join the call" action should be offered.
+ *
+ * Only while the call is live. Offering it after the call is over sends someone into a
+ * room nobody is in, and offering it before the recipient has answered would have the
+ * caller sitting in an empty room listening to nothing.
+ */
+export function canJoin(phase: CallPhase, room: string | null | undefined): boolean {
+  if (isTerminal(phase)) return false;
+  return joinUrl('https://x', room) !== null;
+}

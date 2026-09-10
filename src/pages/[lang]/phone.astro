@@ -115,8 +115,18 @@ const t = useTranslations(lang);
         <div class="flex flex-wrap items-center gap-3">
           <button id="call" type="submit" class="btn-primary">{t('phone.call')}</button>
           <button id="end" type="button" class="btn-ghost hidden">{t('phone.end')}</button>
+          <!--
+            The dashboard places the call; the app carries the audio. Microphone capture,
+            translated playback and subtitles have lived there since the beginning, and a
+            second implementation of the hardest part of the product is not worth saving
+            one tab. Opened in a new tab so hanging up here stays available.
+          -->
+          <a id="join" class="btn-secondary hidden" target="_blank" rel="noopener" href="#"
+            >{t('phone.join')}</a
+          >
           <span id="phase" class="badge"></span>
         </div>
+        <p id="join-hint" class="hidden text-xs text-muted">{t('phone.joinHint')}</p>
 
         <p id="call-error" class="hidden text-sm text-danger" role="alert"></p>
       </form>
@@ -170,10 +180,12 @@ const t = useTranslations(lang);
   import {
     announcement,
     canHangUp,
+    canJoin,
     disclosureSummaryKey,
     formatCredits,
     formatDuration,
     isTerminal,
+    joinUrl,
     looksDialable,
     normaliseDestination,
     phaseFromStatus,
@@ -218,13 +230,20 @@ const t = useTranslations(lang);
     const phaseLive = $('phase-live');
     const callBtn = $<HTMLButtonElement>('call');
     const endBtn = $<HTMLButtonElement>('end');
+    const joinLink = $<HTMLAnchorElement>('join');
+    const joinHint = $('join-hint');
     const callError = $('call-error');
     const disclosureBody = $('disclosure-body');
     const disclosureAsk = $('disclosure-ask');
 
     let phase: CallPhase = 'idle';
     let activeCall: string | null = null;
+    let activeRoom: string | null = null;
     let poll: number | undefined;
+
+    // Where the app lives. Same default as the header's link, so one deployment cannot end
+    // up pointing the two at different origins.
+    const APP_URL = import.meta.env.PUBLIC_APP_URL || 'https://app.voxtranslate.app';
 
     function setPhase(next: CallPhase) {
       const said = announcement(phase, next, t);
@@ -234,6 +253,17 @@ const t = useTranslations(lang);
       if (said && phaseLive) phaseLive.textContent = said;
       if (callBtn) callBtn.classList.toggle('hidden', canHangUp(next));
       if (endBtn) endBtn.classList.toggle('hidden', !canHangUp(next));
+
+      // The join link is offered only while the call is live. Afterwards it would lead
+      // into a room nobody is in, which reads as a broken call rather than a finished one.
+      const href = canJoin(next, activeRoom) ? joinUrl(APP_URL, activeRoom) : null;
+      if (joinLink) {
+        if (href) joinLink.setAttribute('href', href);
+        else joinLink.removeAttribute('href');
+        joinLink.classList.toggle('hidden', !href);
+      }
+      joinHint?.classList.toggle('hidden', !href);
+      if (isTerminal(next)) activeRoom = null;
     }
 
     function showError(el: HTMLElement | null, code: string | null) {
@@ -347,6 +377,9 @@ const t = useTranslations(lang);
         return;
       }
       activeCall = res.data.call_id;
+      // Without this the caller is not in the call at all: the engine translates a speaker
+      // into the room's OTHER languages, and a room holding only the telephone has none.
+      activeRoom = res.data.room ?? null;
       setPhase(phaseFromStatus(res.data.status));
       // The authoritative state comes from the server, which learns it from the provider's
       // webhooks. Nothing here guesses that a call connected.

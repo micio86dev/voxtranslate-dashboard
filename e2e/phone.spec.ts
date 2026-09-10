@@ -79,6 +79,7 @@ async function stubApi(page: Page, opts: StubOptions = {}) {
     dial = {
       call_id: 'c-1',
       session_id: 's-1',
+      room: 'ph-abc123',
       status: 'dialing',
       reserved_credits: 47,
       price_per_minute: '0.0468',
@@ -253,6 +254,43 @@ test('a call walks from dialling to completed and offers hang-up only while it i
   // Once it is over, hanging up is not offered and calling again is.
   await expect(page.locator('#end')).toBeHidden();
   await expect(page.locator('#call')).toBeVisible();
+});
+
+test('a live call offers a way into the room, and stops offering it once it ends', async ({
+  page,
+}) => {
+  // The dashboard places the call; the app carries the audio. Without this link the caller
+  // is not in their own call — the engine translates a speaker into the room's OTHER
+  // languages, and a room holding only the telephone has none.
+  await openDialer(page, { callStatuses: ['ringing', 'answered', 'completed'] });
+  await page.fill('#number', '+393201234567');
+  await expect(page.locator('#rate')).not.toHaveText('—', { timeout: 10_000 });
+
+  await page.click('#call');
+  const join = page.locator('#join');
+  await expect(join).toBeVisible({ timeout: 10_000 });
+  await expect(join).toHaveAttribute('href', /\/\?room=ph-abc123$/);
+  // A new tab, so hanging up from here stays available while the call is in the app.
+  await expect(join).toHaveAttribute('target', '_blank');
+  await expect(join).toHaveAttribute('rel', /noopener/);
+
+  await expect(page.locator('#phase')).toHaveText('Call ended', { timeout: 20_000 });
+  await expect(join).toBeHidden();
+});
+
+test('a call that never returns a room offers no way in', async ({ page }) => {
+  // A link built anyway would drop the caller into a room nobody is in, which reads as a
+  // broken call rather than a server that did not answer the question.
+  await openDialer(page, {
+    dial: { call_id: 'c-1', session_id: 's-1', status: 'dialing', reserved_credits: 1, price_per_minute: '0.05' },
+    callStatuses: ['ringing', 'answered'],
+  });
+  await page.fill('#number', '+393201234567');
+  await expect(page.locator('#rate')).not.toHaveText('—', { timeout: 10_000 });
+
+  await page.click('#call');
+  await expect(page.locator('#end')).toBeVisible({ timeout: 10_000 });
+  await expect(page.locator('#join')).toBeHidden();
 });
 
 test('a dial refused for credits is reported without losing the form', async ({ page }) => {

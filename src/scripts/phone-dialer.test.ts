@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   announcement,
   canHangUp,
+  canJoin,
   disclosureSummaryKey,
   estimateCost,
   formatCredits,
@@ -9,6 +10,7 @@ import {
   hasReasonCopy,
   isMicLive,
   isTerminal,
+  joinUrl,
   looksDialable,
   normaliseDestination,
   phaseFromStatus,
@@ -257,5 +259,42 @@ describe('disclosure preview', () => {
     expect(
       willAskConsent({ recording: false, transcription: false, consent_policy: 'press_key' }),
     ).toBe(false);
+  });
+});
+
+describe('joining the room the call happens in', () => {
+  it('builds the app deep link the client already understands', () => {
+    expect(joinUrl('https://app.voxtranslate.app', 'ph-abc123')).toBe(
+      'https://app.voxtranslate.app/?room=ph-abc123',
+    );
+  });
+
+  it('tolerates a trailing slash on the configured base', () => {
+    expect(joinUrl('https://app.voxtranslate.app///', 'ph-abc123')).toBe(
+      'https://app.voxtranslate.app/?room=ph-abc123',
+    );
+  });
+
+  it('returns nothing rather than a link into an empty room', () => {
+    // A call that has ended carries no room. A link built anyway would drop the caller
+    // into a room nobody is in, which reads as a broken call rather than a finished one.
+    expect(joinUrl('https://app.voxtranslate.app', null)).toBeNull();
+    expect(joinUrl('https://app.voxtranslate.app', '')).toBeNull();
+  });
+
+  it('refuses a room name the app would reject', () => {
+    // Mirrors the client's own `parseRoomParam` charset. Validating here as well means a
+    // malformed value produces no link instead of one that silently fails to join.
+    expect(joinUrl('https://app.voxtranslate.app', 'ph abc')).toBeNull();
+    expect(joinUrl('https://app.voxtranslate.app', '../../etc')).toBeNull();
+    expect(joinUrl('https://app.voxtranslate.app', 'a'.repeat(65))).toBeNull();
+  });
+
+  it('offers the action only while the call is live', () => {
+    expect(canJoin('connected', 'ph-abc')).toBe(true);
+    expect(canJoin('ringing', 'ph-abc')).toBe(true);
+    expect(canJoin('completed', 'ph-abc')).toBe(false);
+    expect(canJoin('failed', 'ph-abc')).toBe(false);
+    expect(canJoin('connected', null)).toBe(false);
   });
 });
