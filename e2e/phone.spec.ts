@@ -57,6 +57,8 @@ interface StubOptions {
   /** Statuses returned by successive polls of the call detail endpoint. */
   callStatuses?: string[];
   calls?: unknown[];
+  /** The `/video-invite` response. A `Failure` here proves video stays an enhancement. */
+  videoInvite?: Record<string, unknown> | Failure;
 }
 
 async function stubApi(page: Page, opts: StubOptions = {}) {
