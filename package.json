@@ -13,7 +13,8 @@
     "format": "prettier --write \"src/**/*.{astro,ts,js,json,css}\"",
     "lint": "prettier --check \"src/**/*.{astro,ts,js,json,css}\"",
     "astro": "astro",
-    "prepare": "husky"
+    "prepare": "husky",
+    "test:e2e": "astro build && playwright test"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.1",
@@ -22,6 +23,7 @@
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.10",
+    "@playwright/test": "^1.63.0",
     "@types/node": "^26.0.0",
     "@vitest/coverage-v8": "^4.1.9",
     "husky": "^9.1.7",

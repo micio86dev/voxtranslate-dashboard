@@ -22,3 +22,9 @@ jobs:
       - run: npm run typecheck
       - run: npm run test:unit
       - run: npm run build
+      # Browser tests for the dialer (spec 0111). The API is stubbed at the network
+      # boundary, so this needs no backend, no database and no telephony provider — it
+      # runs in seconds and gates every push. `--only-shell` because these specs never
+      # need a headed browser and the full download is ~5x the size.
+      - run: npx playwright install --with-deps --only-shell chromium
+      - run: npx playwright test
