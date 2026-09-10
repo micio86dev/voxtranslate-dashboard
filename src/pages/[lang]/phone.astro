@@ -124,9 +124,30 @@ const t = useTranslations(lang);
           <a id="join" class="btn-secondary hidden" target="_blank" rel="noopener" href="#"
             >{t('phone.join')}</a
           >
+          <button id="video" type="button" class="btn-ghost hidden"
+            >{t('phone.upgradeVideo')}</button
+          >
           <span id="phase" class="badge"></span>
         </div>
         <p id="join-hint" class="hidden text-xs text-muted">{t('phone.joinHint')}</p>
+        <!--
+          The link is shown rather than sent: the recipient is on a telephone and there is
+          no channel from here to them. The caller is already talking to the person.
+        -->
+        <div id="video-box" class="hidden rounded-lg border border-line bg-base p-3 text-sm">
+          <p class="text-muted">{t('phone.videoHint')}</p>
+          <div class="mt-2 flex flex-wrap items-center gap-2">
+            <input
+              id="video-url"
+              type="text"
+              readonly
+              class="input flex-1 font-mono text-xs"
+              aria-label={t('phone.upgradeVideo')}
+            />
+            <button id="video-copy" type="button" class="btn-secondary">{t('common.copy')}</button>
+          </div>
+          <p id="video-status" class="mt-1 text-xs text-muted" role="status"></p>
+        </div>
 
         <p id="call-error" class="hidden text-sm text-danger" role="alert"></p>
       </form>
@@ -171,6 +192,7 @@ const t = useTranslations(lang);
     dialVoipCall,
     getVoipCalls,
     getVoipSettings,
+    createVoipVideoInvite,
     hangUpVoipCall,
     quoteVoipCall,
     getVoipCall,
@@ -232,6 +254,11 @@ const t = useTranslations(lang);
     const endBtn = $<HTMLButtonElement>('end');
     const joinLink = $<HTMLAnchorElement>('join');
     const joinHint = $('join-hint');
+    const videoBtn = $<HTMLButtonElement>('video');
+    const videoBox = $('video-box');
+    const videoUrl = $<HTMLInputElement>('video-url');
+    const videoStatus = $('video-status');
+    const videoCopy = $<HTMLButtonElement>('video-copy');
     const callError = $('call-error');
     const disclosureBody = $('disclosure-body');
     const disclosureAsk = $('disclosure-ask');
@@ -263,6 +290,15 @@ const t = useTranslations(lang);
         joinLink.classList.toggle('hidden', !href);
       }
       joinHint?.classList.toggle('hidden', !href);
+
+      // Video is an upgrade to a live call, so it is offered on the same terms as the
+      // join link — and withdrawn the moment the call is over, along with the link that
+      // was already minted for it.
+      videoBtn?.classList.toggle('hidden', !canHangUp(next));
+      if (isTerminal(next)) {
+        videoBox?.classList.add('hidden');
+        if (videoUrl) videoUrl.value = '';
+      }
       if (isTerminal(next)) activeRoom = null;
     }
 
@@ -384,6 +420,36 @@ const t = useTranslations(lang);
       // The authoritative state comes from the server, which learns it from the provider's
       // webhooks. Nothing here guesses that a call connected.
       poll = window.setInterval(pollCall, 1500);
+    });
+
+    videoBtn?.addEventListener('click', async () => {
+      if (!activeCall) return;
+      const res = await createVoipVideoInvite(org, activeCall);
+      if (!res.ok || !res.data) {
+        // A failed upgrade must never disturb the call: report it and leave everything
+        // else exactly as it was.
+        if (videoStatus) videoStatus.textContent = t('phone.videoUnavailable');
+        videoBox?.classList.remove('hidden');
+        return;
+      }
+      if (videoUrl) videoUrl.value = res.data.url;
+      if (videoStatus) videoStatus.textContent = '';
+      videoBox?.classList.remove('hidden');
+      videoUrl?.focus();
+      videoUrl?.select();
+    });
+
+    videoCopy?.addEventListener('click', async () => {
+      if (!videoUrl?.value) return;
+      try {
+        await navigator.clipboard.writeText(videoUrl.value);
+        if (videoStatus) videoStatus.textContent = t('phone.videoCopied');
+      } catch {
+        // Clipboard access can be refused. The link is already selected and on screen, so
+        // there is nothing to recover from — say nothing rather than raise an error for
+        // something the user can simply copy by hand.
+        videoUrl.select();
+      }
     });
 
     endBtn?.addEventListener('click', async () => {

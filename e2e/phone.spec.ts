@@ -86,6 +86,10 @@ async function stubApi(page: Page, opts: StubOptions = {}) {
     },
     callStatuses = ['ringing', 'answered', 'completed'],
     calls = [],
+    videoInvite = {
+      url: 'https://api.test/api/voip/video/tok.sig',
+      expires_at: '2026-01-01T00:15:00Z',
+    },
   } = opts;
 
   let poll = 0;
@@ -124,6 +128,11 @@ async function stubApi(page: Page, opts: StubOptions = {}) {
     if (url.includes('/voip/quote')) {
       const q = quote as Partial<Failure>;
       return q.httpStatus ? json({ error: q.error }, q.httpStatus) : json(quote);
+    }
+    // Before the generic call-detail match, which would otherwise swallow it.
+    if (url.includes('/video-invite')) {
+      const v = videoInvite as Partial<Failure>;
+      return v.httpStatus ? json({ error: v.error }, v.httpStatus) : json(videoInvite);
     }
     if (url.match(/\/voip\/calls\/[^/]+$/)) {
       const status = callStatuses[Math.min(poll++, callStatuses.length - 1)];
@@ -291,6 +300,51 @@ test('a call that never returns a room offers no way in', async ({ page }) => {
   await page.click('#call');
   await expect(page.locator('#end')).toBeVisible({ timeout: 10_000 });
   await expect(page.locator('#join')).toBeHidden();
+});
+
+test('a live call can offer the recipient a video link, and it is not the room code', async ({
+  page,
+}) => {
+  // D9. The recipient is on a telephone, so the upgrade is a link the caller passes on.
+  // It carries a signed ticket rather than the room, because an invitation gets forwarded
+  // and a room code has no expiry.
+  await openDialer(page, { callStatuses: ['ringing', 'answered', 'completed'] });
+  await page.fill('#number', '+393201234567');
+  await expect(page.locator('#rate')).not.toHaveText('—', { timeout: 10_000 });
+
+  await page.click('#call');
+  const video = page.locator('#video');
+  await expect(video).toBeVisible({ timeout: 10_000 });
+  await video.click();
+
+  const url = page.locator('#video-url');
+  await expect(url).toBeVisible();
+  await expect(url).toHaveValue(/\/api\/voip\/video\//);
+  await expect(url).not.toHaveValue(/ph-abc123/);
+
+  // Withdrawn once the call is over, along with the link minted for it.
+  await expect(page.locator('#phase')).toHaveText('Call ended', { timeout: 20_000 });
+  await expect(video).toBeHidden();
+  await expect(page.locator('#video-box')).toBeHidden();
+});
+
+test('a video upgrade that fails leaves the call alone', async ({ page }) => {
+  // The rule D9 states outright: video is an enhancement, never a dependency.
+  await openDialer(page, {
+    callStatuses: ['ringing', 'answered', 'answered'],
+    videoInvite: { httpStatus: 404, error: 'not_found' },
+  });
+  await page.fill('#number', '+393201234567');
+  await expect(page.locator('#rate')).not.toHaveText('—', { timeout: 10_000 });
+
+  await page.click('#call');
+  await expect(page.locator('#video')).toBeVisible({ timeout: 10_000 });
+  await page.click('#video');
+
+  await expect(page.locator('#video-status')).toContainText('not available');
+  // The call is untouched: still live, still hang-up-able.
+  await expect(page.locator('#end')).toBeVisible();
+  await expect(page.locator('#call-error')).toBeHidden();
 });
 
 test('a dial refused for credits is reported without losing the form', async ({ page }) => {

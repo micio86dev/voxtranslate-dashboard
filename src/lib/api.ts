@@ -1187,6 +1187,29 @@ export function getVoipCall(orgId: string, callId: string): Promise<ApiResult<Vo
   return request('GET', `/api/business/organizations/${orgId}/voip/calls/${callId}`);
 }
 
+export interface VoipVideoInvite {
+  /** The link to share. Carries a signed ticket, never the room code itself. */
+  url: string;
+  expires_at: string;
+}
+
+/**
+ * Offer the recipient a browser room for video.
+ *
+ * They are on a telephone, so there is no channel from here to them — the caller is
+ * already talking to the person and passes the link on however they like.
+ */
+export function createVoipVideoInvite(
+  orgId: string,
+  callId: string,
+): Promise<ApiResult<VoipVideoInvite>> {
+  return request(
+    'POST',
+    `/api/business/organizations/${orgId}/voip/calls/${callId}/video-invite`,
+    {},
+  );
+}
+
 export function hangUpVoipCall(orgId: string, callId: string): Promise<ApiResult<unknown>> {
   return request('POST', `/api/business/organizations/${orgId}/voip/calls/${callId}/hangup`);
 }

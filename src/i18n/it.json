@@ -770,6 +770,9 @@
       "consentPending": "In attesa di consenso"
     },
     "join": "Entra nella chiamata",
-    "joinHint": "Apre la chiamata nell'app VoxTranslate, dove si trovano il tuo microfono e l'audio tradotto."
+    "joinHint": "Apre la chiamata nell'app VoxTranslate, dove si trovano il tuo microfono e l'audio tradotto.",
+    "videoHint": "Copia il link e mandalo alla persona che stai chiamando. Vale 15 minuti.",
+    "videoCopied": "Link copiato",
+    "videoUnavailable": "Il video non è disponibile per questa chiamata."
   }
 }

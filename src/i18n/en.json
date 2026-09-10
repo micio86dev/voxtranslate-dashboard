@@ -770,6 +770,9 @@
       "consentPending": "Waiting for consent"
     },
     "join": "Join the call",
-    "joinHint": "Opens the call in the VoxTranslate app, where your microphone and the translated audio are."
+    "joinHint": "Opens the call in the VoxTranslate app, where your microphone and the translated audio are.",
+    "videoHint": "Copy the link and send it to the person you are calling. It works for 15 minutes.",
+    "videoCopied": "Link copied",
+    "videoUnavailable": "Video is not available on this call."
   }
 }
