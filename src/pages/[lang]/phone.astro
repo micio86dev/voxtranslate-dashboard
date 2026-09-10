@@ -1,0 +1,397 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { localePaths, isLocale, DEFAULT_LOCALE, useTranslations } from '../../lib/i18n';
+
+export function getStaticPaths() {
+  return localePaths();
+}
+
+const lang = isLocale(Astro.params.lang) ? Astro.params.lang : DEFAULT_LOCALE;
+const t = useTranslations(lang);
+---
+
+<BaseLayout lang={lang} title={t('phone.title')} chrome>
+  <div class="flex flex-wrap items-end justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-bold">{t('phone.title')}</h1>
+      <p class="mt-0.5 max-w-2xl text-sm text-muted">{t('phone.subtitle')}</p>
+    </div>
+    <a href={`/${lang}/phone/settings`} class="btn-ghost text-sm">{t('phone.settings.title')}</a>
+  </div>
+
+  <!--
+    The call's state is announced, not merely coloured (R30). `aria-live="assertive"`
+    because a phone call changing state is exactly the kind of thing that must interrupt:
+    "connected" means the far end can now hear you.
+  -->
+  <p id="phase-live" class="sr-only" role="status" aria-live="assertive" aria-atomic="true"></p>
+
+  <div id="voip-off" class="card mt-6 hidden">
+    <p class="text-sm">{t('phone.disabled')}</p>
+    <p class="mt-1 text-sm text-muted">{t('phone.disabledAdmin')}</p>
+  </div>
+
+  <div id="voip-on" class="mt-6 hidden grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
+    <!-- ---------------- Dialer ---------------- -->
+    <section class="card" aria-labelledby="dialer-h">
+      <h2 id="dialer-h" class="text-lg font-semibold">{t('phone.new')}</h2>
+
+      <form id="dialer" class="mt-4 grid gap-4" novalidate>
+        <div>
+          <label for="number" class="label">{t('phone.number')}</label>
+          <input
+            id="number"
+            name="number"
+            type="tel"
+            inputmode="tel"
+            autocomplete="tel"
+            class="input mt-1 w-full"
+            placeholder="+39 320 123 4567"
+            aria-describedby="number-hint number-error"
+            required
+          />
+          <p id="number-hint" class="mt-1 text-xs text-muted">{t('phone.numberHint')}</p>
+          <!-- Errors are text, adjacent to the field, and announced — never a red border alone. -->
+          <p id="number-error" class="mt-1 hidden text-xs text-danger" role="alert"></p>
+        </div>
+
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label for="my-lang" class="label">{t('phone.myLanguage')}</label>
+            <select id="my-lang" class="input mt-1 w-full"></select>
+          </div>
+          <div>
+            <label for="their-lang" class="label">{t('phone.recipientLanguage')}</label>
+            <select id="their-lang" class="input mt-1 w-full"></select>
+          </div>
+        </div>
+
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label for="tier" class="label">{t('phone.tier')}</label>
+            <select id="tier" class="input mt-1 w-full"></select>
+          </div>
+          <div>
+            <label for="project" class="label">{t('phone.project')}</label>
+            <select id="project" class="input mt-1 w-full">
+              <option value="">{t('phone.noProject')}</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label for="caller-id" class="label">{t('phone.callerId')}</label>
+          <select id="caller-id" class="input mt-1 w-full">
+            <option value="">{t('phone.callerIdDefault')}</option>
+          </select>
+        </div>
+
+        <fieldset class="grid gap-2">
+          <legend class="label">{t('phone.disclosure.title')}</legend>
+          <label class="flex items-center gap-2 text-sm">
+            <input id="opt-record" type="checkbox" class="checkbox" />
+            {t('phone.record')}
+          </label>
+          <label class="flex items-center gap-2 text-sm">
+            <input id="opt-transcribe" type="checkbox" class="checkbox" checked />
+            {t('phone.transcribe')}
+          </label>
+          <label class="flex items-center gap-2 text-sm">
+            <input id="opt-ai" type="checkbox" class="checkbox" />
+            {t('phone.aiAnalysis')}
+            <span id="ai-hint" class="hidden text-xs text-muted"
+              >{t('phone.aiNeedsTranscript')}</span
+            >
+          </label>
+        </fieldset>
+
+        <!-- What the RECIPIENT will hear, shown before the call so nobody is surprised. -->
+        <div id="disclosure" class="rounded-lg border border-line bg-base p-3 text-sm">
+          <div class="font-medium">{t('phone.disclosure.title')}</div>
+          <p id="disclosure-body" class="mt-1 text-muted"></p>
+          <p id="disclosure-ask" class="mt-1 hidden text-muted"></p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-3">
+          <button id="call" type="submit" class="btn-primary">{t('phone.call')}</button>
+          <button id="end" type="button" class="btn-ghost hidden">{t('phone.end')}</button>
+          <span id="phase" class="badge"></span>
+        </div>
+
+        <p id="call-error" class="hidden text-sm text-danger" role="alert"></p>
+      </form>
+    </section>
+
+    <!-- ---------------- Cost + recent ---------------- -->
+    <aside class="grid gap-6">
+      <section class="card" aria-labelledby="cost-h">
+        <h2 id="cost-h" class="text-sm font-semibold">{t('phone.estimate')}</h2>
+        <div class="mt-2 flex items-baseline gap-2">
+          <span id="rate" class="text-3xl font-bold">—</span>
+          <span class="text-sm text-muted">{t('phone.perMinute')}</span>
+        </div>
+        <dl class="mt-3 grid gap-1 text-sm">
+          <div class="flex justify-between gap-2">
+            <dt class="text-muted">{t('phone.balance')}</dt>
+            <dd id="balance">—</dd>
+          </div>
+          <div class="flex justify-between gap-2">
+            <dt class="text-muted">{t('phone.reserve')}</dt>
+            <dd id="reserve">—</dd>
+          </div>
+        </dl>
+        <p class="mt-2 text-xs text-muted">{t('phone.reserveHint')}</p>
+      </section>
+
+      <section class="card" aria-labelledby="recent-h">
+        <div class="flex items-center justify-between gap-2">
+          <h2 id="recent-h" class="text-sm font-semibold">{t('phone.recent')}</h2>
+        </div>
+        <div id="recent" class="mt-3 text-sm text-muted">{t('common.loading')}</div>
+      </section>
+    </aside>
+  </div>
+</BaseLayout>
+
+<script>
+  import { onPage } from '../../scripts/nav';
+  import { boot } from '../../scripts/app-boot';
+  import {
+    currentOrgId,
+    dialVoipCall,
+    getVoipCalls,
+    getVoipSettings,
+    hangUpVoipCall,
+    quoteVoipCall,
+    getVoipCall,
+    type VoipQuote,
+  } from '../../lib/api';
+  import { useTranslations, type Locale } from '../../lib/i18n';
+  import {
+    announcement,
+    canHangUp,
+    disclosureSummaryKey,
+    formatCredits,
+    formatDuration,
+    isTerminal,
+    looksDialable,
+    normaliseDestination,
+    phaseFromStatus,
+    refusalKey,
+    willAskConsent,
+    type CallPhase,
+  } from '../../scripts/phone-dialer';
+
+  onPage('dialer', async () => {
+    const ctx = await boot();
+    if (!ctx) return;
+    const t = useTranslations(ctx.lang as Locale);
+    const locale = ctx.lang;
+    const org = ctx.activeOrg.id ?? currentOrgId();
+    if (!org) return;
+
+    const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T | null;
+    const on = $('voip-on');
+    const off = $('voip-off');
+
+    const settings = await getVoipSettings(org);
+    // 404 means the feature is off for the whole deployment; `enabled: false` means this
+    // organisation has not turned it on. Both land the user in the same place, but only
+    // the second one is something an admin here can fix.
+    if (!settings.ok || !settings.data?.enabled) {
+      off?.classList.remove('hidden');
+      return;
+    }
+    on?.classList.remove('hidden');
+    on?.classList.add('grid');
+
+    const number = $<HTMLInputElement>('number');
+    const numberError = $('number-error');
+    const optRecord = $<HTMLInputElement>('opt-record');
+    const optTranscribe = $<HTMLInputElement>('opt-transcribe');
+    const optAi = $<HTMLInputElement>('opt-ai');
+    const aiHint = $('ai-hint');
+    const rate = $('rate');
+    const balance = $('balance');
+    const reserve = $('reserve');
+    const phaseBadge = $('phase');
+    const phaseLive = $('phase-live');
+    const callBtn = $<HTMLButtonElement>('call');
+    const endBtn = $<HTMLButtonElement>('end');
+    const callError = $('call-error');
+    const disclosureBody = $('disclosure-body');
+    const disclosureAsk = $('disclosure-ask');
+
+    let phase: CallPhase = 'idle';
+    let activeCall: string | null = null;
+    let poll: number | undefined;
+
+    function setPhase(next: CallPhase) {
+      const said = announcement(phase, next, t);
+      phase = next;
+      if (phaseBadge) phaseBadge.textContent = next === 'idle' ? '' : t(`phase.${next}`);
+      // Announced once per change, not on every poll.
+      if (said && phaseLive) phaseLive.textContent = said;
+      if (callBtn) callBtn.classList.toggle('hidden', canHangUp(next));
+      if (endBtn) endBtn.classList.toggle('hidden', !canHangUp(next));
+    }
+
+    function showError(el: HTMLElement | null, code: string | null) {
+      if (!el) return;
+      if (!code) {
+        el.classList.add('hidden');
+        el.textContent = '';
+        return;
+      }
+      el.textContent = t(refusalKey(code));
+      el.classList.remove('hidden');
+    }
+
+    // AI analysis has nothing to analyse without a transcript. Reflected in the UI so the
+    // checkbox is not silently ignored by the server.
+    function syncAi() {
+      const ok = !!optTranscribe?.checked;
+      if (optAi) optAi.disabled = !ok;
+      if (!ok && optAi) optAi.checked = false;
+      aiHint?.classList.toggle('hidden', ok);
+    }
+
+    function renderDisclosure(q: VoipQuote) {
+      if (disclosureBody) disclosureBody.textContent = t(disclosureSummaryKey(q));
+      const ask = willAskConsent(q);
+      disclosureAsk?.classList.toggle('hidden', !ask);
+      if (ask && disclosureAsk) disclosureAsk.textContent = t('phone.disclosure.willAsk');
+    }
+
+    let quoteSeq = 0;
+    async function refreshQuote() {
+      const raw = number?.value ?? '';
+      showError(numberError, null);
+      if (!looksDialable(raw)) {
+        if (rate) rate.textContent = '—';
+        if (reserve) reserve.textContent = '—';
+        return;
+      }
+      const seq = ++quoteSeq;
+      const res = await quoteVoipCall(org, {
+        destination: normaliseDestination(raw),
+        record: !!optRecord?.checked,
+        transcribe: !!optTranscribe?.checked,
+        ai_analysis: !!optAi?.checked,
+      });
+      // Typing races the network; only the newest answer may paint.
+      if (seq !== quoteSeq) return;
+
+      if (!res.ok || !res.data) {
+        const code = (res.data as unknown as { error?: string } | null)?.error ?? null;
+        showError(numberError, code);
+        if (rate) rate.textContent = '—';
+        if (reserve) reserve.textContent = '—';
+        return;
+      }
+      const q = res.data;
+      if (rate) rate.textContent = `$${Number(q.price_per_minute).toFixed(4)}`;
+      if (balance) balance.textContent = `$${formatCredits(q.balance_credits)}`;
+      if (reserve) reserve.textContent = `$${formatCredits(q.reserve_credits)}`;
+      renderDisclosure(q);
+    }
+
+    let debounce: number | undefined;
+    number?.addEventListener('input', () => {
+      window.clearTimeout(debounce);
+      debounce = window.setTimeout(refreshQuote, 350);
+    });
+    for (const el of [optRecord, optTranscribe, optAi]) {
+      el?.addEventListener('change', () => {
+        syncAi();
+        void refreshQuote();
+      });
+    }
+    syncAi();
+
+    async function pollCall() {
+      if (!activeCall) return;
+      const res = await getVoipCall(org, activeCall);
+      if (!res.ok || !res.data) return;
+      const next = phaseFromStatus(res.data.status);
+      setPhase(next);
+      if (isTerminal(next)) {
+        window.clearInterval(poll);
+        activeCall = null;
+        if (res.data.failure_reason) showError(callError, res.data.failure_reason);
+        void loadRecent();
+      }
+    }
+
+    $('dialer')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      showError(callError, null);
+      setPhase('preparing');
+
+      const res = await dialVoipCall(org, {
+        destination: normaliseDestination(number?.value ?? ''),
+        source_language: $<HTMLSelectElement>('my-lang')?.value ?? 'en',
+        target_language: $<HTMLSelectElement>('their-lang')?.value ?? 'en',
+        engine_id: $<HTMLSelectElement>('tier')?.value || undefined,
+        project_id: $<HTMLSelectElement>('project')?.value || null,
+        caller_id: $<HTMLSelectElement>('caller-id')?.value || null,
+        record: !!optRecord?.checked,
+        transcribe: !!optTranscribe?.checked,
+        ai_analysis: !!optAi?.checked,
+      });
+
+      if (!res.ok || !res.data) {
+        const code = (res.data as unknown as { error?: string } | null)?.error ?? null;
+        setPhase('failed');
+        showError(callError, code);
+        return;
+      }
+      activeCall = res.data.call_id;
+      setPhase(phaseFromStatus(res.data.status));
+      // The authoritative state comes from the server, which learns it from the provider's
+      // webhooks. Nothing here guesses that a call connected.
+      poll = window.setInterval(pollCall, 1500);
+    });
+
+    endBtn?.addEventListener('click', async () => {
+      if (!activeCall) return;
+      setPhase('ending');
+      await hangUpVoipCall(org, activeCall);
+    });
+
+    async function loadRecent() {
+      const el = $('recent');
+      if (!el) return;
+      const res = await getVoipCalls(org, { limit: 8 });
+      if (!res.ok || !res.data) {
+        el.textContent = t('common.connError');
+        return;
+      }
+      const calls = res.data.calls;
+      if (calls.length === 0) {
+        el.innerHTML = `<p>${t('phone.empty')}</p><p class="mt-1 text-xs">${t('phone.emptyHint')}</p>`;
+        return;
+      }
+      el.innerHTML = calls
+        .map((c) => {
+          const when = new Date(c.started_at).toLocaleString();
+          // Status is a word, never a colour on its own.
+          const state = t(`phase.${phaseFromStatus(c.status)}`);
+          return `<a href="/${locale}/phone/${c.id}"
+                     class="flex items-center justify-between gap-2 border-b border-line py-2 last:border-0">
+                    <span>
+                      <span class="font-mono">${c.recipient_masked}</span>
+                      <span class="block text-xs text-muted">${when} · ${state}</span>
+                    </span>
+                    <span class="text-right text-xs">
+                      <span class="block">${formatDuration(c.duration_seconds)}</span>
+                      <span class="block text-muted">$${formatCredits(c.credits_consumed)}</span>
+                    </span>
+                  </a>`;
+        })
+        .join('');
+    }
+
+    await loadRecent();
+  });
+</script>

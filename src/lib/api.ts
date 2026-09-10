@@ -1050,6 +1050,150 @@ export function helpAssistantWsUrl(orgId: string): string {
   return buildHelpAssistantWsUrl(API_BASE, orgId);
 }
 
+// --- Translated phone calls (spec 0111) --------------------------------------
+
+/**
+ * A quote is deliberately the SAME gate as placing the call: if the policy would
+ * refuse the call, the quote refuses too. A price shown for a call that is then
+ * rejected is worse than showing no price at all.
+ */
+export interface VoipQuote {
+  /** Masked form only — the quote payload reaches a browser console. */
+  destination: string;
+  country: string;
+  price_per_minute: string;
+  currency: string;
+  reserve_credits: number;
+  estimated_minutes: number;
+  balance_credits: number;
+  engine_id: string;
+  recording: boolean;
+  transcription: boolean;
+  consent_policy: string;
+  /** Set when an announcement will be played, and in which language. */
+  disclosure_language: string | null;
+}
+
+export interface VoipCallSummary {
+  id: string;
+  status: string;
+  failure_reason: string | null;
+  direction: string;
+  recipient_country: string;
+  /** `+39••••1234`. The full number is on the detail endpoint only. */
+  recipient_masked: string;
+  source_language: string;
+  target_language: string;
+  engine_id: string;
+  started_at: string;
+  ended_at: string | null;
+  duration_seconds: number | null;
+  credits_consumed: number;
+  recording_status: string;
+  transcription_status: string;
+  consent_status: string;
+  project_id: string | null;
+  project_name: string | null;
+}
+
+export interface VoipCallDetail extends Omit<VoipCallSummary, 'recipient_masked'> {
+  session_id: string;
+  /** The full E.164 number. This endpoint is the only place it is returned. */
+  recipient_e164: string;
+  quoted_price_per_min: string | null;
+  /**
+   * Null until the provider rates the call. Rendered as "pending", never as
+   * zero — a zero would read as "free", which is a very different claim from
+   * "not known yet".
+   */
+  actual_provider_cost_usd: string | null;
+  gross_margin: string | null;
+}
+
+export interface VoipSettings {
+  enabled: boolean;
+  home_country: string | null;
+  allowed_countries: string[];
+  blocked_countries: string[];
+  allow_international: boolean;
+  consent_policy: string;
+  consent_refused_action: string;
+  recording_enabled: boolean;
+  transcription_enabled: boolean;
+  ai_analysis_enabled: boolean;
+  max_call_minutes: number;
+  max_concurrent_per_user: number;
+  max_concurrent_per_org: number;
+  default_engine_id: string | null;
+  require_project: boolean;
+}
+
+export interface VoipDialRequest {
+  destination: string;
+  source_language: string;
+  target_language: string;
+  engine_id?: string;
+  project_id?: string | null;
+  caller_id?: string | null;
+  record?: boolean;
+  transcribe?: boolean;
+  ai_analysis?: boolean;
+  estimated_minutes?: number;
+}
+
+export interface VoipCallCreated {
+  call_id: string;
+  session_id: string;
+  status: string;
+  reserved_credits: number;
+  price_per_minute: string;
+}
+
+export function quoteVoipCall(
+  orgId: string,
+  body: Partial<VoipDialRequest> & { destination: string },
+): Promise<ApiResult<VoipQuote>> {
+  return request('POST', `/api/business/organizations/${orgId}/voip/quote`, body);
+}
+
+export function dialVoipCall(
+  orgId: string,
+  body: VoipDialRequest,
+): Promise<ApiResult<VoipCallCreated>> {
+  return request('POST', `/api/business/organizations/${orgId}/voip/calls`, body);
+}
+
+export function getVoipCalls(
+  orgId: string,
+  opts: { projectId?: string; page?: number; limit?: number } = {},
+): Promise<ApiResult<{ calls: VoipCallSummary[]; page: number; limit: number }>> {
+  const q = new URLSearchParams();
+  if (opts.projectId) q.set('project_id', opts.projectId);
+  if (opts.page) q.set('page', String(opts.page));
+  if (opts.limit) q.set('limit', String(opts.limit));
+  const qs = q.toString();
+  return request('GET', `/api/business/organizations/${orgId}/voip/calls${qs ? `?${qs}` : ''}`);
+}
+
+export function getVoipCall(orgId: string, callId: string): Promise<ApiResult<VoipCallDetail>> {
+  return request('GET', `/api/business/organizations/${orgId}/voip/calls/${callId}`);
+}
+
+export function hangUpVoipCall(orgId: string, callId: string): Promise<ApiResult<unknown>> {
+  return request('POST', `/api/business/organizations/${orgId}/voip/calls/${callId}/hangup`);
+}
+
+export function getVoipSettings(orgId: string): Promise<ApiResult<VoipSettings>> {
+  return request('GET', `/api/business/organizations/${orgId}/voip/settings`);
+}
+
+export function saveVoipSettings(
+  orgId: string,
+  body: Partial<VoipSettings> & { enabled: boolean },
+): Promise<ApiResult<VoipSettings>> {
+  return request('PUT', `/api/business/organizations/${orgId}/voip/settings`, body);
+}
+
 // --- Current-org helper (persisted selection) --------------------------------
 
 const ORG_KEY = 'voxb.org';
