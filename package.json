@@ -3,7 +3,7 @@
   "type": "module",
   "version": "0.12.0",
   "private": true,
-  "description": "VoxTranslate for Business \u2014 organization dashboard (Astro 5)",
+  "description": "VoxTranslate for Business — organization dashboard (Astro 5)",
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
