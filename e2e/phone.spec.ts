@@ -706,3 +706,34 @@ test('a refusal the server now names is shown by name, not as "something went wr
   await expect(page.locator('#call-error')).toBeVisible();
   await expect(page.locator('#call-error')).toHaveText(/project/i);
 });
+
+test('every link in the phone section carries its trailing slash and resolves', async ({
+  page,
+}) => {
+  // `trailingSlash: 'always'`. The dialer built its settings link by hand — the only href
+  // in the repo not going through `localizePath`, which appends the slash unconditionally
+  // — so it 404'd in dev and cost a redirect hop in production.
+  await openDialer(page);
+
+  const hrefs = await page
+    .locator('nav[aria-label] a[href^="/en/phone"]')
+    .evaluateAll((els) => els.map((el) => (el as HTMLAnchorElement).getAttribute('href') ?? ''));
+  expect(hrefs.length).toBeGreaterThanOrEqual(3);
+  for (const href of hrefs) {
+    expect(href, `${href} must end in a slash`).toMatch(/\/$/);
+  }
+  expect(hrefs).toContain('/en/phone/settings/');
+  expect(hrefs).toContain('/en/phone/calls/');
+});
+
+test('a failed history request is not reported as an empty history', async ({ page }) => {
+  // Telling a customer they have made no calls because a request failed is a support
+  // ticket. The dialer's recent list already got this right; the history page did not.
+  await signIn(page);
+  await stubApi(page);
+  await page.route('**/voip/calls?**', (route) => route.fulfill({ status: 500, body: '{}' }));
+
+  await page.goto('/en/phone/calls/');
+  await expect(page.locator('#empty')).toBeVisible();
+  await expect(page.locator('#empty')).not.toHaveText(/no calls/i);
+});

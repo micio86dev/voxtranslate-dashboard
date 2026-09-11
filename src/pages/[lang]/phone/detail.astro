@@ -15,7 +15,13 @@
  */
 import BaseLayout from '../../../layouts/BaseLayout.astro';
 import SectionNav from '../../../components/phone/SectionNav.astro';
-import { localePaths, isLocale, DEFAULT_LOCALE, useTranslations } from '../../../lib/i18n';
+import {
+  localePaths,
+  isLocale,
+  localizePath,
+  DEFAULT_LOCALE,
+  useTranslations,
+} from '../../../lib/i18n';
 
 export function getStaticPaths() {
   return localePaths();
@@ -28,7 +34,7 @@ const t = useTranslations(lang);
 <BaseLayout lang={lang} title={t('phone.detail.title')} chrome>
   <div class="flex flex-wrap items-end justify-between gap-3">
     <h1 class="text-2xl font-bold">{t('phone.detail.title')}</h1>
-    <a href={`/${lang}/phone/calls/`} class="btn-ghost text-sm">{t('common.back')}</a>
+    <a href={localizePath(lang, 'phone/calls')} class="btn-ghost text-sm">{t('common.back')}</a>
   </div>
 
   <SectionNav lang={lang} current="calls" />

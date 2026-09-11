@@ -129,9 +129,21 @@ const t = useTranslations(lang);
       if (!rows) return;
       rows.replaceChildren();
 
-      const calls = res.data?.calls ?? [];
+      if (!res.ok || !res.data) {
+        // A blip is not an empty history. Telling a customer they have made no calls
+        // because a request failed is a support ticket; `loadRecent()` in the dialer gets
+        // this right, and this page did not.
+        if (empty) {
+          empty.textContent = t('common.connError');
+          empty.classList.remove('hidden');
+        }
+        return;
+      }
+
+      const calls = res.data.calls;
       if (calls.length === 0) {
-        empty?.classList.remove('hidden');
+        if (empty) empty.textContent = t('phone.empty');
+        empty.classList.remove('hidden');
       }
 
       for (const call of calls) {

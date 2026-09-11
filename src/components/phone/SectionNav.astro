@@ -10,7 +10,7 @@
  * The active tab is marked with `aria-current="page"` and carries weight and colour, not
  * colour alone — the same rule the dialer follows for call state.
  */
-import { useTranslations, type Locale } from '../../lib/i18n';
+import { localizePath, useTranslations, type Locale } from '../../lib/i18n';
 
 interface Props {
   lang: Locale;
@@ -21,9 +21,9 @@ const { lang, current } = Astro.props;
 const t = useTranslations(lang);
 
 const tabs = [
-  { key: 'dialer', href: `/${lang}/phone/`, label: t('phone.new') },
-  { key: 'calls', href: `/${lang}/phone/calls/`, label: t('phone.allCalls') },
-  { key: 'settings', href: `/${lang}/phone/settings/`, label: t('phone.settingsTab') },
+  { key: 'dialer', href: localizePath(lang, 'phone'), label: t('phone.new') },
+  { key: 'calls', href: localizePath(lang, 'phone/calls'), label: t('phone.allCalls') },
+  { key: 'settings', href: localizePath(lang, 'phone/settings'), label: t('phone.settingsTab') },
 ];
 ---
 

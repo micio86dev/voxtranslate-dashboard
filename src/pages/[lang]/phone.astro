@@ -1,6 +1,7 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { localePaths, isLocale, DEFAULT_LOCALE, useTranslations } from '../../lib/i18n';
+import SectionNav from '../../components/phone/SectionNav.astro';
 
 export function getStaticPaths() {
   return localePaths();
@@ -16,8 +17,16 @@ const t = useTranslations(lang);
       <h1 class="text-2xl font-bold">{t('phone.title')}</h1>
       <p class="mt-0.5 max-w-2xl text-sm text-muted">{t('phone.subtitle')}</p>
     </div>
-    <a href={`/${lang}/phone/settings`} class="btn-ghost text-sm">{t('phone.settings.title')}</a>
   </div>
+
+  <!--
+    The section's own landing page carried a hand-built link to settings and no tab bar,
+    which is how it ended up the one href in this repo missing its trailing slash
+    (`trailingSlash: 'always'`): every other link goes through `localizePath`, which
+    appends it unconditionally. The tab bar carries settings now, and `SectionNav`'s
+    `dialer` variant stops being a branch nothing reaches.
+  -->
+  <SectionNav lang={lang} current="dialer" />
 
   <!--
     The call's state is announced, not merely coloured (R30). `aria-live="assertive"`
@@ -694,28 +703,53 @@ const t = useTranslations(lang);
         return;
       }
       const calls = res.data.calls;
+      el.replaceChildren();
       if (calls.length === 0) {
-        el.innerHTML = `<p>${t('phone.empty')}</p><p class="mt-1 text-xs">${t('phone.emptyHint')}</p>`;
+        const empty = document.createElement('p');
+        empty.textContent = t('phone.empty');
+        const hint = document.createElement('p');
+        hint.className = 'mt-1 text-xs';
+        hint.textContent = t('phone.emptyHint');
+        el.append(empty, hint);
         return;
       }
-      el.innerHTML = calls
-        .map((c) => {
-          const when = new Date(c.started_at).toLocaleString();
-          // Status is a word, never a colour on its own.
-          const state = t(`phase.${phaseFromStatus(c.status)}`);
-          return `<a href="/${locale}/phone/detail/?id=${c.id}"
-                     class="flex items-center justify-between gap-2 border-b border-line py-2 last:border-0">
-                    <span>
-                      <span class="font-mono">${c.recipient_masked}</span>
-                      <span class="block text-xs text-muted">${when} · ${state}</span>
-                    </span>
-                    <span class="text-right text-xs">
-                      <span class="block">${formatDuration(c.duration_seconds)}</span>
-                      <span class="block text-muted">$${formatCredits(c.credits_consumed)}</span>
-                    </span>
-                  </a>`;
-        })
-        .join('');
+
+      // Text, never markup. `calls.astro` renders the same fields through `textContent`
+      // and says why; this list was built with `innerHTML` and string interpolation, so
+      // the same feature had two rules for the same data. The masked number comes from
+      // our own server, which is an argument for not worrying and not an argument for
+      // interpolating it into HTML.
+      for (const c of calls) {
+        const row = document.createElement('a');
+        row.href = `/${locale}/phone/detail/?id=${encodeURIComponent(c.id)}`;
+        row.className =
+          'flex items-center justify-between gap-2 border-b border-line py-2 last:border-0';
+
+        const left = document.createElement('span');
+        const number = document.createElement('span');
+        number.className = 'font-mono';
+        number.textContent = c.recipient_masked;
+        const meta = document.createElement('span');
+        meta.className = 'block text-xs text-muted';
+        // Status is a word, never a colour on its own.
+        meta.textContent = `${new Date(c.started_at).toLocaleString()} · ${t(
+          `phase.${phaseFromStatus(c.status)}`,
+        )}`;
+        left.append(number, meta);
+
+        const right = document.createElement('span');
+        right.className = 'text-right text-xs';
+        const duration = document.createElement('span');
+        duration.className = 'block';
+        duration.textContent = formatDuration(c.duration_seconds);
+        const cost = document.createElement('span');
+        cost.className = 'block text-muted';
+        cost.textContent = `$${formatCredits(c.credits_consumed)}`;
+        right.append(duration, cost);
+
+        row.append(left, right);
+        el.appendChild(row);
+      }
     }
 
     await loadCatalogues();

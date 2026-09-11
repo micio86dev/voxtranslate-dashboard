@@ -63,10 +63,11 @@ This repo follows **Git Flow** (project-wide rule):
 
 ## Environment
 
-| Variable | Description |
-|---|---|
-| `PUBLIC_API_BASE` | Rust API origin, no trailing slash. Local: `http://localhost:3001`; prod: `https://api.voxtranslate.app`. |
-| `PUBLIC_GOOGLE_CLIENT_ID` | Google OAuth client id (same project as the call app). |
+| Variable                  | Description                                                                                                                                                                                               |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PUBLIC_API_BASE`         | Rust API origin, no trailing slash. Local: `http://localhost:3001`; prod: `https://api.voxtranslate.app`.                                                                                                 |
+| `PUBLIC_GOOGLE_CLIENT_ID` | Google OAuth client id (same project as the call app).                                                                                                                                                    |
+| `PUBLIC_APP_URL`          | The call app's origin, no trailing slash. Default `https://app.voxtranslate.app`. Read by `Header.astro` ("Open app") and by the dialer, which hands a live phone call off to the app to carry its audio. |
 
 Both are `PUBLIC_` (client-side) values baked into the shipped JS at build time. They
 live in a **committed** `.env.production` (read by `astro build`) — intentionally not
