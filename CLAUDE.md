@@ -20,9 +20,11 @@ at `dashboard/` inside the main VoxTranslate repo; separate deploy from the call
 ```
 src/
   components/layout/Header.astro
+  components/phone/SectionNav.astro
   layouts/BaseLayout.astro
   lib/{auth,api,i18n}.ts
   scripts/app-boot.ts          # auth gate + org load + header wiring (org-scoped pages)
+  scripts/{phone-dialer,phone-catalogue}.ts  # pure dialer logic, unit-tested
   pages/
     index.astro                # root: soft browser-lang redirect
     [lang]/index.astro         # login gate (Google sign-in)
@@ -30,7 +32,11 @@ src/
     [lang]/dashboard.astro     # overview + org switcher
     [lang]/members.astro       # members + invite modal + roles
     [lang]/projects/{index,new,detail}.astro
+    [lang]/phone.astro         # dialer (spec 0111)
+    [lang]/phone/{calls,detail,settings}.astro   # history · one call · org policy (0112)
     [lang]/join.astro          # accept an invite (?token=)
+    …                          # indicative, not exhaustive — history, webinars, credits,
+                               # teams, analytics, search and insights also live here
   i18n/{en,it,es,de,fr}.json
   styles/global.css
 public/{favicon.svg,_headers}

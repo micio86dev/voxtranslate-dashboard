@@ -43,7 +43,13 @@ const t = useTranslations(lang);
 
       <div>
         <label for="home-country" class="label">{t('phone.settings.homeCountry')}</label>
-        <input id="home-country" class="field" maxlength="2" placeholder="IT" autocomplete="off" />
+        <input
+          id="home-country"
+          class="field"
+          maxlength="2"
+          placeholder={t('phone.settings.homeCountryPh')}
+          autocomplete="off"
+        />
         <p class="mt-1 text-xs text-muted">{t('phone.settings.homeCountryHint')}</p>
       </div>
 
@@ -54,7 +60,12 @@ const t = useTranslations(lang);
 
       <div>
         <label for="allowed" class="label">{t('phone.settings.allowedCountries')}</label>
-        <input id="allowed" class="field" placeholder="IT, ES, DE" autocomplete="off" />
+        <input
+          id="allowed"
+          class="field"
+          placeholder={t('phone.settings.allowedPh')}
+          autocomplete="off"
+        />
         <p class="mt-1 text-xs text-muted">{t('phone.settings.allowedHint')}</p>
       </div>
 

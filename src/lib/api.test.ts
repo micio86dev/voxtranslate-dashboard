@@ -692,3 +692,84 @@ describe('phone catalogues and numbers (spec 0112)', () => {
     expect(res.data).toBeNull();
   });
 });
+
+describe('VoIP wrappers hit the paths they claim', () => {
+  // The e2e cannot stand in for these. Its stub matches the glob
+  // `**/api/business/organizations**`, so a wrong path — `/voip/quotes` for `/voip/quote`
+  // — still matches, misses every `url.includes()` branch and falls through to the org
+  // list. The typo would surface in production, not in CI.
+  const ORG = 'org-1';
+  const PREFIX = `${BASE}/api/business/organizations/${ORG}/voip`;
+
+  it('quote', async () => {
+    const fn = mockFetch();
+    await api.quoteVoipCall(ORG, { destination: '+390212345678' });
+    const { url, init } = lastCall(fn);
+    expect(url).toBe(`${PREFIX}/quote`);
+    expect(init.method).toBe('POST');
+  });
+
+  it('dial', async () => {
+    const fn = mockFetch();
+    await api.dialVoipCall(ORG, {
+      destination: '+390212345678',
+      source_language: 'it',
+      target_language: 'zh',
+    });
+    const { url, init } = lastCall(fn);
+    expect(url).toBe(`${PREFIX}/calls`);
+    expect(init.method).toBe('POST');
+  });
+
+  it('history, with its filters in the query string', async () => {
+    const fn = mockFetch({ json: { calls: [], page: 2, limit: 25 } });
+    await api.getVoipCalls(ORG, { projectId: 'p-1', page: 2, limit: 25 });
+    const { url, init } = lastCall(fn);
+    expect(init.method).toBe('GET');
+    expect(url).toContain(`${PREFIX}/calls?`);
+    expect(url).toContain('project_id=p-1');
+    expect(url).toContain('page=2');
+    expect(url).toContain('limit=25');
+  });
+
+  it('history, with no filters and therefore no query string', async () => {
+    const fn = mockFetch({ json: { calls: [], page: 1, limit: 8 } });
+    await api.getVoipCalls(ORG);
+    expect(lastCall(fn).url).toBe(`${PREFIX}/calls`);
+  });
+
+  it('one call', async () => {
+    const fn = mockFetch();
+    await api.getVoipCall(ORG, 'c-1');
+    expect(lastCall(fn).url).toBe(`${PREFIX}/calls/c-1`);
+  });
+
+  it('hang up', async () => {
+    const fn = mockFetch();
+    await api.hangUpVoipCall(ORG, 'c-1');
+    const { url, init } = lastCall(fn);
+    expect(url).toBe(`${PREFIX}/calls/c-1/hangup`);
+    expect(init.method).toBe('POST');
+  });
+
+  it('video invite', async () => {
+    const fn = mockFetch();
+    await api.createVoipVideoInvite(ORG, 'c-1');
+    const { url, init } = lastCall(fn);
+    expect(url).toBe(`${PREFIX}/calls/c-1/video-invite`);
+    expect(init.method).toBe('POST');
+  });
+
+  it('settings, read and write, on the same path with different verbs', async () => {
+    const fn = mockFetch();
+    await api.getVoipSettings(ORG);
+    expect(lastCall(fn).url).toBe(`${PREFIX}/settings`);
+    expect(lastCall(fn).init.method).toBe('GET');
+
+    await api.saveVoipSettings(ORG, { enabled: true, require_project: true });
+    const put = lastCall(fn);
+    expect(put.url).toBe(`${PREFIX}/settings`);
+    expect(put.init.method).toBe('PUT');
+    expect(put.body).toEqual({ enabled: true, require_project: true });
+  });
+});
