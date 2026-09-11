@@ -732,7 +732,13 @@
       "number_leading_zero": "Mit der Ländervorwahl beginnen, nicht mit einer Null.",
       "number_unknown_country": "Diese Ländervorwahl ist unbekannt.",
       "voip_misconfigured": "Die Telefonie ist fehlerhaft konfiguriert. Bitte den Support kontaktieren.",
-      "storage_error": "Auf unserer Seite ist etwas schiefgegangen. Bitte erneut versuchen."
+      "storage_error": "Auf unserer Seite ist etwas schiefgegangen. Bitte erneut versuchen.",
+      "project_required": "Diese Organisation verlangt für jeden Anruf ein Projekt.",
+      "project_not_in_org": "Dieses Projekt gehört zu einer anderen Organisation.",
+      "caller_id_unverified": "Diese Nummer ist keine verifizierte ausgehende Nummer dieser Organisation.",
+      "caller_id_missing": "Für diese Organisation ist noch keine Rufnummernanzeige eingerichtet.",
+      "invalid_country_code": "Zweibuchstabige Ländercodes verwenden, zum Beispiel DE oder AT.",
+      "consent_required_for_capture": "Die Einwilligung kann nicht abgeschaltet werden, solange Aufzeichnung oder Transkription aktiv sind."
     },
     "settings": {
       "title": "Einstellungen für Telefonanrufe",

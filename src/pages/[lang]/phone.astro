@@ -399,8 +399,16 @@ const t = useTranslations(lang);
         return;
       }
       const seq = ++quoteSeq;
+      // Everything that moves the price or the gate. The shipped dialer sent only the
+      // destination and the capture flags, so the quote was always priced on the DEFAULT
+      // engine — change the tier and the figure did not move — and the server could not
+      // run the project or caller-id checks it runs on dial.
       const res = await quoteVoipCall(org, {
         destination: normaliseDestination(raw),
+        engine_id: tierSel?.value || undefined,
+        target_language: theirLang?.value || undefined,
+        project_id: projectSel?.value || null,
+        caller_id: callerIdSel?.value || null,
         record: !!optRecord?.checked,
         transcribe: !!optTranscribe?.checked,
         ai_analysis: !!optAi?.checked,
@@ -548,6 +556,12 @@ const t = useTranslations(lang);
         syncAi();
         void refreshQuote();
       });
+    }
+    // The recipient's language, the project and the caller id all reach the quote now, so
+    // changing one has to re-ask. `tierSel` has its own handler below; it refills the
+    // language selects first and then re-quotes.
+    for (const el of [theirLang, projectSel, callerIdSel]) {
+      el?.addEventListener('change', () => void refreshQuote());
     }
     syncAi();
 

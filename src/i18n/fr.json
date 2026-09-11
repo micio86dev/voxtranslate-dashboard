@@ -732,7 +732,13 @@
       "number_leading_zero": "Commencez par l'indicatif du pays, pas par un zéro.",
       "number_unknown_country": "Indicatif de pays non reconnu.",
       "voip_misconfigured": "La téléphonie est mal configurée. Contactez le support.",
-      "storage_error": "Un problème est survenu de notre côté. Réessayez."
+      "storage_error": "Un problème est survenu de notre côté. Réessayez.",
+      "project_required": "Cette organisation exige un projet pour chaque appel.",
+      "project_not_in_org": "Ce projet appartient à une autre organisation.",
+      "caller_id_unverified": "Ce numéro n'est pas un numéro sortant vérifié pour cette organisation.",
+      "caller_id_missing": "Aucun identifiant d'appelant n'est encore configuré pour cette organisation.",
+      "invalid_country_code": "Utiliser des codes pays à deux lettres, par exemple FR ou BE.",
+      "consent_required_for_capture": "Le consentement ne peut pas être désactivé tant que l'enregistrement ou la transcription sont actifs."
     },
     "settings": {
       "title": "Paramètres des appels téléphoniques",

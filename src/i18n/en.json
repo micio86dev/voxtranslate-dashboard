@@ -732,7 +732,13 @@
       "number_leading_zero": "Start with the country code, not a zero.",
       "number_unknown_country": "That country code is not recognised.",
       "voip_misconfigured": "Phone calling is misconfigured. Please contact support.",
-      "storage_error": "Something went wrong on our side. Please try again."
+      "storage_error": "Something went wrong on our side. Please try again.",
+      "project_required": "This organisation requires a project on every call.",
+      "project_not_in_org": "That project belongs to a different organisation.",
+      "caller_id_unverified": "That number is not a verified outbound number for this organisation.",
+      "caller_id_missing": "No caller ID is set up for this organisation yet.",
+      "invalid_country_code": "Use two-letter country codes, for example IT or ES.",
+      "consent_required_for_capture": "Consent cannot be switched off while recording or transcription is on."
     },
     "settings": {
       "title": "Phone call settings",

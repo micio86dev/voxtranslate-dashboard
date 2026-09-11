@@ -199,6 +199,16 @@ const KNOWN_REASONS = new Set([
   'number_unknown_country',
   'voip_misconfigured',
   'storage_error',
+  // Spec 0112: these refusals used to cross the boundary as raw English in a `text/plain`
+  // body, which this client cannot parse — so every one of them surfaced as the generic
+  // message. They are stable codes now, and a code without copy still degrades to generic
+  // rather than printing itself at a customer.
+  'project_required',
+  'project_not_in_org',
+  'caller_id_unverified',
+  'caller_id_missing',
+  'invalid_country_code',
+  'consent_required_for_capture',
 ]);
 
 export function hasReasonCopy(code: string | null | undefined): boolean {

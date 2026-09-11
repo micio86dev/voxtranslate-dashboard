@@ -158,6 +158,7 @@ const t = useTranslations(lang);
     type VoipSettings,
   } from '../../../lib/api';
   import { useTranslations, type Locale } from '../../../lib/i18n';
+  import { refusalKey } from '../../../scripts/phone-dialer';
 
   onPage('settings-form', async () => {
     const ctx = await boot();
@@ -293,8 +294,12 @@ const t = useTranslations(lang);
       const out = await saveVoipSettings(org, body);
       if (saveBtn) saveBtn.disabled = false;
       if (!out.ok || !out.data) {
+        // The server sends a stable code (`invalid_country_code`,
+        // `consent_required_for_capture`). Naming the problem is the difference between
+        // a form the admin can fix and one that just says no.
+        const code = (out.data as unknown as { error?: string } | null)?.error ?? null;
         if (saveError) {
-          saveError.textContent = t('common.error');
+          saveError.textContent = t(refusalKey(code));
           saveError.classList.remove('hidden');
         }
         return;

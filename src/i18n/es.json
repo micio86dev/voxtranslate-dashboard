@@ -732,7 +732,13 @@
       "number_leading_zero": "Empieza por el prefijo del país, no por un cero.",
       "number_unknown_country": "Prefijo de país no reconocido.",
       "voip_misconfigured": "Las llamadas telefónicas no están bien configuradas. Contacta con soporte.",
-      "storage_error": "Algo ha fallado por nuestra parte. Inténtalo de nuevo."
+      "storage_error": "Algo ha fallado por nuestra parte. Inténtalo de nuevo.",
+      "project_required": "Esta organización exige un proyecto en cada llamada.",
+      "project_not_in_org": "Ese proyecto pertenece a otra organización.",
+      "caller_id_unverified": "Ese número no es un número de salida verificado para esta organización.",
+      "caller_id_missing": "Esta organización aún no tiene un identificador de llamada configurado.",
+      "invalid_country_code": "Usa códigos de país de dos letras, por ejemplo ES o IT.",
+      "consent_required_for_capture": "El consentimiento no puede desactivarse mientras la grabación o la transcripción estén activas."
     },
     "settings": {
       "title": "Ajustes de llamadas telefónicas",

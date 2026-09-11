@@ -668,3 +668,41 @@ test('the call detail page shows what was charged and never our margin', async (
   expect(body).not.toMatch(/gross margin/i);
   expect(body).not.toMatch(/provider cost/i);
 });
+
+test('the quote is asked for the tier and destination actually selected', async ({ page }) => {
+  // The shipped dialer quoted with only the destination and the capture flags, so the
+  // figure was always priced on the DEFAULT engine: you could change the tier and watch
+  // the price not move. The server also could not run the project or caller-id checks it
+  // runs on dial, because it had not been told about them.
+  const quoteBodies: Record<string, unknown>[] = [];
+  page.on('request', (req) => {
+    if (req.method() === 'POST' && req.url().includes('/voip/quote')) {
+      quoteBodies.push(req.postDataJSON());
+    }
+  });
+
+  await openDialer(page);
+  await page.fill('#number', '+39 320 123 4567');
+  await expect(page.locator('#rate')).not.toHaveText('—');
+
+  const last = quoteBodies[quoteBodies.length - 1];
+  expect(last.engine_id).toBe('standard');
+  expect(last.target_language).toBe('zh');
+  expect(last.caller_id).toBe('+390212345678');
+});
+
+test('a refusal the server now names is shown by name, not as "something went wrong"', async ({
+  page,
+}) => {
+  // `project_required` crossed the boundary as English `text/plain` until spec 0112.
+  // The dashboard could not parse it, so it rendered the generic message for a problem
+  // with an obvious fix.
+  await openDialer(page, {
+    dial: { httpStatus: 400, error: 'project_required' },
+  });
+  await page.fill('#number', '+39 320 123 4567');
+  await page.click('#call');
+
+  await expect(page.locator('#call-error')).toBeVisible();
+  await expect(page.locator('#call-error')).toHaveText(/project/i);
+});

@@ -732,7 +732,13 @@
       "number_leading_zero": "Inizia con il prefisso internazionale, non con uno zero.",
       "number_unknown_country": "Prefisso internazionale non riconosciuto.",
       "voip_misconfigured": "Le chiamate telefoniche non sono configurate correttamente. Contatta l'assistenza.",
-      "storage_error": "Qualcosa è andato storto dalla nostra parte. Riprova."
+      "storage_error": "Qualcosa è andato storto dalla nostra parte. Riprova.",
+      "project_required": "Questa organizzazione richiede un progetto per ogni chiamata.",
+      "project_not_in_org": "Quel progetto appartiene a un'altra organizzazione.",
+      "caller_id_unverified": "Quel numero non è un numero in uscita verificato per questa organizzazione.",
+      "caller_id_missing": "Questa organizzazione non ha ancora un ID chiamante configurato.",
+      "invalid_country_code": "Usa codici paese di due lettere, per esempio IT o ES.",
+      "consent_required_for_capture": "Il consenso non può essere disattivato mentre registrazione o trascrizione sono attive."
     },
     "settings": {
       "title": "Impostazioni chiamate telefoniche",
