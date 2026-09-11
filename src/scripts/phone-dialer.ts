@@ -209,6 +209,10 @@ const KNOWN_REASONS = new Set([
   'caller_id_missing',
   'invalid_country_code',
   'consent_required_for_capture',
+  // Spec 0114, the address book.
+  'number_already_known',
+  'name_required',
+  'number_not_e164',
 ]);
 
 export function hasReasonCopy(code: string | null | undefined): boolean {

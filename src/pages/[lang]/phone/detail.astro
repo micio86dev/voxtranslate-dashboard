@@ -54,6 +54,10 @@ const t = useTranslations(lang);
           <dt class="text-muted">{t('phone.detail.recipient')}</dt>
           <dd id="country"></dd>
         </div>
+        <div id="contact-row" class="hidden flex justify-between gap-2">
+          <dt class="text-muted">{t('phone.contacts.title')}</dt>
+          <dd id="contact-name"></dd>
+        </div>
         <div class="flex justify-between gap-2">
           <dt class="text-muted">{t('phone.detail.languages')}</dt>
           <dd id="languages"></dd>
@@ -84,6 +88,28 @@ const t = useTranslations(lang);
     </section>
 
     <!--
+      Keeping a number nobody in the address book holds. One field, because everything
+      else is already known: the number, its country, the language the call was actually
+      conducted in, and the project it was filed under (spec 0114 R6).
+    -->
+    <section id="save-contact" class="card hidden grid gap-3" aria-labelledby="save-h">
+      <h2 id="save-h" class="text-sm font-semibold">{t('phone.contacts.saveToContacts')}</h2>
+      <form id="save-form" class="flex flex-wrap items-end gap-2" novalidate>
+        <div class="min-w-0 flex-1">
+          <label for="save-name" class="label">{t('phone.contacts.name')}</label>
+          <input id="save-name" class="field" required autocomplete="off" />
+        </div>
+        <button type="submit" class="btn-primary text-sm"
+          >{t('phone.contacts.saveToContacts')}</button
+        >
+      </form>
+      <p id="save-done" class="hidden text-sm text-ok" role="status">
+        {t('phone.contacts.saved')}
+      </p>
+      <p id="save-error" class="hidden text-sm text-danger" role="alert"></p>
+    </section>
+
+    <!--
       The conversation lives on the session page, which already renders the transcript,
       its on-demand translation, the recording and the exports for any call_sessions row.
       A phone call is one of those rows, so it is linked, not re-implemented.
@@ -101,7 +127,7 @@ const t = useTranslations(lang);
 <script>
   import { onPage } from '../../../scripts/nav';
   import { boot } from '../../../scripts/app-boot';
-  import { currentOrgId, getVoipCall } from '../../../lib/api';
+  import { createVoipContact, currentOrgId, getVoipCall } from '../../../lib/api';
   import { useTranslations, type Locale } from '../../../lib/i18n';
   import {
     formatCredits,
@@ -109,6 +135,7 @@ const t = useTranslations(lang);
     phaseFromStatus,
     refusalKey,
   } from '../../../scripts/phone-dialer';
+  import { shouldOfferSave } from '../../../scripts/phone-catalogue';
 
   onPage('call-detail', async () => {
     const ctx = await boot();
@@ -186,6 +213,48 @@ const t = useTranslations(lang);
       pending: 'phone.detail.consentPending',
     };
     set('consent', t(CONSENT_COPY[call.consent_status] ?? 'phone.detail.consentPending'));
+
+    if (call.contact_name) {
+      set('contact-name', call.contact_name);
+      $('contact-row')?.classList.remove('hidden');
+      $('contact-row')?.classList.add('flex');
+    }
+
+    // Offer to keep the number only once the call is over and only when nobody holds it.
+    if (shouldOfferSave(call)) {
+      const box = $('save-contact');
+      box?.classList.remove('hidden');
+      box?.classList.add('grid');
+      $('save-form')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const name = ($<HTMLInputElement>('save-name') as HTMLInputElement).value.trim();
+        const error = $('save-error');
+        error?.classList.add('hidden');
+        const res = await createVoipContact(org, {
+          name,
+          numbers: [
+            {
+              e164: call.recipient_e164,
+              // The language the call was actually conducted in — not a guess, and not a
+              // default. It is what the recipient was spoken to in.
+              language: call.target_language,
+              is_primary: true,
+            },
+          ],
+          project_ids: call.project_id ? [call.project_id] : [],
+        });
+        if (!res.ok) {
+          const code = (res.data as unknown as { error?: string } | null)?.error ?? null;
+          if (error) {
+            error.textContent = t(refusalKey(code));
+            error.classList.remove('hidden');
+          }
+          return;
+        }
+        $('save-done')?.classList.remove('hidden');
+        $('save-form')?.classList.add('hidden');
+      });
+    }
 
     // Offer the conversation only when there is one to offer. A link into an empty
     // transcript reads as a broken page rather than as a call nobody recorded.

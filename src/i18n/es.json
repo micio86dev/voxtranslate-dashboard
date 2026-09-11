@@ -687,6 +687,7 @@
     "recent": "Llamadas recientes",
     "allCalls": "Todas las llamadas",
     "settingsTab": "Ajustes",
+    "contactsTab": "Contactos",
     "empty": "Todavía no hay llamadas.",
     "emptyHint": "Aquí aparecerán las llamadas telefónicas traducidas de tu organización.",
     "disabled": "Las llamadas telefónicas no están activadas para esta organización.",
@@ -738,7 +739,10 @@
       "caller_id_unverified": "Ese número no es un número de salida verificado para esta organización.",
       "caller_id_missing": "Esta organización aún no tiene un identificador de llamada configurado.",
       "invalid_country_code": "Usa códigos de país de dos letras, por ejemplo ES o IT.",
-      "consent_required_for_capture": "El consentimiento no puede desactivarse mientras la grabación o la transcripción estén activas."
+      "consent_required_for_capture": "El consentimiento no puede desactivarse mientras la grabación o la transcripción estén activas.",
+      "number_already_known": "Otro contacto de esta organización ya tiene ese número.",
+      "name_required": "Un contacto necesita un nombre.",
+      "number_not_e164": "Usa el formato internacional, con el prefijo del país."
     },
     "settings": {
       "title": "Ajustes de llamadas telefónicas",
@@ -794,6 +798,35 @@
     "joinHint": "Abre la llamada en la aplicación VoxTranslate, donde están tu micrófono y el audio traducido.",
     "videoHint": "Copia el enlace y envíaselo a la persona a la que estás llamando. Sirve durante 15 minutos.",
     "videoCopied": "Enlace copiado",
-    "videoUnavailable": "El vídeo no está disponible en esta llamada."
+    "videoUnavailable": "El vídeo no está disponible en esta llamada.",
+    "contacts": {
+      "addNumber": "Añadir un número",
+      "allLanguages": "Todos los idiomas",
+      "allTags": "Todas las etiquetas",
+      "company": "Empresa",
+      "deleteConfirm": "¿Quitar este contacto? Las llamadas hechas siguen en el historial.",
+      "edit": "Editar contacto",
+      "email": "Correo",
+      "empty": "Todavía no hay contactos.",
+      "emptyHint": "Añade las personas a las que llama tu organización y el marcador dejará de preguntar qué idioma hablan.",
+      "name": "Nombre",
+      "new": "Nuevo contacto",
+      "noContact": "Sin contacto",
+      "notes": "Notas",
+      "numberLabel": "Etiqueta",
+      "numberLanguage": "Idioma que se habla en este número",
+      "numbers": "Números de teléfono",
+      "pick": "Elige un contacto",
+      "primary": "Principal",
+      "projects": "Proyectos",
+      "remove": "Quitar",
+      "role": "Puesto",
+      "saveToContacts": "Guardar en contactos",
+      "saved": "Contacto guardado.",
+      "search": "Busca nombre, empresa o número",
+      "tags": "Etiquetas",
+      "tagsHint": "Separadas por comas.",
+      "title": "Contactos"
+    }
   }
 }

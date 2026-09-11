@@ -1,0 +1,413 @@
+---
+/**
+ * `/[lang]/phone/contacts/` — the organisation's address book (spec 0114 R1, R4).
+ *
+ * One book for the company, not one per project: a person turns up in several, and
+ * duplicating them per project is how address books rot. The editor is on the same page
+ * as the list because a contact is small — a name, some numbers, some links — and a second
+ * route for four fields is a route nobody bookmarks.
+ *
+ * The language sits on each NUMBER. That is the field this whole feature exists for: with
+ * it the dialer stops asking, eighty-four options at a time, what language someone speaks.
+ */
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import SectionNav from '../../../components/phone/SectionNav.astro';
+import { localePaths, isLocale, DEFAULT_LOCALE, useTranslations } from '../../../lib/i18n';
+
+export function getStaticPaths() {
+  return localePaths();
+}
+
+const lang = isLocale(Astro.params.lang) ? Astro.params.lang : DEFAULT_LOCALE;
+const t = useTranslations(lang);
+---
+
+<BaseLayout lang={lang} title={t('phone.contacts.title')} chrome>
+  <h1 class="text-2xl font-bold">{t('phone.contacts.title')}</h1>
+
+  <SectionNav lang={lang} current="contacts" />
+
+  <div id="voip-off" class="card mt-6 hidden">
+    <p class="text-sm">{t('phone.disabled')}</p>
+  </div>
+
+  <div id="contacts-page" class="mt-6 hidden gap-6 lg:grid lg:grid-cols-[minmax(0,1fr)_24rem]">
+    <section aria-labelledby="list-h">
+      <div class="flex flex-wrap items-end justify-between gap-3">
+        <h2 id="list-h" class="sr-only">{t('phone.contacts.title')}</h2>
+        <div class="flex flex-wrap items-end gap-2">
+          <div>
+            <label for="q" class="label">{t('phone.contacts.search')}</label>
+            <input id="q" type="search" class="field" autocomplete="off" />
+          </div>
+          <div>
+            <label for="filter-project" class="label">{t('history.project')}</label>
+            <select id="filter-project" class="field">
+              <option value="">{t('history.allProjects')}</option>
+            </select>
+          </div>
+        </div>
+        <button id="new-contact" type="button" class="btn-primary text-sm"
+          >{t('phone.contacts.new')}</button
+        >
+      </div>
+
+      <div class="card mt-4">
+        <p id="loading" class="text-sm text-muted">{t('common.loading')}</p>
+        <p id="empty" class="hidden text-sm text-muted">{t('phone.contacts.empty')}</p>
+        <p id="empty-hint" class="mt-1 hidden text-xs text-muted">
+          {t('phone.contacts.emptyHint')}
+        </p>
+        <ul id="rows" class="grid"></ul>
+      </div>
+    </section>
+
+    <!-- The editor. Hidden until a contact is opened or a new one started. -->
+    <aside id="editor" class="card hidden" aria-labelledby="editor-h">
+      <h2 id="editor-h" class="text-lg font-semibold">{t('phone.contacts.new')}</h2>
+      <form id="contact-form" class="mt-4 grid gap-4" novalidate>
+        <div>
+          <label for="c-name" class="label">{t('phone.contacts.name')}</label>
+          <input id="c-name" class="field" required autocomplete="off" />
+        </div>
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label for="c-company" class="label">{t('phone.contacts.company')}</label>
+            <input id="c-company" class="field" autocomplete="off" />
+          </div>
+          <div>
+            <label for="c-role" class="label">{t('phone.contacts.role')}</label>
+            <input id="c-role" class="field" autocomplete="off" />
+          </div>
+        </div>
+        <div>
+          <label for="c-email" class="label">{t('phone.contacts.email')}</label>
+          <input id="c-email" type="email" class="field" autocomplete="off" />
+        </div>
+        <div>
+          <label for="c-tags" class="label">{t('phone.contacts.tags')}</label>
+          <input id="c-tags" class="field" autocomplete="off" />
+          <p class="mt-1 text-xs text-muted">{t('phone.contacts.tagsHint')}</p>
+        </div>
+
+        <fieldset class="grid gap-2">
+          <legend class="label">{t('phone.contacts.numbers')}</legend>
+          <div id="numbers" class="grid gap-3"></div>
+          <button id="add-number" type="button" class="btn-ghost self-start text-sm"
+            >{t('phone.contacts.addNumber')}</button
+          >
+        </fieldset>
+
+        <fieldset class="grid gap-2">
+          <legend class="label">{t('phone.contacts.projects')}</legend>
+          <div id="projects" class="grid gap-1"></div>
+        </fieldset>
+
+        <div class="flex flex-wrap items-center gap-3">
+          <button id="save" type="submit" class="btn-primary">{t('common.save')}</button>
+          <button id="cancel" type="button" class="btn-ghost">{t('common.cancel')}</button>
+          <button id="delete" type="button" class="btn-danger hidden">{t('common.delete')}</button>
+        </div>
+        <p id="saved" class="hidden text-sm text-ok" role="status">
+          {t('phone.contacts.saved')}
+        </p>
+        <p id="form-error" class="hidden text-sm text-danger" role="alert"></p>
+      </form>
+    </aside>
+  </div>
+</BaseLayout>
+
+<script>
+  import { onPage } from '../../../scripts/nav';
+  import { boot } from '../../../scripts/app-boot';
+  import {
+    createVoipContact,
+    currentOrgId,
+    deleteVoipContact,
+    getLanguageCatalogue,
+    getVoipContact,
+    getVoipSettings,
+    listProjects,
+    listVoipContacts,
+    updateVoipContact,
+    type VoipContactBody,
+    type VoipContactDetail,
+  } from '../../../lib/api';
+  import { useTranslations, type Locale } from '../../../lib/i18n';
+  import { refusalKey } from '../../../scripts/phone-dialer';
+  import { languageOptions, type LanguageCatalogue } from '../../../scripts/phone-catalogue';
+
+  onPage('contacts-page', async () => {
+    const ctx = await boot();
+    if (!ctx) return;
+    const t = useTranslations(ctx.lang as Locale);
+    const org = ctx.activeOrg.id ?? currentOrgId();
+    if (!org) return;
+
+    const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T | null;
+
+    const settings = await getVoipSettings(org);
+    if (!settings.ok || !settings.data?.enabled) {
+      $('voip-off')?.classList.remove('hidden');
+      return;
+    }
+    const page = $('contacts-page');
+    page?.classList.remove('hidden');
+
+    const rows = $<HTMLUListElement>('rows');
+    const loading = $('loading');
+    const empty = $('empty');
+    const emptyHint = $('empty-hint');
+    const editor = $('editor');
+    const form = $<HTMLFormElement>('contact-form');
+    const numbersBox = $('numbers');
+    const projectsBox = $('projects');
+    const formError = $('form-error');
+    const saved = $('saved');
+    const deleteBtn = $<HTMLButtonElement>('delete');
+    const filterProject = $<HTMLSelectElement>('filter-project');
+    const search = $<HTMLInputElement>('q');
+
+    let catalogue: LanguageCatalogue = { languages: [], regions: [] };
+    let projects: { id: string; name: string }[] = [];
+    let editing: string | null = null;
+
+    const [langRes, projectRes] = await Promise.all([getLanguageCatalogue(), listProjects(org)]);
+    if (langRes.data) {
+      catalogue = { languages: langRes.data.languages, regions: langRes.data.regions };
+    }
+    projects = projectRes.data ?? [];
+    for (const project of projects) {
+      const option = document.createElement('option');
+      option.value = project.id;
+      option.textContent = project.name;
+      filterProject?.appendChild(option);
+    }
+
+    /** One number row in the editor. The language select is the point of the whole page. */
+    function numberRow(
+      value: Partial<{ e164: string; label: string; language: string; is_primary: boolean }> = {},
+    ) {
+      const wrap = document.createElement('div');
+      wrap.className = 'grid gap-2 rounded-lg border border-line p-3 sm:grid-cols-2';
+      wrap.dataset.number = '1';
+
+      const number = document.createElement('input');
+      number.className = 'field';
+      number.placeholder = '+39 320 123 4567';
+      number.dataset.field = 'e164';
+      number.value = value.e164 ?? '';
+      number.setAttribute('aria-label', t('phone.number'));
+
+      const label = document.createElement('input');
+      label.className = 'field';
+      label.dataset.field = 'label';
+      label.value = value.label ?? '';
+      label.setAttribute('aria-label', t('phone.contacts.numberLabel'));
+      label.placeholder = t('phone.contacts.numberLabel');
+
+      const language = document.createElement('select');
+      language.className = 'field';
+      language.dataset.field = 'language';
+      language.setAttribute('aria-label', t('phone.contacts.numberLanguage'));
+      const none = document.createElement('option');
+      none.value = '';
+      none.textContent = t('phone.chooseLanguage');
+      language.appendChild(none);
+      // Every language the catalogue knows: a contact's language is not constrained by
+      // the engine chosen for some future call.
+      for (const option of languageOptions(
+        catalogue,
+        catalogue.languages.map((l) => l.code),
+      )) {
+        const el = document.createElement('option');
+        el.value = option.code;
+        el.textContent = option.label;
+        language.appendChild(el);
+      }
+      language.value = value.language ?? '';
+
+      const primaryLabel = document.createElement('label');
+      primaryLabel.className = 'flex items-center gap-2 text-sm';
+      const primary = document.createElement('input');
+      primary.type = 'radio';
+      primary.name = 'primary-number';
+      primary.className = 'checkbox';
+      primary.dataset.field = 'is_primary';
+      primary.checked = !!value.is_primary;
+      primaryLabel.append(primary, document.createTextNode(t('phone.contacts.primary')));
+
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.className = 'btn-ghost justify-self-start text-xs';
+      remove.textContent = t('phone.contacts.remove');
+      remove.addEventListener('click', () => wrap.remove());
+
+      wrap.append(number, label, language, primaryLabel, remove);
+      return wrap;
+    }
+
+    function renderProjects(selected: string[] = []) {
+      if (!projectsBox) return;
+      projectsBox.replaceChildren();
+      for (const project of projects) {
+        const label = document.createElement('label');
+        label.className = 'flex items-center gap-2 text-sm';
+        const box = document.createElement('input');
+        box.type = 'checkbox';
+        box.className = 'checkbox';
+        box.value = project.id;
+        box.checked = selected.includes(project.id);
+        label.append(box, document.createTextNode(project.name));
+        projectsBox.appendChild(label);
+      }
+    }
+
+    function openEditor(contact: VoipContactDetail | null) {
+      editing = contact?.id ?? null;
+      editor?.classList.remove('hidden');
+      saved?.classList.add('hidden');
+      formError?.classList.add('hidden');
+      deleteBtn?.classList.toggle('hidden', !contact);
+      ($<HTMLInputElement>('c-name') as HTMLInputElement).value = contact?.name ?? '';
+      ($<HTMLInputElement>('c-company') as HTMLInputElement).value = contact?.company ?? '';
+      ($<HTMLInputElement>('c-role') as HTMLInputElement).value = contact?.role ?? '';
+      ($<HTMLInputElement>('c-email') as HTMLInputElement).value = contact?.email ?? '';
+      ($<HTMLInputElement>('c-tags') as HTMLInputElement).value = (contact?.tags ?? []).join(', ');
+      numbersBox?.replaceChildren();
+      const numbers = contact?.numbers?.length ? contact.numbers : [{}];
+      for (const n of numbers) {
+        numbersBox?.appendChild(
+          numberRow({
+            e164: (n as { e164?: string }).e164,
+            label: (n as { label?: string | null }).label ?? undefined,
+            language: (n as { language?: string | null }).language ?? undefined,
+            is_primary: (n as { is_primary?: boolean }).is_primary,
+          }),
+        );
+      }
+      renderProjects((contact?.projects ?? []).map((p) => p.id));
+      $('c-name')?.focus();
+    }
+
+    async function load() {
+      loading?.classList.remove('hidden');
+      const res = await listVoipContacts(org, {
+        q: search?.value || undefined,
+        projectId: filterProject?.value || undefined,
+      });
+      loading?.classList.add('hidden');
+      if (!rows) return;
+      rows.replaceChildren();
+
+      if (!res.ok || !res.data) {
+        // A blip is not an empty address book.
+        if (empty) {
+          empty.textContent = t('common.connError');
+          empty.classList.remove('hidden');
+        }
+        emptyHint?.classList.add('hidden');
+        return;
+      }
+      // `?? []` because a 200 with an unexpected shape is still a 200. The list must
+      // render empty rather than throw on `undefined.length`.
+      const contacts = res.data.contacts ?? [];
+      empty?.classList.toggle('hidden', contacts.length > 0);
+      emptyHint?.classList.toggle('hidden', contacts.length > 0);
+      if (empty) empty.textContent = t('phone.contacts.empty');
+
+      for (const contact of contacts) {
+        const li = document.createElement('li');
+        li.className = 'border-b border-line last:border-0';
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'w-full py-2 text-left';
+        const name = document.createElement('span');
+        name.className = 'font-medium';
+        name.textContent = contact.name;
+        const sub = document.createElement('span');
+        sub.className = 'block text-xs text-muted';
+        sub.textContent = [contact.company, contact.role].filter(Boolean).join(' · ');
+        button.append(name, sub);
+        button.addEventListener('click', async () => {
+          const detail = await getVoipContact(org, contact.id);
+          if (detail.ok && detail.data) openEditor(detail.data);
+        });
+        li.appendChild(button);
+        rows.appendChild(li);
+      }
+    }
+
+    $('new-contact')?.addEventListener('click', () => openEditor(null));
+    $('cancel')?.addEventListener('click', () => editor?.classList.add('hidden'));
+    $('add-number')?.addEventListener('click', () => numbersBox?.appendChild(numberRow()));
+
+    let debounce: number | undefined;
+    search?.addEventListener('input', () => {
+      window.clearTimeout(debounce);
+      debounce = window.setTimeout(() => void load(), 300);
+    });
+    filterProject?.addEventListener('change', () => void load());
+
+    form?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      saved?.classList.add('hidden');
+      formError?.classList.add('hidden');
+
+      const numbers = [...(numbersBox?.querySelectorAll('[data-number]') ?? [])]
+        .map((row) => {
+          const field = (name: string) =>
+            row.querySelector<HTMLInputElement | HTMLSelectElement>(`[data-field="${name}"]`);
+          return {
+            e164: field('e164')?.value.trim() ?? '',
+            label: field('label')?.value.trim() || null,
+            language: field('language')?.value || null,
+            is_primary: (field('is_primary') as HTMLInputElement | null)?.checked ?? false,
+          };
+        })
+        .filter((n) => n.e164);
+
+      const body: VoipContactBody = {
+        name: ($<HTMLInputElement>('c-name') as HTMLInputElement).value.trim(),
+        company: ($<HTMLInputElement>('c-company') as HTMLInputElement).value.trim() || null,
+        role: ($<HTMLInputElement>('c-role') as HTMLInputElement).value.trim() || null,
+        email: ($<HTMLInputElement>('c-email') as HTMLInputElement).value.trim() || null,
+        tags: ($<HTMLInputElement>('c-tags') as HTMLInputElement).value
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean),
+        numbers,
+        project_ids: [...(projectsBox?.querySelectorAll('input:checked') ?? [])].map(
+          (el) => (el as HTMLInputElement).value,
+        ),
+      };
+
+      const res = editing
+        ? await updateVoipContact(org, editing, body)
+        : await createVoipContact(org, body);
+      if (!res.ok) {
+        const code = (res.data as unknown as { error?: string } | null)?.error ?? null;
+        if (formError) {
+          formError.textContent = t(refusalKey(code));
+          formError.classList.remove('hidden');
+        }
+        return;
+      }
+      saved?.classList.remove('hidden');
+      editing = null;
+      editor?.classList.add('hidden');
+      await load();
+    });
+
+    deleteBtn?.addEventListener('click', async () => {
+      if (!editing) return;
+      if (!confirm(t('phone.contacts.deleteConfirm'))) return;
+      await deleteVoipContact(org, editing);
+      editing = null;
+      editor?.classList.add('hidden');
+      await load();
+    });
+
+    await load();
+  });
+</script>

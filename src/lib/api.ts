@@ -1113,6 +1113,9 @@ export interface VoipCallDetail extends Omit<VoipCallSummary, 'recipient_masked'
    * free", which is a very different claim from "not rated yet".
    */
   cost_status: 'pending' | 'final';
+  /** Who was called, when the address book knew. Null once that contact is deleted. */
+  contact_id: string | null;
+  contact_name: string | null;
 }
 
 export interface VoipSettings {
@@ -1253,6 +1256,110 @@ export interface VoipNumber {
  */
 export function listVoipNumbers(orgId: string): Promise<ApiResult<{ numbers: VoipNumber[] }>> {
   return request('GET', `/api/business/organizations/${orgId}/voip/numbers`);
+}
+
+// --- Contacts (spec 0114) ----------------------------------------------------
+
+export interface VoipContactNumber {
+  id?: string;
+  e164: string;
+  label: string | null;
+  /** The language THIS number speaks — not the person's. */
+  language: string | null;
+  country?: string | null;
+  is_primary: boolean;
+}
+
+export interface VoipContactSummary {
+  id: string;
+  name: string;
+  company: string | null;
+  role: string | null;
+  notes: string | null;
+  tags: string[];
+  email: string | null;
+}
+
+export interface VoipContactDetail extends VoipContactSummary {
+  numbers: VoipContactNumber[];
+  projects: { id: string; name: string }[];
+}
+
+export interface VoipContactBody {
+  name: string;
+  company?: string | null;
+  role?: string | null;
+  notes?: string | null;
+  tags?: string[];
+  email?: string | null;
+  numbers?: Partial<VoipContactNumber>[];
+  project_ids?: string[];
+}
+
+export interface ContactQuery {
+  q?: string;
+  projectId?: string;
+  tag?: string;
+  language?: string;
+  page?: number;
+  limit?: number;
+}
+
+export function listVoipContacts(
+  orgId: string,
+  opts: ContactQuery = {},
+): Promise<ApiResult<{ contacts: VoipContactSummary[]; page: number; limit: number }>> {
+  const q = new URLSearchParams();
+  if (opts.q) q.set('q', opts.q);
+  if (opts.projectId) q.set('project_id', opts.projectId);
+  if (opts.tag) q.set('tag', opts.tag);
+  if (opts.language) q.set('language', opts.language);
+  if (opts.page) q.set('page', String(opts.page));
+  if (opts.limit) q.set('limit', String(opts.limit));
+  const qs = q.toString();
+  return request('GET', `/api/business/organizations/${orgId}/voip/contacts${qs ? `?${qs}` : ''}`);
+}
+
+export function createVoipContact(
+  orgId: string,
+  body: VoipContactBody,
+): Promise<ApiResult<{ id: string }>> {
+  return request('POST', `/api/business/organizations/${orgId}/voip/contacts`, body);
+}
+
+export function getVoipContact(
+  orgId: string,
+  contactId: string,
+): Promise<ApiResult<VoipContactDetail>> {
+  return request('GET', `/api/business/organizations/${orgId}/voip/contacts/${contactId}`);
+}
+
+export function updateVoipContact(
+  orgId: string,
+  contactId: string,
+  body: VoipContactBody,
+): Promise<ApiResult<unknown>> {
+  return request('PATCH', `/api/business/organizations/${orgId}/voip/contacts/${contactId}`, body);
+}
+
+export function deleteVoipContact(orgId: string, contactId: string): Promise<ApiResult<unknown>> {
+  return request('DELETE', `/api/business/organizations/${orgId}/voip/contacts/${contactId}`);
+}
+
+/**
+ * Who holds this number? A 404 means nobody, which is normal rather than an error — it is
+ * how the call page decides whether to offer to save the number it just dialled.
+ */
+export function lookupVoipContact(
+  orgId: string,
+  e164: string,
+): Promise<
+  ApiResult<{ id: string; name: string; company: string | null; language: string | null }>
+> {
+  return request(
+    'GET',
+    `/api/business/organizations/${orgId}/voip/contacts/lookup?e164=${encodeURIComponent(e164)}`,
+  );
 }
 
 // --- Shared catalogues (public, not org-scoped) ------------------------------

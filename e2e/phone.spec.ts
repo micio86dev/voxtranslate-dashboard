@@ -158,6 +158,49 @@ async function stubApi(page: Page, opts: StubOptions = {}) {
         require_project: false,
       });
     }
+    if (url.includes('/voip/contacts/lookup')) {
+      return json({ error: 'not found' }, 404);
+    }
+    if (url.match(/\/voip\/contacts\/[^/?]+$/) && route.request().method() === 'GET') {
+      return json({
+        id: 'k-1',
+        name: 'Wei Zhang',
+        company: 'Shenzhen Optics',
+        role: null,
+        notes: null,
+        tags: ['supplier'],
+        email: null,
+        numbers: [
+          {
+            id: 'n-1',
+            e164: '+8613800138000',
+            label: 'Mobile',
+            language: 'zh',
+            country: 'CN',
+            is_primary: true,
+          },
+        ],
+        projects: [],
+      });
+    }
+    if (url.includes('/voip/contacts')) {
+      if (route.request().method() === 'POST') return json({ id: 'k-2' }, 201);
+      return json({
+        contacts: [
+          {
+            id: 'k-1',
+            name: 'Wei Zhang',
+            company: 'Shenzhen Optics',
+            role: null,
+            notes: null,
+            tags: ['supplier'],
+            email: null,
+          },
+        ],
+        page: 1,
+        limit: 50,
+      });
+    }
     if (url.includes('/voip/numbers')) {
       return json({
         numbers: [
@@ -736,4 +779,143 @@ test('a failed history request is not reported as an empty history', async ({ pa
   await page.goto('/en/phone/calls/');
   await expect(page.locator('#empty')).toBeVisible();
   await expect(page.locator('#empty')).not.toHaveText(/no calls/i);
+});
+
+// ---- contacts (spec 0114) --------------------------------------------------
+
+test('choosing a contact fills the number and the language that number speaks', async ({
+  page,
+}) => {
+  // The whole reason the language lives on the NUMBER rather than on the person: with it
+  // the dialer stops asking, eighty-four options at a time, what language someone speaks.
+  await openDialer(page);
+  // Undo `openDialer`'s choice so the preselection is what sets it.
+  await page.selectOption('#their-lang', '');
+
+  await page.selectOption('#contact', 'k-1');
+
+  await expect(page.locator('#number')).toHaveValue('+8613800138000');
+  await expect(page.locator('#their-lang')).toHaveValue('zh');
+});
+
+test('the address book lists people and opens one for editing', async ({ page }) => {
+  await signIn(page);
+  await stubApi(page);
+  await page.goto('/en/phone/contacts/');
+
+  await expect(page.locator('#rows')).toContainText('Wei Zhang');
+  await expect(page.locator('#rows')).toContainText('Shenzhen Optics');
+  await expect(page.locator('#editor')).toBeHidden();
+
+  await page.getByRole('button', { name: /Wei Zhang/ }).click();
+  await expect(page.locator('#editor')).toBeVisible();
+  await expect(page.locator('#c-name')).toHaveValue('Wei Zhang');
+  // The number row carries its own language select, set to what that number speaks.
+  await expect(page.locator('#numbers [data-field="language"]')).toHaveValue('zh');
+});
+
+test('a refused number says which rule it broke', async ({ page }) => {
+  // `number_already_known` is a stable code with copy in five locales, not English prose
+  // in a text/plain body.
+  await signIn(page);
+  await stubApi(page);
+  await page.route('**/voip/contacts', async (route) => {
+    if (route.request().method() === 'POST') {
+      return route.fulfill({
+        status: 409,
+        contentType: 'application/json',
+        body: JSON.stringify({ error: 'number_already_known' }),
+      });
+    }
+    return route.fallback();
+  });
+
+  await page.goto('/en/phone/contacts/');
+  await page.click('#new-contact');
+  await page.fill('#c-name', 'Duplicate');
+  await page.fill('#numbers [data-field="e164"]', '+8613800138000');
+  await page.click('#save');
+
+  await expect(page.locator('#form-error')).toBeVisible();
+  await expect(page.locator('#form-error')).toHaveText(/already holds that number/i);
+});
+
+test('a finished call to a stranger offers to keep the number', async ({ page }) => {
+  await signIn(page);
+  await stubApi(page);
+  await page.route('**/voip/calls/c-9', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        id: 'c-9',
+        session_id: 's-9',
+        status: 'completed',
+        failure_reason: null,
+        direction: 'outbound',
+        recipient_e164: '+34911234567',
+        recipient_country: 'ES',
+        source_language: 'en',
+        target_language: 'es',
+        engine_id: 'standard',
+        started_at: '2026-09-01T10:00:00Z',
+        ended_at: '2026-09-01T10:01:35Z',
+        duration_seconds: 95,
+        credits_consumed: 120,
+        quoted_price_per_min: '0.0468',
+        cost_status: 'final',
+        recording_status: 'none',
+        transcription_status: 'none',
+        consent_status: 'granted',
+        project_id: null,
+        contact_id: null,
+        contact_name: null,
+      }),
+    }),
+  );
+
+  await page.goto('/en/phone/detail/?id=c-9');
+  await expect(page.locator('#save-contact')).toBeVisible();
+  await page.fill('#save-name', 'Someone New');
+  await page.click('#save-form button[type="submit"]');
+  await expect(page.locator('#save-done')).toBeVisible();
+});
+
+test('a call to somebody already known offers nothing, and names them', async ({ page }) => {
+  await signIn(page);
+  await stubApi(page);
+  await page.route('**/voip/calls/c-8', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        id: 'c-8',
+        session_id: 's-8',
+        status: 'completed',
+        failure_reason: null,
+        direction: 'outbound',
+        recipient_e164: '+8613800138000',
+        recipient_country: 'CN',
+        source_language: 'it',
+        target_language: 'zh',
+        engine_id: 'standard',
+        started_at: '2026-09-01T10:00:00Z',
+        ended_at: null,
+        duration_seconds: 95,
+        credits_consumed: 120,
+        quoted_price_per_min: '0.0468',
+        cost_status: 'final',
+        recording_status: 'none',
+        transcription_status: 'none',
+        consent_status: 'granted',
+        project_id: null,
+        contact_id: 'k-1',
+        contact_name: 'Wei Zhang',
+      }),
+    }),
+  );
+
+  await page.goto('/en/phone/detail/?id=c-8');
+  await expect(page.locator('#contact-name')).toHaveText('Wei Zhang');
+  await expect(page.locator('#save-contact')).toBeHidden();
 });

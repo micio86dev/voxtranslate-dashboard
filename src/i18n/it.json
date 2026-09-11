@@ -687,6 +687,7 @@
     "recent": "Chiamate recenti",
     "allCalls": "Tutte le chiamate",
     "settingsTab": "Impostazioni",
+    "contactsTab": "Contatti",
     "empty": "Ancora nessuna chiamata.",
     "emptyHint": "Qui compariranno le chiamate telefoniche tradotte della tua organizzazione.",
     "disabled": "Le chiamate telefoniche non sono attive per questa organizzazione.",
@@ -738,7 +739,10 @@
       "caller_id_unverified": "Quel numero non è un numero in uscita verificato per questa organizzazione.",
       "caller_id_missing": "Questa organizzazione non ha ancora un ID chiamante configurato.",
       "invalid_country_code": "Usa codici paese di due lettere, per esempio IT o ES.",
-      "consent_required_for_capture": "Il consenso non può essere disattivato mentre registrazione o trascrizione sono attive."
+      "consent_required_for_capture": "Il consenso non può essere disattivato mentre registrazione o trascrizione sono attive.",
+      "number_already_known": "Un altro contatto di questa organizzazione ha già quel numero.",
+      "name_required": "Un contatto ha bisogno di un nome.",
+      "number_not_e164": "Usa il formato internazionale, con il prefisso del paese."
     },
     "settings": {
       "title": "Impostazioni chiamate telefoniche",
@@ -794,6 +798,35 @@
     "joinHint": "Apre la chiamata nell'app VoxTranslate, dove si trovano il tuo microfono e l'audio tradotto.",
     "videoHint": "Copia il link e mandalo alla persona che stai chiamando. Vale 15 minuti.",
     "videoCopied": "Link copiato",
-    "videoUnavailable": "Il video non è disponibile per questa chiamata."
+    "videoUnavailable": "Il video non è disponibile per questa chiamata.",
+    "contacts": {
+      "addNumber": "Aggiungi un numero",
+      "allLanguages": "Tutte le lingue",
+      "allTags": "Tutte le etichette",
+      "company": "Azienda",
+      "deleteConfirm": "Rimuovere questo contatto? Le chiamate fatte restano nello storico.",
+      "edit": "Modifica contatto",
+      "email": "Email",
+      "empty": "Nessun contatto.",
+      "emptyHint": "Aggiungi le persone che la tua organizzazione chiama e il dialer smetterà di chiedere che lingua parlano.",
+      "name": "Nome",
+      "new": "Nuovo contatto",
+      "noContact": "Nessun contatto",
+      "notes": "Note",
+      "numberLabel": "Etichetta",
+      "numberLanguage": "Lingua parlata su questo numero",
+      "numbers": "Numeri di telefono",
+      "pick": "Scegli un contatto",
+      "primary": "Principale",
+      "projects": "Progetti",
+      "remove": "Rimuovi",
+      "role": "Ruolo",
+      "saveToContacts": "Salva nei contatti",
+      "saved": "Contatto salvato.",
+      "search": "Cerca nome, azienda o numero",
+      "tags": "Etichette",
+      "tagsHint": "Separate da virgola.",
+      "title": "Contatti"
+    }
   }
 }

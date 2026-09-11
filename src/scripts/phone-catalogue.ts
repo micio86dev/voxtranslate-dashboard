@@ -238,3 +238,49 @@ export interface CallerIdCandidate {
 export function usableCallerIds<T extends CallerIdCandidate>(numbers: readonly T[]): T[] {
   return numbers.filter((n) => n.outbound_enabled && n.verification_status === 'verified');
 }
+
+// ---- contacts (spec 0114) --------------------------------------------------
+
+/** One of a contact's numbers, narrowed to what choosing one needs. */
+export interface ContactNumber {
+  e164: string;
+  label?: string | null;
+  language?: string | null;
+  is_primary?: boolean;
+}
+
+/**
+ * The language spoken on a specific number.
+ *
+ * On the NUMBER, never on the person — a colleague in Barcelona who takes work calls in
+ * English on the office line and Catalan on their mobile is one contact, and asking the
+ * contact would be wrong half the time.
+ *
+ * `null` when the number carries no language, which the dialer must treat as "still ask"
+ * rather than as a default. Guessing here would put a stranger's call in the wrong
+ * language, and the caller would not find out until nobody understood anybody.
+ */
+export function languageForNumber(numbers: readonly ContactNumber[], e164: string): string | null {
+  return numbers.find((n) => n.e164 === e164)?.language ?? null;
+}
+
+/** The number to offer first: the one marked primary, else the first there is. */
+export function primaryNumber<T extends ContactNumber>(numbers: readonly T[]): T | null {
+  if (numbers.length === 0) return null;
+  return numbers.find((n) => n.is_primary) ?? numbers[0];
+}
+
+/**
+ * Whether a finished call should offer to keep the number.
+ *
+ * Only once it is over. Asking somebody to file a contact mid-conversation is asking them
+ * to stop listening — and a call that is still ringing may yet reach a person the address
+ * book knows under a different number.
+ *
+ * A failed call still gets the offer: a wrong number is exactly the one worth fixing and
+ * keeping.
+ */
+export function shouldOfferSave(call: { status: string; contact_id: string | null }): boolean {
+  if (call.contact_id) return false;
+  return call.status === 'completed' || call.status === 'failed';
+}

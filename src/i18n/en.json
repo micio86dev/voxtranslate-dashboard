@@ -687,6 +687,7 @@
     "recent": "Recent calls",
     "allCalls": "All calls",
     "settingsTab": "Settings",
+    "contactsTab": "Contacts",
     "empty": "No calls yet.",
     "emptyHint": "Your organisation's translated phone calls will appear here.",
     "disabled": "Phone calls are not enabled for this organisation.",
@@ -738,7 +739,10 @@
       "caller_id_unverified": "That number is not a verified outbound number for this organisation.",
       "caller_id_missing": "No caller ID is set up for this organisation yet.",
       "invalid_country_code": "Use two-letter country codes, for example IT or ES.",
-      "consent_required_for_capture": "Consent cannot be switched off while recording or transcription is on."
+      "consent_required_for_capture": "Consent cannot be switched off while recording or transcription is on.",
+      "number_already_known": "Another contact in this organisation already holds that number.",
+      "name_required": "A contact needs a name.",
+      "number_not_e164": "Use the international format, starting with the country code."
     },
     "settings": {
       "title": "Phone call settings",
@@ -794,6 +798,35 @@
     "joinHint": "Opens the call in the VoxTranslate app, where your microphone and the translated audio are.",
     "videoHint": "Copy the link and send it to the person you are calling. It works for 15 minutes.",
     "videoCopied": "Link copied",
-    "videoUnavailable": "Video is not available on this call."
+    "videoUnavailable": "Video is not available on this call.",
+    "contacts": {
+      "addNumber": "Add a number",
+      "allLanguages": "All languages",
+      "allTags": "All tags",
+      "company": "Company",
+      "deleteConfirm": "Remove this contact? The calls made to them stay in your history.",
+      "edit": "Edit contact",
+      "email": "Email",
+      "empty": "No contacts yet.",
+      "emptyHint": "Add the people your organisation calls, and the dialer will stop asking which language they speak.",
+      "name": "Name",
+      "new": "New contact",
+      "noContact": "No contact",
+      "notes": "Notes",
+      "numberLabel": "Label",
+      "numberLanguage": "Language spoken on this number",
+      "numbers": "Phone numbers",
+      "pick": "Choose a contact",
+      "primary": "Primary",
+      "projects": "Projects",
+      "remove": "Remove",
+      "role": "Role",
+      "saveToContacts": "Save to contacts",
+      "saved": "Contact saved.",
+      "search": "Search name, company or number",
+      "tags": "Tags",
+      "tagsHint": "Comma separated.",
+      "title": "Contacts"
+    }
   }
 }

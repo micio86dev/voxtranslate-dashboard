@@ -14,7 +14,7 @@ import { localizePath, useTranslations, type Locale } from '../../lib/i18n';
 
 interface Props {
   lang: Locale;
-  current: 'dialer' | 'calls' | 'settings';
+  current: 'dialer' | 'calls' | 'contacts' | 'settings';
 }
 
 const { lang, current } = Astro.props;
@@ -23,6 +23,7 @@ const t = useTranslations(lang);
 const tabs = [
   { key: 'dialer', href: localizePath(lang, 'phone'), label: t('phone.new') },
   { key: 'calls', href: localizePath(lang, 'phone/calls'), label: t('phone.allCalls') },
+  { key: 'contacts', href: localizePath(lang, 'phone/contacts'), label: t('phone.contactsTab') },
   { key: 'settings', href: localizePath(lang, 'phone/settings'), label: t('phone.settingsTab') },
 ];
 ---

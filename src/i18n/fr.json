@@ -687,6 +687,7 @@
     "recent": "Appels récents",
     "allCalls": "Tous les appels",
     "settingsTab": "Paramètres",
+    "contactsTab": "Contacts",
     "empty": "Aucun appel pour l'instant.",
     "emptyHint": "Les appels téléphoniques traduits de votre organisation apparaîtront ici.",
     "disabled": "Les appels téléphoniques ne sont pas activés pour cette organisation.",
@@ -738,7 +739,10 @@
       "caller_id_unverified": "Ce numéro n'est pas un numéro sortant vérifié pour cette organisation.",
       "caller_id_missing": "Aucun identifiant d'appelant n'est encore configuré pour cette organisation.",
       "invalid_country_code": "Utiliser des codes pays à deux lettres, par exemple FR ou BE.",
-      "consent_required_for_capture": "Le consentement ne peut pas être désactivé tant que l'enregistrement ou la transcription sont actifs."
+      "consent_required_for_capture": "Le consentement ne peut pas être désactivé tant que l'enregistrement ou la transcription sont actifs.",
+      "number_already_known": "Un autre contact de cette organisation possède déjà ce numéro.",
+      "name_required": "Un contact a besoin d'un nom.",
+      "number_not_e164": "Utiliser le format international, avec l'indicatif du pays."
     },
     "settings": {
       "title": "Paramètres des appels téléphoniques",
@@ -794,6 +798,35 @@
     "joinHint": "Ouvre l'appel dans l'application VoxTranslate, où se trouvent votre micro et l'audio traduit.",
     "videoHint": "Copiez le lien et envoyez-le à la personne que vous appelez. Il est valable 15 minutes.",
     "videoCopied": "Lien copié",
-    "videoUnavailable": "La vidéo n'est pas disponible pour cet appel."
+    "videoUnavailable": "La vidéo n'est pas disponible pour cet appel.",
+    "contacts": {
+      "addNumber": "Ajouter un numéro",
+      "allLanguages": "Toutes les langues",
+      "allTags": "Toutes les étiquettes",
+      "company": "Société",
+      "deleteConfirm": "Retirer ce contact ? Les appels passés restent dans l'historique.",
+      "edit": "Modifier le contact",
+      "email": "E-mail",
+      "empty": "Aucun contact pour l'instant.",
+      "emptyHint": "Ajoutez les personnes que votre organisation appelle : le composeur cessera de demander quelle langue elles parlent.",
+      "name": "Nom",
+      "new": "Nouveau contact",
+      "noContact": "Aucun contact",
+      "notes": "Notes",
+      "numberLabel": "Libellé",
+      "numberLanguage": "Langue parlée sur ce numéro",
+      "numbers": "Numéros de téléphone",
+      "pick": "Choisir un contact",
+      "primary": "Principal",
+      "projects": "Projets",
+      "remove": "Retirer",
+      "role": "Fonction",
+      "saveToContacts": "Enregistrer dans les contacts",
+      "saved": "Contact enregistré.",
+      "search": "Rechercher un nom, une société ou un numéro",
+      "tags": "Étiquettes",
+      "tagsHint": "Séparées par des virgules.",
+      "title": "Contacts"
+    }
   }
 }

@@ -687,6 +687,7 @@
     "recent": "Letzte Anrufe",
     "allCalls": "Alle Anrufe",
     "settingsTab": "Einstellungen",
+    "contactsTab": "Kontakte",
     "empty": "Noch keine Anrufe.",
     "emptyHint": "Hier erscheinen die übersetzten Telefonanrufe Ihrer Organisation.",
     "disabled": "Telefonanrufe sind für diese Organisation nicht aktiviert.",
@@ -738,7 +739,10 @@
       "caller_id_unverified": "Diese Nummer ist keine verifizierte ausgehende Nummer dieser Organisation.",
       "caller_id_missing": "Für diese Organisation ist noch keine Rufnummernanzeige eingerichtet.",
       "invalid_country_code": "Zweibuchstabige Ländercodes verwenden, zum Beispiel DE oder AT.",
-      "consent_required_for_capture": "Die Einwilligung kann nicht abgeschaltet werden, solange Aufzeichnung oder Transkription aktiv sind."
+      "consent_required_for_capture": "Die Einwilligung kann nicht abgeschaltet werden, solange Aufzeichnung oder Transkription aktiv sind.",
+      "number_already_known": "Ein anderer Kontakt dieser Organisation hat diese Nummer bereits.",
+      "name_required": "Ein Kontakt braucht einen Namen.",
+      "number_not_e164": "Internationales Format verwenden, mit Ländervorwahl."
     },
     "settings": {
       "title": "Einstellungen für Telefonanrufe",
@@ -794,6 +798,35 @@
     "joinHint": "Öffnet den Anruf in der VoxTranslate-App, wo Ihr Mikrofon und die übersetzte Audioausgabe sind.",
     "videoHint": "Kopieren Sie den Link und senden Sie ihn der angerufenen Person. Er gilt 15 Minuten.",
     "videoCopied": "Link kopiert",
-    "videoUnavailable": "Video ist für diesen Anruf nicht verfügbar."
+    "videoUnavailable": "Video ist für diesen Anruf nicht verfügbar.",
+    "contacts": {
+      "addNumber": "Nummer hinzufügen",
+      "allLanguages": "Alle Sprachen",
+      "allTags": "Alle Schlagwörter",
+      "company": "Firma",
+      "deleteConfirm": "Diesen Kontakt entfernen? Die geführten Anrufe bleiben im Verlauf.",
+      "edit": "Kontakt bearbeiten",
+      "email": "E-Mail",
+      "empty": "Noch keine Kontakte.",
+      "emptyHint": "Tragen Sie die Personen ein, die Ihre Organisation anruft — dann fragt der Dialer nicht mehr nach ihrer Sprache.",
+      "name": "Name",
+      "new": "Neuer Kontakt",
+      "noContact": "Kein Kontakt",
+      "notes": "Notizen",
+      "numberLabel": "Bezeichnung",
+      "numberLanguage": "Sprache auf dieser Nummer",
+      "numbers": "Telefonnummern",
+      "pick": "Kontakt wählen",
+      "primary": "Hauptnummer",
+      "projects": "Projekte",
+      "remove": "Entfernen",
+      "role": "Position",
+      "saveToContacts": "In Kontakten speichern",
+      "saved": "Kontakt gespeichert.",
+      "search": "Name, Firma oder Nummer suchen",
+      "tags": "Schlagwörter",
+      "tagsHint": "Durch Komma getrennt.",
+      "title": "Kontakte"
+    }
   }
 }

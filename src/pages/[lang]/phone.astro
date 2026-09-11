@@ -47,6 +47,13 @@ const t = useTranslations(lang);
 
       <form id="dialer" class="mt-4 grid gap-4" novalidate>
         <div>
+          <label for="contact" class="label">{t('phone.contacts.pick')}</label>
+          <select id="contact" class="field mt-1">
+            <option value="">{t('phone.contacts.noContact')}</option>
+          </select>
+        </div>
+
+        <div>
           <label for="number" class="label">{t('phone.number')}</label>
           <input
             id="number"
@@ -212,6 +219,8 @@ const t = useTranslations(lang);
     createVoipVideoInvite,
     hangUpVoipCall,
     listProjects,
+    listVoipContacts,
+    getVoipContact,
     listVoipNumbers,
     quoteVoipCall,
     getVoipCall,
@@ -238,6 +247,8 @@ const t = useTranslations(lang);
     engineById,
     groupedLanguageOptions,
     keepLanguage,
+    languageForNumber,
+    primaryNumber,
     usableCallerIds,
     validateDial,
     type EngineOption,
@@ -296,6 +307,7 @@ const t = useTranslations(lang);
     const tierSel = $<HTMLSelectElement>('tier');
     const projectSel = $<HTMLSelectElement>('project');
     const callerIdSel = $<HTMLSelectElement>('caller-id');
+    const contactSel = $<HTMLSelectElement>('contact');
 
     let phase: CallPhase = 'idle';
     let activeCall: string | null = null;
@@ -540,6 +552,18 @@ const t = useTranslations(lang);
         }
       }
 
+      // The address book (spec 0114). Choosing somebody fills the number AND the language
+      // that number speaks — which is the whole reason the language lives on the number.
+      if (contactSel) {
+        const contacts = await listVoipContacts(org, { limit: 200 });
+        for (const contact of contacts.data?.contacts ?? []) {
+          const el = document.createElement('option');
+          el.value = contact.id;
+          el.textContent = contact.company ? `${contact.name} · ${contact.company}` : contact.name;
+          contactSel.appendChild(el);
+        }
+      }
+
       if (callerIdSel) {
         // Only numbers that may actually be presented. `resolve_caller_id` refuses the
         // rest, so offering one would produce a refusal after the user had chosen it.
@@ -552,6 +576,31 @@ const t = useTranslations(lang);
         }
       }
     }
+
+    contactSel?.addEventListener('change', async () => {
+      const id = contactSel.value;
+      if (!id) return;
+      const res = await getVoipContact(org, id);
+      const contact = res.data;
+      if (!contact) return;
+
+      const chosen = primaryNumber(contact.numbers);
+      if (!chosen || !number) return;
+      number.value = chosen.e164;
+
+      // Preselected, never forced: the language is offered from what we know about this
+      // number, and the caller can still change it for this call (R5). A number with no
+      // language recorded leaves the select alone rather than guessing.
+      const language = languageForNumber(contact.numbers, chosen.e164);
+      if (language && theirLang && keepLanguage(currentEngine(), language, 'output')) {
+        theirLang.value = language;
+      }
+      // A project the contact belongs to, when none has been chosen yet.
+      if (projectSel && !projectSel.value && contact.projects.length === 1) {
+        projectSel.value = contact.projects[0].id;
+      }
+      void refreshQuote();
+    });
 
     // Changing tier can strip a language the previous engine supported.
     tierSel?.addEventListener('change', () => {

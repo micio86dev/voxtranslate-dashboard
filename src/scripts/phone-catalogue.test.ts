@@ -3,8 +3,11 @@ import {
   engineById,
   groupedLanguageOptions,
   keepLanguage,
+  languageForNumber,
   languageLabel,
   languageOptions,
+  primaryNumber,
+  shouldOfferSave,
   tierOptions,
   usableCallerIds,
   validateDial,
@@ -284,5 +287,55 @@ describe('usableCallerIds', () => {
 
   it('offers nothing rather than something fabricated when the org owns nothing', () => {
     expect(usableCallerIds([])).toEqual([]);
+  });
+});
+
+describe('contacts (spec 0114)', () => {
+  const numbers = [
+    { e164: '+390212345678', label: 'Office', language: 'en', is_primary: true },
+    { e164: '+393201234567', label: 'Mobile', language: 'ca', is_primary: false },
+    { e164: '+390687654321', label: 'Fax', language: null, is_primary: false },
+  ];
+
+  it('reads the language off the number that was chosen, not off the person', () => {
+    // The whole reason the language lives on the number: one colleague, two lines, two
+    // languages. Asking the contact would be wrong half the time.
+    expect(languageForNumber(numbers, '+390212345678')).toBe('en');
+    expect(languageForNumber(numbers, '+393201234567')).toBe('ca');
+  });
+
+  it('returns null when the number carries no language, rather than guessing', () => {
+    expect(languageForNumber(numbers, '+390687654321')).toBeNull();
+    expect(languageForNumber(numbers, '+399999999999')).toBeNull();
+    expect(languageForNumber([], '+390212345678')).toBeNull();
+  });
+
+  it('picks the primary number, or the first when none is marked', () => {
+    expect(primaryNumber(numbers)?.e164).toBe('+390212345678');
+    expect(primaryNumber(numbers.slice(1))?.e164).toBe('+393201234567');
+    expect(primaryNumber([])).toBeNull();
+  });
+
+  describe('shouldOfferSave', () => {
+    it('offers to keep a number nobody in the address book holds', () => {
+      expect(shouldOfferSave({ status: 'completed', contact_id: null })).toBe(true);
+    });
+
+    it('says nothing when the person is already known', () => {
+      expect(shouldOfferSave({ status: 'completed', contact_id: 'c-1' })).toBe(false);
+    });
+
+    it('does not offer while the call is still going', () => {
+      // Asking someone to file a contact mid-conversation is asking them to stop
+      // listening. The offer belongs on the call page, after the fact.
+      for (const status of ['created', 'dialing', 'ringing', 'answered', 'bridged']) {
+        expect(shouldOfferSave({ status, contact_id: null })).toBe(false);
+      }
+    });
+
+    it('still offers after a call that failed', () => {
+      // A wrong number is exactly the one you want to fix and keep.
+      expect(shouldOfferSave({ status: 'failed', contact_id: null })).toBe(true);
+    });
   });
 });
