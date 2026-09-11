@@ -1,0 +1,18 @@
+# Gentleman Guardian Angel — project configuration.
+#
+# This submodule is its own repository with its own reviewer run, so it needs its own
+# config; without one `gga` falls back to the global defaults.
+#
+# FILE_PATTERNS: the global default is `*.ts,*.tsx,*.js,*.jsx,*.py,*.go` — which in an
+# Astro project means the pages are never looked at. Most of the code here lives in
+# `.astro` files: the markup, the inline page scripts, and every piece of copy. A review
+# that skips them reports success having read the glue and none of the product.
+#
+# The parent repository makes the same correction for `.rs`, and records why: "No matching
+# files staged" reads like approval and is not.
+PROVIDER="claude"
+FILE_PATTERNS="*.ts,*.tsx,*.js,*.jsx,*.astro,*.mjs"
+EXCLUDE_PATTERNS="*.test.ts,*.spec.ts,*.test.tsx,*.spec.tsx,*.d.ts,dist/*,node_modules/*"
+RULES_FILE="AGENTS.md"
+STRICT_MODE="true"
+TIMEOUT="300"
