@@ -518,7 +518,11 @@ const t = useTranslations(lang);
         for (const engine of engines) {
           const el = document.createElement('option');
           el.value = engine.id;
-          el.textContent = `${engine.display_name} · $${engine.rate_per_minute.toFixed(4)}/min`;
+          // `/min` is copy. `phone.perMinute` already says it in five languages, right
+          // beside the rate in the estimate card.
+          el.textContent = `${engine.display_name} · $${engine.rate_per_minute.toFixed(4)} ${t(
+            'phone.perMinute',
+          )}`;
           tierSel.appendChild(el);
         }
         // The org's configured default, when it still exists in the catalogue.
