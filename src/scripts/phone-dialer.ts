@@ -140,7 +140,15 @@ export function estimateCost(pricePerMinute: string | number, minutes: number): 
     return '0.00';
   }
   // Work in cents and ceil, so the displayed figure is never under the settled one.
-  return (Math.ceil(rate * minutes * 100) / 100).toFixed(2);
+  //
+  // `toFixed(6)` first, because ceiling a binary float is not the same as ceiling the
+  // price it stands for: `0.005 * 14 * 100` evaluates to 7.000000000000001, and the ceil
+  // turns that hair into a whole extra cent. Snapping to a hundredth of a cent — the
+  // precision the server's `MONEY_DP` works to — removes the tail without touching any
+  // real fraction of a cent, which must still round up. 167 rate/minute pairs under
+  // $0.05 were affected, every one of them against the customer.
+  const cents = Math.ceil(Number((rate * minutes * 100).toFixed(6)));
+  return (cents / 100).toFixed(2);
 }
 
 /** `95` → `1:35`. */
@@ -291,9 +299,12 @@ export function joinUrl(appBase: string, room: string | null | undefined): strin
 /**
  * Whether the "join the call" action should be offered.
  *
- * Only while the call is live. Offering it after the call is over sends someone into a
- * room nobody is in, and offering it before the recipient has answered would have the
- * caller sitting in an empty room listening to nothing.
+ * Only while the call is not over: offering it afterwards sends someone into a room
+ * nobody is in.
+ *
+ * It deliberately does NOT wait for the recipient to answer. The caller wants to be in
+ * the room before the call connects, not after — and in practice the question does not
+ * arise before dialling, because `activeRoom` is null until the server returns one.
  */
 export function canJoin(phase: CallPhase, room: string | null | undefined): boolean {
   if (isTerminal(phase)) return false;

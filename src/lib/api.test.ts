@@ -60,11 +60,18 @@ describe('request() core behaviour', () => {
   });
 
   it('does not parse a 204 body', async () => {
-    const fn = mockFetch({ ok: true, status: 204 });
+    // A spy on json(), because that is the claim. The previous assertion here
+    // (`fetch` was called once) only proved the request went out, and `jsonThrows`
+    // cannot distinguish either — `request` swallows a throwing json() with
+    // `.catch(() => null)`, which is the same `data: null` a 204 produces.
+    const json = vi.fn(async () => ({ shouldNotBeRead: true }));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({ ok: true, status: 204, json })),
+    );
     const res = await api.deleteProject('o1', 'p1');
     expect(res).toEqual({ ok: true, status: 204, data: null });
-    // json() must not have been consulted on a 204 — assert via a spy-free path:
-    expect(fn).toHaveBeenCalledOnce();
+    expect(json).not.toHaveBeenCalled();
   });
 
   it('yields null data when the body is not JSON', async () => {

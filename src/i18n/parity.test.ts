@@ -36,11 +36,15 @@ describe('locale key parity', () => {
   });
 
   for (const [name, tree] of Object.entries(LOCALES)) {
-    it(`${name} has exactly the keys en has`, () => {
-      const keys = flatten(tree).sort();
-      expect(keys.filter((k) => !REFERENCE.includes(k))).toEqual([]);
-      expect(REFERENCE.filter((k) => !keys.includes(k))).toEqual([]);
-    });
+    // `en` IS the reference, so comparing it to itself is a check that can never go red.
+    // Its blank-value check below still runs, and that one can.
+    if (name !== 'en') {
+      it(`${name} has exactly the keys en has`, () => {
+        const keys = flatten(tree).sort();
+        expect(keys.filter((k) => !REFERENCE.includes(k))).toEqual([]);
+        expect(REFERENCE.filter((k) => !keys.includes(k))).toEqual([]);
+      });
+    }
 
     it(`${name} leaves no value blank`, () => {
       // A blank string is worse than a missing key: the fallback never fires, so the UI
