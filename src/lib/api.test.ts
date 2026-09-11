@@ -780,3 +780,66 @@ describe('VoIP wrappers hit the paths they claim', () => {
     expect(put.body).toEqual({ enabled: true, require_project: true });
   });
 });
+
+describe('contact wrappers hit the paths they claim (spec 0114)', () => {
+  const ORG = 'org-1';
+  const PREFIX = `${BASE}/api/business/organizations/${ORG}/voip/contacts`;
+
+  it('list, with the filters people actually use', async () => {
+    const fn = mockFetch({ json: { contacts: [], page: 1, limit: 50 } });
+    await api.listVoipContacts(ORG, {
+      q: 'zhang',
+      projectId: 'p-1',
+      tag: 'supplier',
+      language: 'zh',
+    });
+    const { url } = lastCall(fn);
+    expect(url).toContain(`${PREFIX}?`);
+    expect(url).toContain('q=zhang');
+    expect(url).toContain('project_id=p-1');
+    expect(url).toContain('tag=supplier');
+    expect(url).toContain('language=zh');
+  });
+
+  it('list, with nothing to filter and therefore no query string', async () => {
+    const fn = mockFetch({ json: { contacts: [], page: 1, limit: 50 } });
+    await api.listVoipContacts(ORG);
+    expect(lastCall(fn).url).toBe(PREFIX);
+  });
+
+  it('create, read, update and delete one contact', async () => {
+    const fn = mockFetch({ json: { id: 'k-1' } });
+
+    await api.createVoipContact(ORG, { name: 'Wei' });
+    expect(lastCall(fn).url).toBe(PREFIX);
+    expect(lastCall(fn).init.method).toBe('POST');
+
+    await api.getVoipContact(ORG, 'k-1');
+    expect(lastCall(fn).url).toBe(`${PREFIX}/k-1`);
+    expect(lastCall(fn).init.method).toBe('GET');
+
+    await api.updateVoipContact(ORG, 'k-1', { name: 'Wei Zhang' });
+    expect(lastCall(fn).url).toBe(`${PREFIX}/k-1`);
+    expect(lastCall(fn).init.method).toBe('PATCH');
+    expect(lastCall(fn).body).toEqual({ name: 'Wei Zhang' });
+
+    await api.deleteVoipContact(ORG, 'k-1');
+    expect(lastCall(fn).url).toBe(`${PREFIX}/k-1`);
+    expect(lastCall(fn).init.method).toBe('DELETE');
+  });
+
+  it('escapes the number in a lookup, because a + in a query string is a space', async () => {
+    const fn = mockFetch({ json: { id: 'k-1', name: 'Wei', company: null, language: 'zh' } });
+    await api.lookupVoipContact(ORG, '+8613800138000');
+    expect(lastCall(fn).url).toBe(`${PREFIX}/lookup?e164=%2B8613800138000`);
+  });
+
+  it('reports an unknown number as a plain miss, not an error to handle', async () => {
+    // Not knowing somebody is normal: the call page uses exactly this to decide whether
+    // to offer to save a number.
+    mockFetch({ ok: false, status: 404, json: { error: 'not found' } });
+    const res = await api.lookupVoipContact(ORG, '+8613800138000');
+    expect(res.ok).toBe(false);
+    expect(res.status).toBe(404);
+  });
+});
