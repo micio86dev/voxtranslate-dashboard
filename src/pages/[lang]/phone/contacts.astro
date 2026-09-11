@@ -194,7 +194,7 @@ const t = useTranslations(lang);
 
       const number = document.createElement('input');
       number.className = 'field';
-      number.placeholder = '+39 320 123 4567';
+      number.placeholder = t('phone.numberPh');
       number.dataset.field = 'e164';
       number.value = value.e164 ?? '';
       number.setAttribute('aria-label', t('phone.number'));
