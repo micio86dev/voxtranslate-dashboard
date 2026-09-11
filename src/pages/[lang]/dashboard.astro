@@ -96,13 +96,25 @@ const link = (p: string) => localizePath(lang, p);
     <a href={link('members')} class="btn-ghost">{t('dashboard.inviteMember')}</a>
     <a href={link('projects/new')} class="btn-ghost">{t('dashboard.newProject')}</a>
     <a href={link('meetings')} class="btn-ghost">{t('dashboard.newMeeting')}</a>
+    <!--
+      Revealed only for an organisation that has actually turned phone calls on. A quick
+      action for a feature you do not have is clutter, and one that leads to a "not
+      enabled" card is worse than absent.
+    -->
+    <a id="quick-call" href={link('phone')} class="btn-ghost hidden">{t('dashboard.newCall')}</a>
   </div>
 </BaseLayout>
 
 <script>
   import { onPage } from '../../scripts/nav';
   import { boot } from '../../scripts/app-boot';
-  import { listMembers, listProjects, getAnalytics, listMeetings } from '../../lib/api';
+  import {
+    listMembers,
+    listProjects,
+    getAnalytics,
+    listMeetings,
+    getVoipSettings,
+  } from '../../lib/api';
   import { useTranslations, type Locale } from '../../lib/i18n';
   import { barChart, esc, hbars } from '../../lib/charts';
 
@@ -111,6 +123,17 @@ const link = (p: string) => localizePath(lang, p);
     if (!ctx) return;
     const t = useTranslations(ctx.lang as Locale);
     const orgId = ctx.activeOrg.id;
+
+    // Phone calls need a live subscription, so an org without one cannot have them and
+    // there is nothing to ask the server about. Checking that first keeps this page's
+    // request count where it was for everyone else.
+    if (ctx.activeOrg.subscription_active) {
+      void getVoipSettings(orgId).then((res) => {
+        if (res.ok && res.data?.enabled) {
+          document.getElementById('quick-call')?.classList.remove('hidden');
+        }
+      });
+    }
     const set = (id: string, v: string) => {
       const el = document.getElementById(id);
       if (el) el.textContent = v;

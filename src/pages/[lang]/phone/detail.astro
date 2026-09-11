@@ -1,0 +1,200 @@
+---
+/**
+ * `/[lang]/phone/detail/?id=<call_id>` — the telephony record for one call
+ * (spec 0112 R4, R8).
+ *
+ * The dialer's recent-calls list has linked to a per-call page since 1.50.0 and the link
+ * 404'd. A path segment cannot serve it — the dashboard is `output: 'static'` — so this
+ * follows the convention already used by `history/detail/?session=` and
+ * `projects/detail/?id=`.
+ *
+ * This page owns the telephony record. The conversation itself — transcript, on-demand
+ * translation, recording player, TXT/PDF export — already exists at
+ * `history/detail/?session=` for any `call_sessions` row, and a VoIP call is one, so it
+ * is linked rather than copied.
+ */
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import SectionNav from '../../../components/phone/SectionNav.astro';
+import { localePaths, isLocale, DEFAULT_LOCALE, useTranslations } from '../../../lib/i18n';
+
+export function getStaticPaths() {
+  return localePaths();
+}
+
+const lang = isLocale(Astro.params.lang) ? Astro.params.lang : DEFAULT_LOCALE;
+const t = useTranslations(lang);
+---
+
+<BaseLayout lang={lang} title={t('phone.detail.title')} chrome>
+  <div class="flex flex-wrap items-end justify-between gap-3">
+    <h1 class="text-2xl font-bold">{t('phone.detail.title')}</h1>
+    <a href={`/${lang}/phone/calls/`} class="btn-ghost text-sm">{t('common.back')}</a>
+  </div>
+
+  <SectionNav lang={lang} current="calls" />
+
+  <p id="loading" class="mt-6 text-sm text-muted">{t('common.loading')}</p>
+  <p id="load-error" class="mt-6 hidden text-sm text-danger" role="alert"></p>
+
+  <div id="call-detail" class="mt-6 hidden grid max-w-3xl gap-6">
+    <section class="card grid gap-3">
+      <div class="flex flex-wrap items-baseline justify-between gap-2">
+        <p id="recipient" class="font-mono text-2xl font-bold"></p>
+        <span id="status" class="badge"></span>
+      </div>
+      <p id="failure" class="hidden text-sm text-danger" role="alert"></p>
+      <dl class="grid gap-2 text-sm sm:grid-cols-2">
+        <div class="flex justify-between gap-2">
+          <dt class="text-muted">{t('phone.detail.recipient')}</dt>
+          <dd id="country"></dd>
+        </div>
+        <div class="flex justify-between gap-2">
+          <dt class="text-muted">{t('phone.detail.languages')}</dt>
+          <dd id="languages"></dd>
+        </div>
+        <div class="flex justify-between gap-2">
+          <dt class="text-muted">{t('phone.tier')}</dt>
+          <dd id="tier"></dd>
+        </div>
+        <div class="flex justify-between gap-2">
+          <dt class="text-muted">{t('phone.duration')}</dt>
+          <dd id="duration"></dd>
+        </div>
+      </dl>
+    </section>
+
+    <section class="card grid gap-2" aria-labelledby="cost-h">
+      <h2 id="cost-h" class="text-sm font-semibold">{t('phone.detail.cost')}</h2>
+      <div class="flex items-baseline gap-2">
+        <span id="credits" class="text-3xl font-bold">—</span>
+        <span id="cost-status" class="text-xs text-muted"></span>
+      </div>
+      <p id="rate" class="text-sm text-muted"></p>
+    </section>
+
+    <section class="card grid gap-2" aria-labelledby="consent-h">
+      <h2 id="consent-h" class="text-sm font-semibold">{t('phone.detail.consent')}</h2>
+      <p id="consent" class="text-sm"></p>
+    </section>
+
+    <!--
+      The conversation lives on the session page, which already renders the transcript,
+      its on-demand translation, the recording and the exports for any call_sessions row.
+      A phone call is one of those rows, so it is linked, not re-implemented.
+    -->
+    <section id="conversation" class="card hidden grid gap-3" aria-labelledby="conv-h">
+      <h2 id="conv-h" class="text-sm font-semibold">{t('phone.detail.transcript')}</h2>
+      <p id="capture-state" class="text-sm text-muted"></p>
+      <a id="open-transcript" class="btn-ghost hidden self-start text-sm" href="#"
+        >{t('phone.detail.transcript')}</a
+      >
+    </section>
+  </div>
+</BaseLayout>
+
+<script>
+  import { onPage } from '../../../scripts/nav';
+  import { boot } from '../../../scripts/app-boot';
+  import { currentOrgId, getVoipCall } from '../../../lib/api';
+  import { useTranslations, type Locale } from '../../../lib/i18n';
+  import {
+    formatCredits,
+    formatDuration,
+    phaseFromStatus,
+    refusalKey,
+  } from '../../../scripts/phone-dialer';
+
+  onPage('call-detail', async () => {
+    const ctx = await boot();
+    if (!ctx) return;
+    const t = useTranslations(ctx.lang as Locale);
+    const locale = ctx.lang;
+    const org = ctx.activeOrg.id ?? currentOrgId();
+    if (!org) return;
+
+    const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T | null;
+    const callId = new URLSearchParams(location.search).get('id');
+    const loading = $('loading');
+    const loadError = $('load-error');
+
+    function fail(message: string) {
+      loading?.classList.add('hidden');
+      if (loadError) {
+        loadError.textContent = message;
+        loadError.classList.remove('hidden');
+      }
+    }
+
+    if (!callId) return fail(t('common.error'));
+
+    const res = await getVoipCall(org, callId);
+    // A call belonging to another organisation is a 404, not a 403 — the server does not
+    // confirm that an id it will not show you exists.
+    if (!res.ok || !res.data) return fail(t('common.error'));
+    const call = res.data;
+
+    loading?.classList.add('hidden');
+    const root = $('call-detail');
+    root?.classList.remove('hidden');
+    root?.classList.add('grid');
+
+    const set = (id: string, text: string) => {
+      const el = $(id);
+      if (el) el.textContent = text;
+    };
+
+    set('recipient', call.recipient_e164);
+    set('country', call.recipient_country);
+    set('languages', `${call.source_language} → ${call.target_language}`);
+    set('tier', call.engine_id);
+    set('duration', formatDuration(call.duration_seconds));
+    set('status', t(`phase.${phaseFromStatus(call.status)}`));
+
+    if (call.failure_reason) {
+      const failure = $('failure');
+      if (failure) {
+        failure.textContent = t(refusalKey(call.failure_reason));
+        failure.classList.remove('hidden');
+      }
+    }
+
+    set('credits', `$${formatCredits(call.credits_consumed)}`);
+    // A status, never a number: what the leg cost us and the margin we made on it stay on
+    // the server (spec 0112 R6). "Pending" rather than a zero, because a zero reads as
+    // "this call was free".
+    set(
+      'cost-status',
+      call.cost_status === 'final'
+        ? t('phone.detail.costFinal')
+        : t('phone.detail.providerCostPending'),
+    );
+    if (call.quoted_price_per_min) {
+      set('rate', `$${Number(call.quoted_price_per_min).toFixed(4)} ${t('phone.perMinute')}`);
+    }
+
+    const CONSENT_COPY: Record<string, string> = {
+      not_required: 'phone.detail.consentNotRequired',
+      granted: 'phone.detail.consentGranted',
+      denied: 'phone.detail.consentDenied',
+      timeout: 'phone.detail.consentTimeout',
+      pending: 'phone.detail.consentPending',
+    };
+    set('consent', t(CONSENT_COPY[call.consent_status] ?? 'phone.detail.consentPending'));
+
+    // Offer the conversation only when there is one to offer. A link into an empty
+    // transcript reads as a broken page rather than as a call nobody recorded.
+    const captured = call.transcription_status !== 'none' || call.recording_status !== 'none';
+    if (captured) {
+      $('conversation')?.classList.remove('hidden');
+      $('conversation')?.classList.add('grid');
+      const processing =
+        call.transcription_status === 'processing' || call.recording_status === 'processing';
+      set('capture-state', processing ? t('transcript.processing') : '');
+      const link = $<HTMLAnchorElement>('open-transcript');
+      if (link && !processing) {
+        link.setAttribute('href', `/${locale}/history/detail/?session=${call.session_id}`);
+        link.classList.remove('hidden');
+      }
+    }
+  });
+</script>

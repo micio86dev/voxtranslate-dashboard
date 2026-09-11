@@ -149,7 +149,8 @@
     "upcomingMeetings": "Prossime riunioni",
     "viewAll": "Vedi tutto",
     "noUpcoming": "Nessuna riunione in programma.",
-    "newMeeting": "Programma una riunione"
+    "newMeeting": "Programma una riunione",
+    "newCall": "Fai una chiamata"
   },
   "org": {
     "switch": "Spazio di lavoro",
@@ -650,6 +651,7 @@
     "country": "Paese",
     "myLanguage": "La mia lingua",
     "recipientLanguage": "La sua lingua",
+    "chooseLanguage": "Scegli una lingua",
     "tier": "Livello di traduzione",
     "project": "Progetto",
     "noProject": "Nessun progetto",
@@ -682,6 +684,8 @@
     "duration": "Durata",
     "cost": "Costo",
     "recent": "Chiamate recenti",
+    "allCalls": "Tutte le chiamate",
+    "settingsTab": "Impostazioni",
     "empty": "Ancora nessuna chiamata.",
     "emptyHint": "Qui compariranno le chiamate telefoniche tradotte della tua organizzazione.",
     "disabled": "Le chiamate telefoniche non sono attive per questa organizzazione.",
@@ -694,6 +698,13 @@
       "both": "Un breve annuncio che spiega che la chiamata usa la traduzione AI in tempo reale e sarà registrata e trascritta.",
       "willAsk": "Le verrà chiesto di premere 1 prima che si registri o trascriva qualcosa. Se rifiuta, la chiamata prosegue senza.",
       "language": "Pronunciato in {language}."
+    },
+    "error": {
+      "languageNotInTier": "Questo livello non supporta quella lingua. Scegli un'altra lingua, o un altro livello.",
+      "projectRequired": "Questa organizzazione collega ogni chiamata a un progetto. Scegline uno.",
+      "sourceLanguageRequired": "Scegli la lingua in cui parlerai.",
+      "targetLanguageRequired": "Scegli la lingua che parla il destinatario.",
+      "tierRequired": "Scegli un livello di traduzione."
     },
     "reason": {
       "generic": "Non è stato possibile effettuare la chiamata. Riprova.",
@@ -761,6 +772,7 @@
       "cost": "Costo",
       "providerCost": "Costo del provider",
       "providerCostPending": "Non ancora comunicato dal provider",
+      "costFinal": "Definitivo",
       "margin": "Margine lordo",
       "consent": "Informativa",
       "consentNotRequired": "Annunciata; nessun consenso richiesto",

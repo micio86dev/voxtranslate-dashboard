@@ -81,12 +81,45 @@ export function normaliseDestination(raw: string): string {
 }
 
 /**
+ * Why a typed number cannot be dialled, named with the **server's own reason code**.
+ *
+ * The server already ships localised copy for each of these under `phone.reason.number_*`
+ * (see `KNOWN_REASONS`), so reporting which rule was broken costs no new translation in
+ * any of the five locales and tells the user what to change. "Invalid number" does not.
+ *
+ * This stays a convenience: `E164::parse` on the server is authoritative, and it is the
+ * server that spends the money. Duplicating the full E.164 rules here would guarantee the
+ * two drift.
+ */
+export type NumberProblem =
+  | 'number_empty'
+  | 'number_non_numeric'
+  | 'number_leading_zero'
+  | 'number_too_short'
+  | 'number_too_long';
+
+export function numberProblem(raw: string | null | undefined): NumberProblem | null {
+  const trimmed = (raw ?? '').trim();
+  if (!trimmed) return 'number_empty';
+  const digits = normaliseDestination(trimmed).replace(/^\+/, '');
+  // Something was typed, and none of it was a digit.
+  if (!digits) return 'number_non_numeric';
+  // A national trunk prefix, not an international number: `+0…` is never dialable.
+  if (digits.startsWith('0')) return 'number_leading_zero';
+  if (digits.length < 8) return 'number_too_short';
+  if (digits.length > 15) return 'number_too_long';
+  return null;
+}
+
+/**
  * A cheap "is this worth asking the server about" check, so the dialer does not fire a
  * quote on every keystroke of a half-typed number.
+ *
+ * The same rule as [`numberProblem`], asked as a yes/no question — one set of thresholds,
+ * so the number the dialer quotes and the number it will let you send cannot disagree.
  */
 export function looksDialable(raw: string): boolean {
-  const digits = normaliseDestination(raw).replace(/^\+/, '');
-  return digits.length >= 8 && digits.length <= 15 && !digits.startsWith('0');
+  return numberProblem(raw) === null;
 }
 
 /** Credits (integers, 1 = $0.01) as a currency amount. */

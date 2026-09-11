@@ -149,7 +149,8 @@
     "upcomingMeetings": "Anstehende Meetings",
     "viewAll": "Alle ansehen",
     "noUpcoming": "Keine anstehenden Meetings.",
-    "newMeeting": "Meeting planen"
+    "newMeeting": "Meeting planen",
+    "newCall": "Anruf starten"
   },
   "org": {
     "switch": "Workspace",
@@ -650,6 +651,7 @@
     "country": "Land",
     "myLanguage": "Meine Sprache",
     "recipientLanguage": "Ihre Sprache",
+    "chooseLanguage": "Sprache wählen",
     "tier": "Übersetzungsstufe",
     "project": "Projekt",
     "noProject": "Kein Projekt",
@@ -682,6 +684,8 @@
     "duration": "Dauer",
     "cost": "Kosten",
     "recent": "Letzte Anrufe",
+    "allCalls": "Alle Anrufe",
+    "settingsTab": "Einstellungen",
     "empty": "Noch keine Anrufe.",
     "emptyHint": "Hier erscheinen die übersetzten Telefonanrufe Ihrer Organisation.",
     "disabled": "Telefonanrufe sind für diese Organisation nicht aktiviert.",
@@ -694,6 +698,13 @@
       "both": "Eine kurze Ansage, dass der Anruf KI-Übersetzung in Echtzeit verwendet und aufgezeichnet sowie transkribiert wird.",
       "willAsk": "Sie wird gebeten, die 1 zu drücken, bevor irgendetwas aufgezeichnet oder transkribiert wird. Lehnt sie ab, läuft der Anruf ohne weiter.",
       "language": "Gesprochen auf {language}."
+    },
+    "error": {
+      "languageNotInTier": "Diese Stufe unterstützt diese Sprache nicht. Andere Sprache oder andere Stufe wählen.",
+      "projectRequired": "Diese Organisation ordnet jeden Anruf einem Projekt zu. Projekt wählen.",
+      "sourceLanguageRequired": "Eigene Sprache wählen.",
+      "targetLanguageRequired": "Sprache der Gegenstelle wählen.",
+      "tierRequired": "Übersetzungsstufe wählen."
     },
     "reason": {
       "generic": "Der Anruf konnte nicht hergestellt werden. Bitte erneut versuchen.",
@@ -761,6 +772,7 @@
       "cost": "Kosten",
       "providerCost": "Anbieterkosten",
       "providerCostPending": "Vom Anbieter noch nicht gemeldet",
+      "costFinal": "Endgültig",
       "margin": "Bruttomarge",
       "consent": "Hinweis",
       "consentNotRequired": "Angesagt; keine Einwilligung erforderlich",

@@ -1,0 +1,295 @@
+---
+/**
+ * `/[lang]/phone/settings/` — the organisation's phone policy (spec 0112 R4, R7).
+ *
+ * The dialer has linked here since 1.50.0 and the link 404'd: the page was planned in
+ * spec 0111 §4 and never built, while its copy shipped in all five locales. Every field
+ * below already had a translated label waiting for it.
+ *
+ * Writing is an ADMIN action and the server enforces that (`put_settings` requires ADMIN
+ * and writes an audit-log row). The read-only rendering here is courtesy, not security.
+ */
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import SectionNav from '../../../components/phone/SectionNav.astro';
+import { localePaths, isLocale, DEFAULT_LOCALE, useTranslations } from '../../../lib/i18n';
+
+export function getStaticPaths() {
+  return localePaths();
+}
+
+const lang = isLocale(Astro.params.lang) ? Astro.params.lang : DEFAULT_LOCALE;
+const t = useTranslations(lang);
+---
+
+<BaseLayout lang={lang} title={t('phone.settings.title')} chrome>
+  <div class="flex flex-wrap items-end justify-between gap-3">
+    <h1 class="text-2xl font-bold">{t('phone.settings.title')}</h1>
+    <a href={`/${lang}/phone/`} class="btn-ghost text-sm">{t('common.back')}</a>
+  </div>
+
+  <SectionNav lang={lang} current="settings" />
+
+  <div id="voip-off" class="card mt-6 hidden">
+    <p class="text-sm">{t('phone.disabled')}</p>
+    <p class="mt-1 text-sm text-muted">{t('phone.disabledAdmin')}</p>
+  </div>
+
+  <form id="settings-form" class="mt-6 hidden grid max-w-2xl gap-6" novalidate>
+    <section class="card grid gap-4">
+      <label class="flex items-center gap-2 text-sm font-medium">
+        <input id="enabled" type="checkbox" class="checkbox" />
+        {t('phone.settings.enabled')}
+      </label>
+
+      <div>
+        <label for="home-country" class="label">{t('phone.settings.homeCountry')}</label>
+        <input id="home-country" class="field" maxlength="2" placeholder="IT" autocomplete="off" />
+        <p class="mt-1 text-xs text-muted">{t('phone.settings.homeCountryHint')}</p>
+      </div>
+
+      <label class="flex items-center gap-2 text-sm">
+        <input id="allow-international" type="checkbox" class="checkbox" />
+        {t('phone.settings.allowInternational')}
+      </label>
+
+      <div>
+        <label for="allowed" class="label">{t('phone.settings.allowedCountries')}</label>
+        <input id="allowed" class="field" placeholder="IT, ES, DE" autocomplete="off" />
+        <p class="mt-1 text-xs text-muted">{t('phone.settings.allowedHint')}</p>
+      </div>
+
+      <div>
+        <label for="blocked" class="label">{t('phone.settings.blockedCountries')}</label>
+        <input id="blocked" class="field" autocomplete="off" />
+      </div>
+    </section>
+
+    <section class="card grid gap-4">
+      <div>
+        <label for="consent" class="label">{t('phone.settings.consentPolicy')}</label>
+        <select id="consent" class="field mt-1">
+          <option value="notice_only">{t('phone.settings.consentNotice')}</option>
+          <option value="press_key">{t('phone.settings.consentPressKey')}</option>
+          <option value="verbal">{t('phone.settings.consentVerbal')}</option>
+          <option value="disabled">{t('phone.settings.consentDisabled')}</option>
+        </select>
+        <!--
+          The server refuses this combination outright
+          (`consent_cannot_be_disabled_while_capture_is_enabled`). Saying so here turns a
+          rejected save into a question the admin can answer before pressing the button.
+        -->
+        <p id="consent-warning" class="mt-1 hidden text-xs text-warn" role="alert">
+          {t('phone.settings.consentDisabledWarning')}
+        </p>
+      </div>
+
+      <div>
+        <label for="refused" class="label">{t('phone.settings.refusedAction')}</label>
+        <select id="refused" class="field mt-1">
+          <option value="continue_unrecorded">{t('phone.settings.refusedContinue')}</option>
+          <option value="end">{t('phone.settings.refusedEnd')}</option>
+        </select>
+      </div>
+
+      <label class="flex items-center gap-2 text-sm">
+        <input id="recording" type="checkbox" class="checkbox" />
+        {t('phone.settings.recording')}
+      </label>
+      <label class="flex items-center gap-2 text-sm">
+        <input id="transcription" type="checkbox" class="checkbox" />
+        {t('phone.settings.transcription')}
+      </label>
+      <label class="flex items-center gap-2 text-sm">
+        <input id="ai-analysis" type="checkbox" class="checkbox" />
+        {t('phone.settings.aiAnalysis')}
+      </label>
+    </section>
+
+    <section class="card grid gap-4 sm:grid-cols-2">
+      <div>
+        <label for="max-minutes" class="label">{t('phone.settings.maxMinutes')}</label>
+        <input id="max-minutes" type="number" min="1" class="field" />
+      </div>
+      <div>
+        <label for="per-user" class="label">{t('phone.settings.perUser')}</label>
+        <input id="per-user" type="number" min="1" class="field" />
+      </div>
+      <div>
+        <label for="per-org" class="label">{t('phone.settings.perOrg')}</label>
+        <input id="per-org" type="number" min="1" class="field" />
+      </div>
+      <div>
+        <label for="default-tier" class="label">{t('phone.settings.defaultTier')}</label>
+        <select id="default-tier" class="field"></select>
+      </div>
+      <label class="flex items-center gap-2 text-sm sm:col-span-2">
+        <input id="require-project" type="checkbox" class="checkbox" />
+        {t('phone.settings.requireProject')}
+      </label>
+    </section>
+
+    <div class="flex flex-wrap items-center gap-3">
+      <button id="save" type="submit" class="btn-primary">{t('common.save')}</button>
+      <p id="saved" class="hidden text-sm text-ok" role="status">{t('phone.settings.saved')}</p>
+      <p id="save-error" class="hidden text-sm text-danger" role="alert"></p>
+    </div>
+  </form>
+</BaseLayout>
+
+<script>
+  import { onPage } from '../../../scripts/nav';
+  import { boot } from '../../../scripts/app-boot';
+  import {
+    currentOrgId,
+    getEngines,
+    getVoipSettings,
+    saveVoipSettings,
+    type VoipSettings,
+  } from '../../../lib/api';
+  import { useTranslations, type Locale } from '../../../lib/i18n';
+
+  onPage('settings-form', async () => {
+    const ctx = await boot();
+    if (!ctx) return;
+    const t = useTranslations(ctx.lang as Locale);
+    const org = ctx.activeOrg.id ?? currentOrgId();
+    if (!org) return;
+
+    const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T | null;
+    const form = $<HTMLFormElement>('settings-form');
+
+    const res = await getVoipSettings(org);
+    // A 404 means the feature is off for the whole deployment. There is nothing an admin
+    // here can do about that, so the form is not shown at all.
+    if (!res.ok || !res.data) {
+      $('voip-off')?.classList.remove('hidden');
+      return;
+    }
+    form?.classList.remove('hidden');
+    form?.classList.add('grid');
+
+    const check = (id: string) => $<HTMLInputElement>(id);
+    const num = (id: string) => $<HTMLInputElement>(id);
+    const sel = (id: string) => $<HTMLSelectElement>(id);
+
+    const enabled = check('enabled');
+    const homeCountry = $<HTMLInputElement>('home-country');
+    const allowIntl = check('allow-international');
+    const allowed = $<HTMLInputElement>('allowed');
+    const blocked = $<HTMLInputElement>('blocked');
+    const consent = sel('consent');
+    const refused = sel('refused');
+    const recording = check('recording');
+    const transcription = check('transcription');
+    const aiAnalysis = check('ai-analysis');
+    const maxMinutes = num('max-minutes');
+    const perUser = num('per-user');
+    const perOrg = num('per-org');
+    const defaultTier = sel('default-tier');
+    const requireProject = check('require-project');
+    const consentWarning = $('consent-warning');
+    const saved = $('saved');
+    const saveError = $('save-error');
+    const saveBtn = $<HTMLButtonElement>('save');
+
+    function fill(s: VoipSettings) {
+      if (enabled) enabled.checked = s.enabled;
+      if (homeCountry) homeCountry.value = s.home_country ?? '';
+      if (allowIntl) allowIntl.checked = s.allow_international;
+      if (allowed) allowed.value = s.allowed_countries.join(', ');
+      if (blocked) blocked.value = s.blocked_countries.join(', ');
+      if (consent) consent.value = s.consent_policy;
+      if (refused) refused.value = s.consent_refused_action;
+      if (recording) recording.checked = s.recording_enabled;
+      if (transcription) transcription.checked = s.transcription_enabled;
+      if (aiAnalysis) aiAnalysis.checked = s.ai_analysis_enabled;
+      if (maxMinutes) maxMinutes.value = String(s.max_call_minutes);
+      if (perUser) perUser.value = String(s.max_concurrent_per_user);
+      if (perOrg) perOrg.value = String(s.max_concurrent_per_org);
+      if (requireProject) requireProject.checked = s.require_project;
+      if (defaultTier) defaultTier.value = s.default_engine_id ?? '';
+      syncConsentWarning();
+    }
+
+    /** Mirror the server's rule rather than discovering it on a rejected save. */
+    function syncConsentWarning() {
+      const capturing = !!recording?.checked || !!transcription?.checked;
+      const off = consent?.value === 'disabled';
+      consentWarning?.classList.toggle('hidden', !(capturing && off));
+    }
+
+    for (const el of [consent, recording, transcription]) {
+      el?.addEventListener('change', syncConsentWarning);
+    }
+
+    // A comma-separated list of country codes. The server normalises and validates them
+    // (`settings_round_trip_and_normalise_country_codes`), so this only has to split.
+    const codes = (raw: string) =>
+      raw
+        .split(',')
+        .map((c) => c.trim())
+        .filter(Boolean);
+
+    const engineRes = await getEngines();
+    if (defaultTier) {
+      const none = document.createElement('option');
+      none.value = '';
+      none.textContent = t('common.none');
+      defaultTier.appendChild(none);
+      for (const engine of engineRes.data?.engines ?? []) {
+        const option = document.createElement('option');
+        option.value = engine.id;
+        option.textContent = engine.display_name;
+        defaultTier.appendChild(option);
+      }
+    }
+
+    fill(res.data);
+
+    // Writing is an admin action. The server enforces it; this only avoids offering a
+    // button that is going to be refused.
+    const isAdmin = ctx.activeOrg.role === 'admin' || ctx.activeOrg.role === 'owner';
+    if (!isAdmin) {
+      for (const el of form?.querySelectorAll('input, select, button') ?? []) {
+        (el as HTMLInputElement).disabled = true;
+      }
+    }
+
+    form?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      saved?.classList.add('hidden');
+      saveError?.classList.add('hidden');
+      if (saveBtn) saveBtn.disabled = true;
+
+      const body: Partial<VoipSettings> & { enabled: boolean } = {
+        enabled: !!enabled?.checked,
+        home_country: homeCountry?.value.trim() || null,
+        allow_international: !!allowIntl?.checked,
+        allowed_countries: codes(allowed?.value ?? ''),
+        blocked_countries: codes(blocked?.value ?? ''),
+        consent_policy: consent?.value ?? 'press_key',
+        consent_refused_action: refused?.value ?? 'continue_unrecorded',
+        recording_enabled: !!recording?.checked,
+        transcription_enabled: !!transcription?.checked,
+        ai_analysis_enabled: !!aiAnalysis?.checked,
+        max_call_minutes: Number(maxMinutes?.value || 0),
+        max_concurrent_per_user: Number(perUser?.value || 0),
+        max_concurrent_per_org: Number(perOrg?.value || 0),
+        default_engine_id: defaultTier?.value || null,
+        require_project: !!requireProject?.checked,
+      };
+
+      const out = await saveVoipSettings(org, body);
+      if (saveBtn) saveBtn.disabled = false;
+      if (!out.ok || !out.data) {
+        if (saveError) {
+          saveError.textContent = t('common.error');
+          saveError.classList.remove('hidden');
+        }
+        return;
+      }
+      fill(out.data);
+      saved?.classList.remove('hidden');
+    });
+  });
+</script>

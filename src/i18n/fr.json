@@ -149,7 +149,8 @@
     "upcomingMeetings": "Réunions à venir",
     "viewAll": "Tout voir",
     "noUpcoming": "Aucune réunion à venir.",
-    "newMeeting": "Planifier une réunion"
+    "newMeeting": "Planifier une réunion",
+    "newCall": "Passer un appel"
   },
   "org": {
     "switch": "Espace de travail",
@@ -650,6 +651,7 @@
     "country": "Pays",
     "myLanguage": "Ma langue",
     "recipientLanguage": "Sa langue",
+    "chooseLanguage": "Choisir une langue",
     "tier": "Niveau de traduction",
     "project": "Projet",
     "noProject": "Aucun projet",
@@ -682,6 +684,8 @@
     "duration": "Durée",
     "cost": "Coût",
     "recent": "Appels récents",
+    "allCalls": "Tous les appels",
+    "settingsTab": "Paramètres",
     "empty": "Aucun appel pour l'instant.",
     "emptyHint": "Les appels téléphoniques traduits de votre organisation apparaîtront ici.",
     "disabled": "Les appels téléphoniques ne sont pas activés pour cette organisation.",
@@ -694,6 +698,13 @@
       "both": "Une courte annonce indiquant que l'appel utilise la traduction IA en temps réel et sera enregistré et transcrit.",
       "willAsk": "Il lui sera demandé d'appuyer sur 1 avant tout enregistrement ou transcription. Si elle refuse, l'appel continue sans.",
       "language": "Énoncée en {language}."
+    },
+    "error": {
+      "languageNotInTier": "Ce niveau ne prend pas en charge cette langue. Choisir une autre langue, ou un autre niveau.",
+      "projectRequired": "Cette organisation rattache chaque appel à un projet. En choisir un.",
+      "sourceLanguageRequired": "Choisir votre langue.",
+      "targetLanguageRequired": "Choisir la langue de votre correspondant.",
+      "tierRequired": "Choisir un niveau de traduction."
     },
     "reason": {
       "generic": "L'appel n'a pas pu être passé. Réessayez.",
@@ -761,6 +772,7 @@
       "cost": "Coût",
       "providerCost": "Coût opérateur",
       "providerCostPending": "Pas encore communiqué par l'opérateur",
+      "costFinal": "Définitif",
       "margin": "Marge brute",
       "consent": "Information",
       "consentNotRequired": "Annoncé ; aucun consentement requis",

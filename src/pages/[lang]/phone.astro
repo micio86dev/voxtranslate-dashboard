@@ -45,7 +45,7 @@ const t = useTranslations(lang);
             type="tel"
             inputmode="tel"
             autocomplete="tel"
-            class="input mt-1 w-full"
+            class="field mt-1"
             placeholder="+39 320 123 4567"
             aria-describedby="number-hint number-error"
             required
@@ -58,22 +58,22 @@ const t = useTranslations(lang);
         <div class="grid gap-4 sm:grid-cols-2">
           <div>
             <label for="my-lang" class="label">{t('phone.myLanguage')}</label>
-            <select id="my-lang" class="input mt-1 w-full"></select>
+            <select id="my-lang" class="field mt-1"></select>
           </div>
           <div>
             <label for="their-lang" class="label">{t('phone.recipientLanguage')}</label>
-            <select id="their-lang" class="input mt-1 w-full"></select>
+            <select id="their-lang" class="field mt-1"></select>
           </div>
         </div>
 
         <div class="grid gap-4 sm:grid-cols-2">
           <div>
             <label for="tier" class="label">{t('phone.tier')}</label>
-            <select id="tier" class="input mt-1 w-full"></select>
+            <select id="tier" class="field mt-1"></select>
           </div>
           <div>
             <label for="project" class="label">{t('phone.project')}</label>
-            <select id="project" class="input mt-1 w-full">
+            <select id="project" class="field mt-1">
               <option value="">{t('phone.noProject')}</option>
             </select>
           </div>
@@ -81,7 +81,7 @@ const t = useTranslations(lang);
 
         <div>
           <label for="caller-id" class="label">{t('phone.callerId')}</label>
-          <select id="caller-id" class="input mt-1 w-full">
+          <select id="caller-id" class="field mt-1">
             <option value="">{t('phone.callerIdDefault')}</option>
           </select>
         </div>
@@ -121,7 +121,7 @@ const t = useTranslations(lang);
             second implementation of the hardest part of the product is not worth saving
             one tab. Opened in a new tab so hanging up here stays available.
           -->
-          <a id="join" class="btn-secondary hidden" target="_blank" rel="noopener" href="#"
+          <a id="join" class="btn-ghost hidden" target="_blank" rel="noopener" href="#"
             >{t('phone.join')}</a
           >
           <button id="video" type="button" class="btn-ghost hidden"
@@ -141,15 +141,21 @@ const t = useTranslations(lang);
               id="video-url"
               type="text"
               readonly
-              class="input flex-1 font-mono text-xs"
+              class="field min-w-0 flex-1 font-mono text-xs"
               aria-label={t('phone.upgradeVideo')}
             />
-            <button id="video-copy" type="button" class="btn-secondary">{t('common.copy')}</button>
+            <button id="video-copy" type="button" class="btn-ghost">{t('common.copy')}</button>
           </div>
           <p id="video-status" class="mt-1 text-xs text-muted" role="status"></p>
         </div>
 
         <p id="call-error" class="hidden text-sm text-danger" role="alert"></p>
+        <!--
+          A refusal the user can act on gets a way out. `insufficient_credits` is the one
+          refusal whose fix is one click away, and leaving the user to find the credits
+          page themselves is the difference between a wall and a door.
+        -->
+        <a id="call-error-cta" class="btn-ghost hidden self-start text-sm" href="#"></a>
       </form>
     </section>
 
@@ -190,10 +196,14 @@ const t = useTranslations(lang);
   import {
     currentOrgId,
     dialVoipCall,
+    getEngines,
+    getLanguageCatalogue,
     getVoipCalls,
     getVoipSettings,
     createVoipVideoInvite,
     hangUpVoipCall,
+    listProjects,
+    listVoipNumbers,
     quoteVoipCall,
     getVoipCall,
     type VoipQuote,
@@ -215,6 +225,15 @@ const t = useTranslations(lang);
     willAskConsent,
     type CallPhase,
   } from '../../scripts/phone-dialer';
+  import {
+    engineById,
+    groupedLanguageOptions,
+    keepLanguage,
+    usableCallerIds,
+    validateDial,
+    type EngineOption,
+    type LanguageCatalogue,
+  } from '../../scripts/phone-catalogue';
 
   onPage('dialer', async () => {
     const ctx = await boot();
@@ -262,6 +281,12 @@ const t = useTranslations(lang);
     const callError = $('call-error');
     const disclosureBody = $('disclosure-body');
     const disclosureAsk = $('disclosure-ask');
+    const errorCta = $<HTMLAnchorElement>('call-error-cta');
+    const myLang = $<HTMLSelectElement>('my-lang');
+    const theirLang = $<HTMLSelectElement>('their-lang');
+    const tierSel = $<HTMLSelectElement>('tier');
+    const projectSel = $<HTMLSelectElement>('project');
+    const callerIdSel = $<HTMLSelectElement>('caller-id');
 
     let phase: CallPhase = 'idle';
     let activeCall: string | null = null;
@@ -313,6 +338,41 @@ const t = useTranslations(lang);
       el.classList.remove('hidden');
     }
 
+    /**
+     * Show a message that is already a translation key rather than a server reason code.
+     * Client-side refusals (`phone.error.*`) and server ones (`phone.reason.*`) both land
+     * here; only the lookup differs.
+     */
+    function showKeyed(el: HTMLElement | null, key: string | null) {
+      if (!el) return;
+      if (!key) {
+        el.classList.add('hidden');
+        el.textContent = '';
+        return;
+      }
+      el.textContent = t(key);
+      el.classList.remove('hidden');
+    }
+
+    /**
+     * Offer a way out of the one refusal that has one.
+     *
+     * Mirrors `resolveHaErrorCta` in the help-assistant panel: a dead end the product
+     * knows how to fix should not make the user go looking for the fix.
+     */
+    function syncErrorCta(code: string | null) {
+      if (!errorCta) return;
+      const recoverable = code === 'insufficient_credits' || code === 'credits_exhausted';
+      errorCta.classList.toggle('hidden', !recoverable);
+      if (recoverable) {
+        errorCta.setAttribute('href', `/${locale}/credits/#plans`);
+        errorCta.textContent = t('credits.buy');
+      } else {
+        errorCta.removeAttribute('href');
+        errorCta.textContent = '';
+      }
+    }
+
     // AI analysis has nothing to analyse without a transcript. Reflected in the UI so the
     // checkbox is not silently ignored by the server.
     function syncAi() {
@@ -362,6 +422,122 @@ const t = useTranslations(lang);
       renderDisclosure(q);
     }
 
+    // ---- catalogues ---------------------------------------------------------
+    //
+    // The selects shipped in 1.50.0 declared in markup and never populated. Because
+    // `select.value` is `''` and not `undefined`, the `?? 'en'` fallback in the submit
+    // handler never fired and every call carried an EMPTY language (spec 0112 D1). They
+    // are filled here, from the same two catalogues the call app reads.
+
+    let engines: EngineOption[] = [];
+    let catalogue: LanguageCatalogue = { languages: [], regions: [] };
+    const requireProject = settings.data?.require_project ?? false;
+
+    function placeholder(select: HTMLSelectElement, label: string) {
+      const opt = document.createElement('option');
+      opt.value = '';
+      opt.textContent = label;
+      select.appendChild(opt);
+    }
+
+    function fillLanguages(
+      select: HTMLSelectElement | null,
+      allowed: readonly string[],
+      keep: string,
+    ) {
+      if (!select) return;
+      select.replaceChildren();
+      placeholder(select, t('phone.chooseLanguage'));
+      for (const group of groupedLanguageOptions(catalogue, allowed)) {
+        const optgroup = document.createElement('optgroup');
+        optgroup.label = group.region;
+        for (const option of group.options) {
+          const el = document.createElement('option');
+          el.value = option.code;
+          el.textContent = option.label;
+          optgroup.appendChild(el);
+        }
+        select.appendChild(optgroup);
+      }
+      // Keep the choice when the engine still speaks it. When it does not, fall back to
+      // the empty placeholder rather than to the first option: silently *replacing* the
+      // user's language is the same class of bug as silently sending an empty one.
+      select.value = allowed.includes(keep) ? keep : '';
+    }
+
+    function currentEngine(): EngineOption | null {
+      return engineById(engines, tierSel?.value ?? '');
+    }
+
+    function refreshLanguages() {
+      const engine = currentEngine();
+      const inputs = engine?.input_languages ?? [];
+      const outputs = engine?.output_languages ?? [];
+      const mine = myLang?.value ?? '';
+      const theirs = theirLang?.value ?? '';
+      fillLanguages(myLang, inputs, keepLanguage(engine, mine, 'input') ? mine : '');
+      fillLanguages(theirLang, outputs, keepLanguage(engine, theirs, 'output') ? theirs : '');
+      // The caller is the person sitting here, so their dashboard language is a defensible
+      // default. The recipient's is not guessable from anything we know, and guessing it
+      // would put a stranger's call in the wrong language.
+      if (myLang && !myLang.value && inputs.includes(locale)) myLang.value = locale;
+    }
+
+    async function loadCatalogues() {
+      const [engineRes, langRes, projectRes, numberRes] = await Promise.all([
+        getEngines(),
+        getLanguageCatalogue(),
+        listProjects(org),
+        listVoipNumbers(org),
+      ]);
+
+      engines = engineRes.data?.engines ?? [];
+      if (langRes.data) {
+        catalogue = { languages: langRes.data.languages, regions: langRes.data.regions };
+      }
+
+      if (tierSel) {
+        tierSel.replaceChildren();
+        for (const engine of engines) {
+          const el = document.createElement('option');
+          el.value = engine.id;
+          el.textContent = `${engine.display_name} · $${engine.rate_per_minute.toFixed(4)}/min`;
+          tierSel.appendChild(el);
+        }
+        // The org's configured default, when it still exists in the catalogue.
+        const preferred = settings.data?.default_engine_id ?? '';
+        if (preferred && engines.some((e) => e.id === preferred)) tierSel.value = preferred;
+      }
+      refreshLanguages();
+
+      if (projectSel) {
+        for (const project of projectRes.data ?? []) {
+          const el = document.createElement('option');
+          el.value = project.id;
+          el.textContent = project.name;
+          projectSel.appendChild(el);
+        }
+      }
+
+      if (callerIdSel) {
+        // Only numbers that may actually be presented. `resolve_caller_id` refuses the
+        // rest, so offering one would produce a refusal after the user had chosen it.
+        for (const n of usableCallerIds(numberRes.data?.numbers ?? [])) {
+          const el = document.createElement('option');
+          el.value = n.e164;
+          el.textContent = n.label ? `${n.label} · ${n.e164}` : n.e164;
+          callerIdSel.appendChild(el);
+          if (n.is_default) callerIdSel.value = n.e164;
+        }
+      }
+    }
+
+    // Changing tier can strip a language the previous engine supported.
+    tierSel?.addEventListener('change', () => {
+      refreshLanguages();
+      void refreshQuote();
+    });
+
     let debounce: number | undefined;
     number?.addEventListener('input', () => {
       window.clearTimeout(debounce);
@@ -384,7 +560,10 @@ const t = useTranslations(lang);
       if (isTerminal(next)) {
         window.clearInterval(poll);
         activeCall = null;
-        if (res.data.failure_reason) showError(callError, res.data.failure_reason);
+        if (res.data.failure_reason) {
+          showError(callError, res.data.failure_reason);
+          syncErrorCta(res.data.failure_reason);
+        }
         void loadRecent();
       }
     }
@@ -392,15 +571,48 @@ const t = useTranslations(lang);
     $('dialer')?.addEventListener('submit', async (e) => {
       e.preventDefault();
       showError(callError, null);
+      showError(numberError, null);
+      syncErrorCta(null);
+
+      // Nothing leaves the browser until the request is complete. The shipped dialer
+      // sent whatever the selects happened to hold, which was the empty string.
+      const problem = validateDial(
+        {
+          destination: number?.value ?? '',
+          sourceLanguage: myLang?.value ?? '',
+          targetLanguage: theirLang?.value ?? '',
+          engineId: tierSel?.value ?? '',
+          projectId: projectSel?.value || null,
+        },
+        { engines, requireProject },
+      );
+      if (problem) {
+        // The message goes where the user is looking — beside the number for a number
+        // problem, beside the button they just pressed otherwise — and focus moves to the
+        // control that needs fixing, so the fix is reachable without hunting for it.
+        const control: Record<string, HTMLElement | null> = {
+          destination: number,
+          source: myLang,
+          target: theirLang,
+          tier: tierSel,
+          project: projectSel,
+        };
+        showKeyed(problem.field === 'destination' ? numberError : callError, problem.key);
+        control[problem.field]?.focus();
+        return;
+      }
+
       setPhase('preparing');
 
       const res = await dialVoipCall(org, {
         destination: normaliseDestination(number?.value ?? ''),
-        source_language: $<HTMLSelectElement>('my-lang')?.value ?? 'en',
-        target_language: $<HTMLSelectElement>('their-lang')?.value ?? 'en',
-        engine_id: $<HTMLSelectElement>('tier')?.value || undefined,
-        project_id: $<HTMLSelectElement>('project')?.value || null,
-        caller_id: $<HTMLSelectElement>('caller-id')?.value || null,
+        // No `?? 'en'` here: `validateDial` above has already refused an unset language,
+        // and the fallback was what hid the bug in the first place.
+        source_language: myLang?.value ?? '',
+        target_language: theirLang?.value ?? '',
+        engine_id: tierSel?.value || undefined,
+        project_id: projectSel?.value || null,
+        caller_id: callerIdSel?.value || null,
         record: !!optRecord?.checked,
         transcribe: !!optTranscribe?.checked,
         ai_analysis: !!optAi?.checked,
@@ -410,6 +622,7 @@ const t = useTranslations(lang);
         const code = (res.data as unknown as { error?: string } | null)?.error ?? null;
         setPhase('failed');
         showError(callError, code);
+        syncErrorCta(code);
         return;
       }
       activeCall = res.data.call_id;
@@ -476,7 +689,7 @@ const t = useTranslations(lang);
           const when = new Date(c.started_at).toLocaleString();
           // Status is a word, never a colour on its own.
           const state = t(`phase.${phaseFromStatus(c.status)}`);
-          return `<a href="/${locale}/phone/${c.id}"
+          return `<a href="/${locale}/phone/detail/?id=${c.id}"
                      class="flex items-center justify-between gap-2 border-b border-line py-2 last:border-0">
                     <span>
                       <span class="font-mono">${c.recipient_masked}</span>
@@ -491,6 +704,7 @@ const t = useTranslations(lang);
         .join('');
     }
 
+    await loadCatalogues();
     await loadRecent();
   });
 </script>

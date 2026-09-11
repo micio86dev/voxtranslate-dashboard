@@ -657,3 +657,38 @@ describe('current-org persistence', () => {
     setSpy.mockRestore();
   });
 });
+
+describe('phone catalogues and numbers (spec 0112)', () => {
+  it('asks the org-scoped route for the organisation own numbers', async () => {
+    const fn = mockFetch({ json: { numbers: [] } });
+    const res = await api.listVoipNumbers('org-1');
+    expect(lastCall(fn).url).toBe(`${BASE}/api/business/organizations/org-1/voip/numbers`);
+    expect(res.ok).toBe(true);
+    expect(res.data).toEqual({ numbers: [] });
+  });
+
+  it('reads the engine catalogue from the shared, unauthenticated route', async () => {
+    // Shared with the call app on purpose: a tier list that drifts between the dialer
+    // and the room is a tier list someone will have to reconcile by hand.
+    const fn = mockFetch({ json: { engines: [{ id: 'standard' }] } });
+    const res = await api.getEngines();
+    expect(lastCall(fn).url).toBe(`${BASE}/api/engines`);
+    expect(res.data?.engines).toHaveLength(1);
+  });
+
+  it('reads the language catalogue from the shared route', async () => {
+    const fn = mockFetch({ json: { languages: [], regions: [] } });
+    const res = await api.getLanguageCatalogue();
+    expect(lastCall(fn).url).toBe(`${BASE}/api/languages`);
+    expect(res.data?.regions).toEqual([]);
+  });
+
+  it('surfaces a failure rather than inventing an empty catalogue', async () => {
+    // The dialer must be able to tell "no engines configured" from "the request failed";
+    // a silent empty list would render a tier select with nothing in it and no reason.
+    mockFetch({ rejects: true });
+    const res = await api.getEngines();
+    expect(res.ok).toBe(false);
+    expect(res.data).toBeNull();
+  });
+});

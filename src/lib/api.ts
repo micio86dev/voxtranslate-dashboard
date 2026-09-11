@@ -1102,12 +1102,17 @@ export interface VoipCallDetail extends Omit<VoipCallSummary, 'recipient_masked'
   recipient_e164: string;
   quoted_price_per_min: string | null;
   /**
-   * Null until the provider rates the call. Rendered as "pending", never as
-   * zero — a zero would read as "free", which is a very different claim from
-   * "not known yet".
+   * `'pending'` until the provider rates the leg, then `'final'`.
+   *
+   * A status and not a number, on purpose (spec 0112 R6). What the leg cost us and the
+   * margin we made on it are business-internal and never leave the server — the same
+   * rule `engine/metadata.rs` enforces for the engine catalogue. What the customer
+   * agreed to and what they paid are above, and both are still here.
+   *
+   * Reported as pending rather than as zero, because a zero reads as "this call was
+   * free", which is a very different claim from "not rated yet".
    */
-  actual_provider_cost_usd: string | null;
-  gross_margin: string | null;
+  cost_status: 'pending' | 'final';
 }
 
 export interface VoipSettings {
@@ -1223,6 +1228,80 @@ export function saveVoipSettings(
   body: Partial<VoipSettings> & { enabled: boolean },
 ): Promise<ApiResult<VoipSettings>> {
   return request('PUT', `/api/business/organizations/${orgId}/voip/settings`, body);
+}
+
+/** One of the organisation's own telephone numbers (spec 0112 R3). */
+export interface VoipNumber {
+  id: string;
+  e164: string;
+  country: string;
+  label: string | null;
+  is_default: boolean;
+  inbound_enabled: boolean;
+  outbound_enabled: boolean;
+  /** 'pending' | 'verified' | 'rejected'. Only a verified number may be presented. */
+  verification_status: string;
+}
+
+/**
+ * The organisation's numbers, every one of them.
+ *
+ * Rows that cannot be presented as caller id yet come back too, carrying the state that
+ * says so — hiding a number stuck in `pending` from the admin who has to chase it would
+ * be the wrong kind of tidy. Deciding which are *usable* is `usableCallerIds` in
+ * `scripts/phone-catalogue.ts`, and the server re-checks it on the way out.
+ */
+export function listVoipNumbers(orgId: string): Promise<ApiResult<{ numbers: VoipNumber[] }>> {
+  return request('GET', `/api/business/organizations/${orgId}/voip/numbers`);
+}
+
+// --- Shared catalogues (public, not org-scoped) ------------------------------
+
+/**
+ * One engine as the public catalogue describes it.
+ *
+ * `rate_per_minute` is the user-facing rate. The raw cost and the markup behind it are
+ * never serialized — `engine_info_never_leaks_cost_or_markup` in the server pins that.
+ */
+export interface EngineInfo {
+  id: string;
+  display_name: string;
+  tier: string;
+  description: string;
+  rate_per_minute: number;
+  input_languages: string[];
+  output_languages: string[];
+}
+
+export interface LanguageMetaDto {
+  code: string;
+  native: string;
+  english: string;
+  region: string;
+  rtl: boolean;
+  flag: string;
+}
+
+/**
+ * `GET /api/engines` — which engines exist, what they cost, and the languages each one
+ * can take in and emit. Unauthenticated and shared with the call app, so the dialer's
+ * tier list cannot drift from the one a user sees in a room.
+ */
+export function getEngines(): Promise<ApiResult<{ engines: EngineInfo[] }>> {
+  return request('GET', '/api/engines');
+}
+
+/**
+ * `GET /api/languages` — how language codes are named, grouped and ordered.
+ *
+ * Served from the same embedded `languages.json` the call app reads, and cached an hour,
+ * so the phone picker names a language exactly as the room does. A second vocabulary for
+ * the same thing is a support ticket waiting to happen.
+ */
+export function getLanguageCatalogue(): Promise<
+  ApiResult<{ languages: LanguageMetaDto[]; regions: string[] }>
+> {
+  return request('GET', '/api/languages');
 }
 
 // --- Current-org helper (persisted selection) --------------------------------

@@ -13,6 +13,7 @@ import {
   joinUrl,
   looksDialable,
   normaliseDestination,
+  numberProblem,
   phaseFromStatus,
   phaseProgress,
   refusalKey,
@@ -296,5 +297,30 @@ describe('joining the room the call happens in', () => {
     expect(canJoin('completed', 'ph-abc')).toBe(false);
     expect(canJoin('failed', 'ph-abc')).toBe(false);
     expect(canJoin('connected', null)).toBe(false);
+  });
+});
+
+describe('numberProblem', () => {
+  it('names the same problem the server would name', () => {
+    // The server already ships copy for each of these codes (`phone.reason.number_*`),
+    // so saying which rule the number broke costs no new translation and tells the user
+    // what to change. "Invalid number" tells them nothing.
+    expect(numberProblem('')).toBe('number_empty');
+    expect(numberProblem('   ')).toBe('number_empty');
+    expect(numberProblem('nope')).toBe('number_non_numeric');
+    expect(numberProblem('0320 123 4567')).toBe('number_leading_zero');
+    expect(numberProblem('+39 320')).toBe('number_too_short');
+    expect(numberProblem('+3912345678901234567')).toBe('number_too_long');
+  });
+
+  it('passes a dialable number', () => {
+    expect(numberProblem('+39 320 123 4567')).toBeNull();
+    expect(numberProblem('+8613800138000')).toBeNull();
+  });
+
+  it('agrees with looksDialable, which is the same rule asked as a question', () => {
+    for (const raw of ['', 'nope', '0320123456', '+39320', '+39 320 123 4567', '+8613800138000']) {
+      expect(looksDialable(raw)).toBe(numberProblem(raw) === null);
+    }
   });
 });

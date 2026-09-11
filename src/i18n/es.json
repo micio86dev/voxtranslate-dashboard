@@ -149,7 +149,8 @@
     "upcomingMeetings": "Próximas reuniones",
     "viewAll": "Ver todo",
     "noUpcoming": "No hay reuniones programadas.",
-    "newMeeting": "Programar una reunión"
+    "newMeeting": "Programar una reunión",
+    "newCall": "Hacer una llamada"
   },
   "org": {
     "switch": "Espacio de trabajo",
@@ -650,6 +651,7 @@
     "country": "País",
     "myLanguage": "Mi idioma",
     "recipientLanguage": "Su idioma",
+    "chooseLanguage": "Elige un idioma",
     "tier": "Nivel de traducción",
     "project": "Proyecto",
     "noProject": "Sin proyecto",
@@ -682,6 +684,8 @@
     "duration": "Duración",
     "cost": "Coste",
     "recent": "Llamadas recientes",
+    "allCalls": "Todas las llamadas",
+    "settingsTab": "Ajustes",
     "empty": "Todavía no hay llamadas.",
     "emptyHint": "Aquí aparecerán las llamadas telefónicas traducidas de tu organización.",
     "disabled": "Las llamadas telefónicas no están activadas para esta organización.",
@@ -694,6 +698,13 @@
       "both": "Un breve aviso que explica que la llamada usa traducción de IA en tiempo real y se grabará y transcribirá.",
       "willAsk": "Se le pedirá que pulse 1 antes de grabar o transcribir nada. Si se niega, la llamada continúa sin ello.",
       "language": "Se dice en {language}."
+    },
+    "error": {
+      "languageNotInTier": "Este nivel no admite ese idioma. Elige otro idioma, u otro nivel.",
+      "projectRequired": "Esta organización vincula cada llamada a un proyecto. Elige uno.",
+      "sourceLanguageRequired": "Elige el idioma en el que hablarás.",
+      "targetLanguageRequired": "Elige el idioma que habla el destinatario.",
+      "tierRequired": "Elige un nivel de traducción."
     },
     "reason": {
       "generic": "No se ha podido realizar la llamada. Inténtalo de nuevo.",
@@ -761,6 +772,7 @@
       "cost": "Coste",
       "providerCost": "Coste del proveedor",
       "providerCostPending": "El proveedor aún no lo ha comunicado",
+      "costFinal": "Definitivo",
       "margin": "Margen bruto",
       "consent": "Aviso",
       "consentNotRequired": "Anunciado; no se requiere consentimiento",

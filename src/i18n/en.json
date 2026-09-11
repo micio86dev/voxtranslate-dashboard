@@ -149,7 +149,8 @@
     "upcomingMeetings": "Upcoming meetings",
     "viewAll": "View all",
     "noUpcoming": "No upcoming meetings.",
-    "newMeeting": "Schedule a meeting"
+    "newMeeting": "Schedule a meeting",
+    "newCall": "Place a call"
   },
   "org": {
     "switch": "Workspace",
@@ -650,6 +651,7 @@
     "country": "Country",
     "myLanguage": "My language",
     "recipientLanguage": "Their language",
+    "chooseLanguage": "Choose a language",
     "tier": "Translation tier",
     "project": "Project",
     "noProject": "No project",
@@ -682,6 +684,8 @@
     "duration": "Duration",
     "cost": "Cost",
     "recent": "Recent calls",
+    "allCalls": "All calls",
+    "settingsTab": "Settings",
     "empty": "No calls yet.",
     "emptyHint": "Your organisation's translated phone calls will appear here.",
     "disabled": "Phone calls are not enabled for this organisation.",
@@ -694,6 +698,13 @@
       "both": "A short announcement saying the call uses real-time AI translation and will be recorded and transcribed.",
       "willAsk": "They will be asked to press 1 before anything is recorded or transcribed. If they decline, the call continues without it.",
       "language": "Spoken in {language}."
+    },
+    "error": {
+      "languageNotInTier": "This tier does not support that language. Choose another language, or another tier.",
+      "projectRequired": "This organisation links every call to a project. Choose one.",
+      "sourceLanguageRequired": "Choose the language you will speak.",
+      "targetLanguageRequired": "Choose the language they speak.",
+      "tierRequired": "Choose a translation tier."
     },
     "reason": {
       "generic": "The call could not be placed. Please try again.",
@@ -761,6 +772,7 @@
       "cost": "Cost",
       "providerCost": "Provider cost",
       "providerCostPending": "Not yet reported by the provider",
+      "costFinal": "Final",
       "margin": "Gross margin",
       "consent": "Disclosure",
       "consentNotRequired": "Announced; no consent required",

@@ -22,6 +22,37 @@ const ORG = '11111111-1111-4111-8111-111111111111';
 const ORGS_ROUTE = '**/api/business/organizations**';
 /** Everything else the boot path reaches for, so nothing hangs the page. */
 const ANY_API_ROUTE = '**/api/**';
+/** The two shared, unauthenticated catalogues the dialer fills its selects from. */
+const ENGINES_ROUTE = '**/api/engines**';
+const LANGUAGES_ROUTE = '**/api/languages**';
+
+const ENGINES = [
+  {
+    id: 'standard',
+    display_name: 'Standard',
+    tier: 'standard',
+    description: '',
+    rate_per_minute: 0.0045,
+    input_languages: ['en', 'it', 'zh'],
+    output_languages: ['en', 'it', 'zh'],
+  },
+];
+
+const LANGUAGES = {
+  regions: ['Europe', 'Asia'],
+  languages: [
+    { code: 'en', native: 'English', english: 'English', region: 'Europe', rtl: false, flag: 'GB' },
+    {
+      code: 'it',
+      native: 'Italiano',
+      english: 'Italian',
+      region: 'Europe',
+      rtl: false,
+      flag: 'IT',
+    },
+    { code: 'zh', native: 'Zhongwen', english: 'Chinese', region: 'Asia', rtl: false, flag: 'CN' },
+  ],
+};
 
 /** A session, planted the way the app plants one after Google sign-in. */
 async function signIn(page: Page) {
@@ -127,6 +158,32 @@ async function stubApi(page: Page, opts: StubOptions = {}) {
         require_project: false,
       });
     }
+    if (url.includes('/voip/numbers')) {
+      return json({
+        numbers: [
+          {
+            id: 'n-1',
+            e164: '+390212345678',
+            country: 'IT',
+            label: 'Milan Office',
+            is_default: true,
+            inbound_enabled: false,
+            outbound_enabled: true,
+            verification_status: 'verified',
+          },
+          {
+            id: 'n-2',
+            e164: '+34911234567',
+            country: 'ES',
+            label: 'Sales Spain',
+            is_default: false,
+            inbound_enabled: false,
+            outbound_enabled: true,
+            verification_status: 'pending',
+          },
+        ],
+      });
+    }
     if (url.includes('/voip/quote')) {
       const q = quote as Partial<Failure>;
       return q.httpStatus ? json({ error: q.error }, q.httpStatus) : json(quote);
@@ -161,6 +218,24 @@ async function stubApi(page: Page, opts: StubOptions = {}) {
       },
     ]);
   });
+
+  // Registered after the catch-all, so these win: Playwright matches in reverse
+  // registration order. Without them `**/api/**` answers `{}` and the dialer's selects
+  // stay empty — which is now a refusal, not a silently empty language.
+  await page.route(ENGINES_ROUTE, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ engines: ENGINES }),
+    }),
+  );
+  await page.route(LANGUAGES_ROUTE, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(LANGUAGES),
+    }),
+  );
 }
 
 async function openDialer(page: Page, opts: StubOptions = {}) {
@@ -168,6 +243,12 @@ async function openDialer(page: Page, opts: StubOptions = {}) {
   await stubApi(page, opts);
   await page.goto('/en/phone/');
   await expect(page.locator('#voip-on')).toBeVisible();
+  // The catalogues arrive after boot, and the dialer is not usable until they have.
+  await expect(page.locator('#tier option')).toHaveCount(ENGINES.length);
+  // The caller's language defaults to their dashboard locale. The recipient's is not
+  // guessable from anything the product knows, so every test that dials chooses one —
+  // exactly as a user must.
+  await page.selectOption('#their-lang', 'zh');
 }
 
 test('an organisation that has not enabled phone calls sees why, not a broken form', async ({
@@ -293,7 +374,13 @@ test('a call that never returns a room offers no way in', async ({ page }) => {
   // A link built anyway would drop the caller into a room nobody is in, which reads as a
   // broken call rather than a server that did not answer the question.
   await openDialer(page, {
-    dial: { call_id: 'c-1', session_id: 's-1', status: 'dialing', reserved_credits: 1, price_per_minute: '0.05' },
+    dial: {
+      call_id: 'c-1',
+      session_id: 's-1',
+      status: 'dialing',
+      reserved_credits: 1,
+      price_per_minute: '0.05',
+    },
     callStatuses: ['ringing', 'answered'],
   });
   await page.fill('#number', '+393201234567');
@@ -429,4 +516,155 @@ test('the dialer is operable from the keyboard alone', async ({ page }) => {
   await expect(page.getByLabel('My language')).toBeVisible();
   await expect(page.getByLabel('Their language')).toBeVisible();
   await expect(page.getByLabel('Translation tier')).toBeVisible();
+});
+
+// ---- spec 0112: the selects, and what the browser now refuses to send -------
+
+test('the language, tier and caller-id selects are filled from the catalogues', async ({
+  page,
+}) => {
+  // They shipped in 1.50.0 declared in markup and never populated, so the dialer could
+  // not express the one thing the product is for: which language each side speaks.
+  await openDialer(page);
+
+  await expect(page.locator('#tier option')).toHaveCount(1);
+  await expect(page.locator('#tier')).toContainText('Standard');
+
+  // Named the way the call app names them, grouped by the catalogue's region order.
+  await expect(page.locator('#their-lang optgroup')).toHaveCount(2);
+  await expect(page.locator('#their-lang')).toContainText('Italiano');
+  await expect(page.locator('#their-lang')).toContainText('Chinese');
+
+  // The caller's own language defaults to their dashboard locale.
+  await expect(page.locator('#my-lang')).toHaveValue('en');
+
+  // Only the verified, outbound-enabled number is offered: the server refuses the rest,
+  // so offering one would produce a refusal after the user had already chosen it.
+  await expect(page.locator('#caller-id')).toContainText('Milan Office');
+  await expect(page.locator('#caller-id')).not.toContainText('Sales Spain');
+});
+
+test('a dial with no recipient language is refused here, and nothing is sent', async ({ page }) => {
+  const dialAttempts: string[] = [];
+  page.on('request', (req) => {
+    if (req.method() === 'POST' && req.url().includes('/voip/calls')) dialAttempts.push(req.url());
+  });
+
+  await openDialer(page);
+  // Undo the choice `openDialer` makes, to reproduce what a user sees on arrival.
+  await page.selectOption('#their-lang', '');
+  await page.fill('#number', '+39 320 123 4567');
+  await page.click('#call');
+
+  await expect(page.locator('#call-error')).toBeVisible();
+  await expect(page.locator('#call-error')).toHaveText(/language/i);
+  // Focus lands on the control that needs fixing, so the fix is reachable without hunting.
+  await expect(page.locator('#their-lang')).toBeFocused();
+  // The point of the exercise: the request never left the browser.
+  expect(dialAttempts).toEqual([]);
+});
+
+test('an unparseable number is reported before any language problem', async ({ page }) => {
+  // The number is what the user typed first and what the server checks first. Reporting a
+  // language problem on a number that cannot be dialled sends them to the wrong field.
+  await openDialer(page);
+  await page.selectOption('#their-lang', '');
+  await page.fill('#number', 'nope');
+  await page.click('#call');
+
+  await expect(page.locator('#number-error')).toBeVisible();
+  await expect(page.locator('#number')).toBeFocused();
+  await expect(page.locator('#call-error')).toBeHidden();
+});
+
+test('a refusal for credits offers a way to buy some', async ({ page }) => {
+  await openDialer(page, {
+    dial: { httpStatus: 402, error: 'insufficient_credits' },
+  });
+  await page.fill('#number', '+39 320 123 4567');
+  await page.click('#call');
+
+  await expect(page.locator('#call-error')).toBeVisible();
+  const cta = page.locator('#call-error-cta');
+  await expect(cta).toBeVisible();
+  await expect(cta).toHaveAttribute('href', '/en/credits/#plans');
+});
+
+test('the settings page exists and round-trips what an admin saves', async ({ page }) => {
+  // The dialer has linked here since 1.50.0 and the link 404'd.
+  let saved: Record<string, unknown> | null = null;
+  await signIn(page);
+  await stubApi(page);
+  await page.route('**/voip/settings', async (route) => {
+    if (route.request().method() === 'PUT') {
+      saved = route.request().postDataJSON();
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ ...saved, enabled: true }),
+      });
+    }
+    return route.fallback();
+  });
+
+  await page.goto('/en/phone/settings/');
+  await expect(page.locator('#settings-form')).toBeVisible();
+  await expect(page.locator('#home-country')).toHaveValue('IT');
+
+  await page.fill('#blocked', 'RU, BY');
+  await page.click('#save');
+
+  await expect(page.locator('#saved')).toBeVisible();
+  expect(saved).toBeTruthy();
+  expect(saved!.blocked_countries).toEqual(['RU', 'BY']);
+});
+
+test('the call detail page shows what was charged and never our margin', async ({ page }) => {
+  await signIn(page);
+  await stubApi(page);
+  await page.route('**/voip/calls/c-9', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        id: 'c-9',
+        session_id: 's-9',
+        status: 'completed',
+        failure_reason: null,
+        direction: 'outbound',
+        recipient_e164: '+8613800138000',
+        recipient_country: 'CN',
+        source_language: 'it',
+        target_language: 'zh',
+        engine_id: 'standard',
+        started_at: '2026-09-01T10:00:00Z',
+        ended_at: '2026-09-01T10:01:35Z',
+        duration_seconds: 95,
+        credits_consumed: 120,
+        quoted_price_per_min: '0.0468',
+        cost_status: 'final',
+        recording_status: 'none',
+        transcription_status: 'ready',
+        consent_status: 'granted',
+        project_id: null,
+      }),
+    }),
+  );
+
+  await page.goto('/en/phone/detail/?id=c-9');
+  await expect(page.locator('#recipient')).toHaveText('+8613800138000');
+  await expect(page.locator('#credits')).toHaveText('$1.20');
+  await expect(page.locator('#consent')).toHaveText(/consent given/i);
+
+  // The conversation is linked, not re-implemented: history/detail already renders the
+  // transcript, its translation, the recording and the exports for this session.
+  await expect(page.locator('#open-transcript')).toHaveAttribute(
+    'href',
+    '/en/history/detail/?session=s-9',
+  );
+
+  // R6: our cost and our margin are not in the page, under any name.
+  const body = await page.locator('body').innerText();
+  expect(body).not.toMatch(/gross margin/i);
+  expect(body).not.toMatch(/provider cost/i);
 });
