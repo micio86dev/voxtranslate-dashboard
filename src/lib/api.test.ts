@@ -943,3 +943,30 @@ describe('telephony analytics wrapper (spec 0117)', () => {
     expect(lastCall(fn).url).toContain('days=30');
   });
 });
+
+describe('office hours wrappers (spec 0118)', () => {
+  const ORG = 'org-1';
+  const PREFIX = `${BASE}/api/business/organizations/${ORG}/voip/numbers/n-1/hours`;
+
+  it('reads, writes and clears', async () => {
+    const fn = mockFetch({ json: { configured: false } });
+
+    await api.getVoipHours(ORG, 'n-1');
+    expect(lastCall(fn).url).toBe(PREFIX);
+    expect(lastCall(fn).init.method).toBe('GET');
+
+    await api.saveVoipHours(ORG, 'n-1', {
+      timezone: 'Europe/Rome',
+      opens_at: [540, -1, -1, -1, -1, -1, -1],
+      closes_at: [1020, -1, -1, -1, -1, -1, -1],
+      closed_action: 'voicemail',
+    });
+    expect(lastCall(fn).init.method).toBe('PUT');
+    expect(lastCall(fn).body).toMatchObject({ timezone: 'Europe/Rome' });
+
+    // Clearing, rather than storing an empty week — "always open" is the absence of a
+    // row, and the two must not be confusable.
+    await api.clearVoipHours(ORG, 'n-1');
+    expect(lastCall(fn).init.method).toBe('DELETE');
+  });
+});

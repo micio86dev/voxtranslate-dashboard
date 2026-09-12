@@ -1372,6 +1372,47 @@ export function saveVoipRouting(
   );
 }
 
+/** A number's opening times (spec 0118). Minutes from midnight, Monday first. */
+export interface VoipHours {
+  configured: boolean;
+  timezone?: string;
+  opens_at?: number[];
+  closes_at?: number[];
+  closed_action?: 'voicemail' | 'forward' | 'refuse';
+  closed_forward_to?: string | null;
+}
+
+/**
+ * `configured: false` rather than a 404: "no hours" is a real and meaningful state — the
+ * number is always open — and the screen has to be able to say so.
+ */
+export function getVoipHours(orgId: string, numberId: string): Promise<ApiResult<VoipHours>> {
+  return request('GET', `/api/business/organizations/${orgId}/voip/numbers/${numberId}/hours`);
+}
+
+export function saveVoipHours(
+  orgId: string,
+  numberId: string,
+  body: {
+    timezone: string;
+    opens_at: number[];
+    closes_at: number[];
+    closed_action: string;
+    closed_forward_to?: string | null;
+  },
+): Promise<ApiResult<unknown>> {
+  return request(
+    'PUT',
+    `/api/business/organizations/${orgId}/voip/numbers/${numberId}/hours`,
+    body,
+  );
+}
+
+/** Back to always open. */
+export function clearVoipHours(orgId: string, numberId: string): Promise<ApiResult<unknown>> {
+  return request('DELETE', `/api/business/organizations/${orgId}/voip/numbers/${numberId}/hours`);
+}
+
 /** Take a ringing inbound call. First to claim it wins. */
 export function answerVoipCall(
   orgId: string,

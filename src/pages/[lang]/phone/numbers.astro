@@ -96,6 +96,33 @@ const t = useTranslations(lang);
           <select id="stranger-lang" class="field"></select>
         </div>
 
+        <!--
+          Office hours (spec 0118). Same panel as the rest of a number's routing, because
+          "when is the office open" is part of "what happens when somebody calls" rather
+          than a separate subject.
+        -->
+        <fieldset class="grid gap-3 rounded-lg border border-line p-3">
+          <legend class="label">{t('phone.hours.title')}</legend>
+          <label class="flex items-center gap-2 text-sm">
+            <input id="hours-always" type="checkbox" class="checkbox" checked />
+            {t('phone.hours.always')}
+          </label>
+          <div id="hours-detail" class="hidden grid gap-3">
+            <div>
+              <label for="hours-tz" class="label">{t('phone.hours.timezone')}</label>
+              <input id="hours-tz" class="field" placeholder="Europe/Rome" autocomplete="off" />
+            </div>
+            <div id="hours-days" class="grid gap-2"></div>
+            <div>
+              <label for="closed-action" class="label">{t('phone.hours.ifClosed')}</label>
+              <select id="closed-action" class="field">
+                <option value="voicemail">{t('phone.routing.voicemail')}</option>
+                <option value="refuse">{t('phone.routing.refuse')}</option>
+              </select>
+            </div>
+          </div>
+        </fieldset>
+
         <div class="flex flex-wrap items-center gap-3">
           <button type="submit" class="btn-primary text-sm">{t('common.save')}</button>
           <button id="routing-close" type="button" class="btn-ghost text-sm"
@@ -149,11 +176,14 @@ const t = useTranslations(lang);
     currentOrgId,
     getVoipSettings,
     getLanguageCatalogue,
+    clearVoipHours,
+    getVoipHours,
     getVoipRouting,
     listMembers,
     listTeams,
     listVoipNumbers,
     releaseVoipNumber,
+    saveVoipHours,
     saveVoipRouting,
     searchVoipNumbers,
     verifyVoipNumber,
@@ -161,7 +191,7 @@ const t = useTranslations(lang);
     type VoipRouting,
   } from '../../../lib/api';
   import { languageOptions, type LanguageCatalogue } from '../../../scripts/phone-catalogue';
-  import { useTranslations, type Locale } from '../../../lib/i18n';
+  import { tList, useTranslations, type Locale } from '../../../lib/i18n';
   import { refusalKey } from '../../../scripts/phone-dialer';
 
   onPage('numbers-page', async () => {
@@ -260,6 +290,62 @@ const t = useTranslations(lang);
       syncRoutingFields();
     }
 
+    const DAYS = tList(ctx.lang as Locale, 'phone.hours.days');
+
+    /** Minutes from midnight to `HH:MM`, and back. The wire speaks minutes; a person
+     *  speaks o'clock, and the conversion belongs here rather than in the schema. */
+    const toClock = (m: number) =>
+      `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+    const toMinutes = (v: string) => {
+      const [h, m] = v.split(':').map(Number);
+      return Number.isFinite(h) && Number.isFinite(m) ? h * 60 + m : -1;
+    };
+
+    function renderDays(opens: number[] = [], closes: number[] = []) {
+      const box = $('hours-days');
+      box?.replaceChildren();
+      DAYS.forEach((name, i) => {
+        const open = opens[i] ?? -1;
+        const close = closes[i] ?? -1;
+        const row = document.createElement('div');
+        row.className = 'flex flex-wrap items-center gap-2 text-sm';
+        row.dataset.day = String(i);
+
+        const on = document.createElement('input');
+        on.type = 'checkbox';
+        on.className = 'checkbox';
+        on.dataset.field = 'on';
+        on.checked = open >= 0 && close >= 0;
+
+        const label = document.createElement('span');
+        label.className = 'w-24';
+        label.textContent = name;
+
+        const from = document.createElement('input');
+        from.type = 'time';
+        from.className = 'field w-auto';
+        from.dataset.field = 'from';
+        from.value = open >= 0 ? toClock(open) : '09:00';
+        from.setAttribute('aria-label', `${name} ${t('phone.hours.from')}`);
+
+        const to = document.createElement('input');
+        to.type = 'time';
+        to.className = 'field w-auto';
+        to.dataset.field = 'to';
+        to.value = close >= 0 ? toClock(close) : '17:00';
+        to.setAttribute('aria-label', `${name} ${t('phone.hours.to')}`);
+
+        row.append(on, label, from, to);
+        box?.appendChild(row);
+      });
+    }
+
+    $('hours-always')?.addEventListener('change', () => {
+      const always = ($<HTMLInputElement>('hours-always') as HTMLInputElement).checked;
+      $('hours-detail')?.classList.toggle('hidden', always);
+      $('hours-detail')?.classList.toggle('grid', !always);
+    });
+
     async function openRouting(numberId: string, e164: string) {
       routingFor = numberId;
       const res = await getVoipRouting(org, numberId);
@@ -267,6 +353,20 @@ const t = useTranslations(lang);
       const label = $('routing-for');
       if (label) label.textContent = e164;
       fillRouting(res.data);
+
+      const hours = await getVoipHours(org, numberId);
+      const configured = !!hours.data?.configured;
+      ($<HTMLInputElement>('hours-always') as HTMLInputElement).checked = !configured;
+      $('hours-detail')?.classList.toggle('hidden', !configured);
+      $('hours-detail')?.classList.toggle('grid', configured);
+      ($<HTMLInputElement>('hours-tz') as HTMLInputElement).value =
+        hours.data?.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
+      if ($<HTMLSelectElement>('closed-action')) {
+        ($<HTMLSelectElement>('closed-action') as HTMLSelectElement).value =
+          hours.data?.closed_action ?? 'voicemail';
+      }
+      renderDays(hours.data?.opens_at, hours.data?.closes_at);
+
       routingPanel?.classList.remove('hidden');
       routingPanel?.classList.add('grid');
       $('routing-saved')?.classList.add('hidden');
@@ -304,6 +404,39 @@ const t = useTranslations(lang);
         }
         return;
       }
+      // Hours are saved with the rest of the routing: one button, because from an
+      // admin's point of view it is one answer to one question.
+      const always = ($<HTMLInputElement>('hours-always') as HTMLInputElement).checked;
+      if (always) {
+        await clearVoipHours(org, routingFor);
+      } else {
+        const opens: number[] = [];
+        const closes: number[] = [];
+        for (const row of $('hours-days')?.querySelectorAll('[data-day]') ?? []) {
+          const field = (name: string) =>
+            row.querySelector<HTMLInputElement>(`[data-field="${name}"]`);
+          const on = field('on')?.checked ?? false;
+          opens.push(on ? toMinutes(field('from')?.value ?? '') : -1);
+          closes.push(on ? toMinutes(field('to')?.value ?? '') : -1);
+        }
+        const saved = await saveVoipHours(org, routingFor, {
+          timezone: ($<HTMLInputElement>('hours-tz') as HTMLInputElement).value.trim(),
+          opens_at: opens,
+          closes_at: closes,
+          closed_action:
+            ($<HTMLSelectElement>('closed-action') as HTMLSelectElement)?.value ?? 'voicemail',
+        });
+        if (!saved.ok) {
+          const code = (saved.data as unknown as { error?: string } | null)?.error ?? null;
+          const box = $('routing-error');
+          if (box) {
+            box.textContent = t(refusalKey(code));
+            box.classList.remove('hidden');
+          }
+          return;
+        }
+      }
+
       $('routing-saved')?.classList.remove('hidden');
     });
 

@@ -222,6 +222,8 @@ const KNOWN_REASONS = new Set([
   'invalid_no_answer_action',
   'forward_to_required',
   'already_answered',
+  // Spec 0118, office hours.
+  'invalid_timezone',
 ]);
 
 export function hasReasonCopy(code: string | null | undefined): boolean {

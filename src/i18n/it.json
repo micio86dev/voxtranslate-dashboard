@@ -750,7 +750,8 @@
       "invalid_ring_mode": "Scegli chi deve squillare.",
       "invalid_no_answer_action": "Scegli cosa succede se non risponde nessuno.",
       "forward_to_required": "L'inoltro ha bisogno di un numero a cui inoltrare.",
-      "already_answered": "Ha risposto qualcun altro."
+      "already_answered": "Ha risposto qualcun altro.",
+      "invalid_timezone": "Non è un fuso orario che conosciamo. Prova con Europe/Rome."
     },
     "settings": {
       "title": "Impostazioni chiamate telefoniche",
@@ -901,6 +902,18 @@
       "tab": "Statistiche",
       "title": "Statistiche telefono",
       "window": "Ultimi 30 giorni"
+    },
+    "hours": {
+      "always": "Aperto a ogni ora",
+      "clear": "Sempre aperto",
+      "days": ["Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì", "Sabato", "Domenica"],
+      "from": "Dalle",
+      "ifClosed": "Quando è chiuso",
+      "open": "Aperto",
+      "saved": "Orari salvati.",
+      "timezone": "Fuso orario",
+      "title": "Orari di apertura",
+      "to": "Alle"
     }
   }
 }

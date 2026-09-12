@@ -221,6 +221,12 @@ async function stubApi(page: Page, opts: StubOptions = {}) {
         telephony_credits_spent: 820,
       });
     }
+    if (url.includes('/hours')) {
+      if (route.request().method() === 'PUT') return route.fulfill({ status: 204, body: '' });
+      if (route.request().method() === 'DELETE') return route.fulfill({ status: 204, body: '' });
+      // Not configured: the number is always open, which is a real state and not a 404.
+      return json({ configured: false });
+    }
     if (url.includes('/routing')) {
       if (route.request().method() === 'PUT') return route.fulfill({ status: 204, body: '' });
       return json({
@@ -1170,4 +1176,86 @@ test('the analytics page answers what the telephone did and cost', async ({ page
   const body = await page.locator('body').innerText();
   expect(body).not.toMatch(/gross margin/i);
   expect(body).not.toMatch(/provider cost/i);
+});
+
+// ---- office hours (spec 0118) ----------------------------------------------
+
+test('a number with no hours reads as always open, and saying otherwise reveals the week', async ({
+  page,
+}) => {
+  await signIn(page);
+  await stubApi(page);
+  await page.goto('/en/phone/numbers/');
+  await page
+    .locator('#owned li')
+    .first()
+    .getByRole('button', { name: /When somebody calls/ })
+    .click();
+
+  // `configured: false` is a meaningful answer, not an absence.
+  await expect(page.locator('#hours-always')).toBeChecked();
+  await expect(page.locator('#hours-detail')).toBeHidden();
+
+  await page.uncheck('#hours-always');
+  await expect(page.locator('#hours-detail')).toBeVisible();
+  // Seven days, named, Monday first.
+  await expect(page.locator('#hours-days [data-day]')).toHaveCount(7);
+  await expect(page.locator('#hours-days')).toContainText('Monday');
+  await expect(page.locator('#hours-days')).toContainText('Sunday');
+});
+
+test('hours are saved as minutes, and a closed day is sent as closed', async ({ page }) => {
+  const saved: Record<string, unknown>[] = [];
+  page.on('request', (req) => {
+    if (req.method() === 'PUT' && req.url().includes('/hours')) saved.push(req.postDataJSON());
+  });
+
+  await signIn(page);
+  await stubApi(page);
+  await page.goto('/en/phone/numbers/');
+  await page
+    .locator('#owned li')
+    .first()
+    .getByRole('button', { name: /When somebody calls/ })
+    .click();
+  await page.uncheck('#hours-always');
+
+  // Open Monday 09:00–17:00 and nothing else.
+  const days = page.locator('#hours-days [data-day]');
+  await days.nth(0).locator('[data-field="on"]').check();
+  await days.nth(0).locator('[data-field="from"]').fill('09:00');
+  await days.nth(0).locator('[data-field="to"]').fill('17:00');
+
+  await page.click('#routing-form button[type="submit"]');
+  await expect(page.locator('#routing-saved')).toBeVisible();
+
+  expect(saved).toHaveLength(1);
+  // The wire speaks minutes from midnight; the person spoke o'clock.
+  expect((saved[0].opens_at as number[])[0]).toBe(540);
+  expect((saved[0].closes_at as number[])[0]).toBe(1020);
+  // A day nobody ticked is closed, not "midnight to midnight".
+  expect((saved[0].opens_at as number[])[1]).toBe(-1);
+  expect((saved[0].opens_at as number[]).length).toBe(7);
+});
+
+test('leaving a number always open clears its hours rather than storing an empty week', async ({
+  page,
+}) => {
+  let cleared = 0;
+  page.on('request', (req) => {
+    if (req.method() === 'DELETE' && req.url().includes('/hours')) cleared += 1;
+  });
+
+  await signIn(page);
+  await stubApi(page);
+  await page.goto('/en/phone/numbers/');
+  await page
+    .locator('#owned li')
+    .first()
+    .getByRole('button', { name: /When somebody calls/ })
+    .click();
+  await page.click('#routing-form button[type="submit"]');
+
+  await expect(page.locator('#routing-saved')).toBeVisible();
+  expect(cleared).toBe(1);
 });

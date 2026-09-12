@@ -750,7 +750,8 @@
       "invalid_ring_mode": "Elige a quién hacer sonar.",
       "invalid_no_answer_action": "Elige qué pasa si no contesta nadie.",
       "forward_to_required": "El desvío necesita un número al que desviar.",
-      "already_answered": "Otra persona atendió la llamada."
+      "already_answered": "Otra persona atendió la llamada.",
+      "invalid_timezone": "No reconocemos esa zona horaria. Prueba con Europe/Madrid."
     },
     "settings": {
       "title": "Ajustes de llamadas telefónicas",
@@ -901,6 +902,18 @@
       "tab": "Analíticas",
       "title": "Analíticas de teléfono",
       "window": "Últimos 30 días"
+    },
+    "hours": {
+      "always": "Abierto a todas horas",
+      "clear": "Siempre abierto",
+      "days": ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"],
+      "from": "De",
+      "ifClosed": "Cuando está cerrado",
+      "open": "Abierto",
+      "saved": "Horario guardado.",
+      "timezone": "Zona horaria",
+      "title": "Horario",
+      "to": "A"
     }
   }
 }

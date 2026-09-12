@@ -750,7 +750,8 @@
       "invalid_ring_mode": "Choisissez qui doit sonner.",
       "invalid_no_answer_action": "Choisissez ce qui se passe si personne ne répond.",
       "forward_to_required": "Un transfert a besoin d'un numéro de destination.",
-      "already_answered": "Quelqu'un d'autre a pris cet appel."
+      "already_answered": "Quelqu'un d'autre a pris cet appel.",
+      "invalid_timezone": "Ce fuseau horaire nous est inconnu. Essayez Europe/Paris."
     },
     "settings": {
       "title": "Paramètres des appels téléphoniques",
@@ -901,6 +902,18 @@
       "tab": "Statistiques",
       "title": "Statistiques téléphone",
       "window": "30 derniers jours"
+    },
+    "hours": {
+      "always": "Ouvert à toute heure",
+      "clear": "Toujours ouvert",
+      "days": ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"],
+      "from": "De",
+      "ifClosed": "Quand c'est fermé",
+      "open": "Ouvert",
+      "saved": "Horaires enregistrés.",
+      "timezone": "Fuseau horaire",
+      "title": "Horaires",
+      "to": "À"
     }
   }
 }

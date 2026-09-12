@@ -750,7 +750,8 @@
       "invalid_ring_mode": "Wählen Sie, bei wem es klingeln soll.",
       "invalid_no_answer_action": "Wählen Sie, was passiert, wenn niemand abnimmt.",
       "forward_to_required": "Eine Weiterleitung braucht eine Zielnummer.",
-      "already_answered": "Jemand anderes hat den Anruf angenommen."
+      "already_answered": "Jemand anderes hat den Anruf angenommen.",
+      "invalid_timezone": "Diese Zeitzone kennen wir nicht. Versuchen Sie Europe/Berlin."
     },
     "settings": {
       "title": "Einstellungen für Telefonanrufe",
@@ -901,6 +902,18 @@
       "tab": "Auswertung",
       "title": "Telefon-Auswertung",
       "window": "Letzte 30 Tage"
+    },
+    "hours": {
+      "always": "Rund um die Uhr geöffnet",
+      "clear": "Immer geöffnet",
+      "days": ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"],
+      "from": "Von",
+      "ifClosed": "Wenn geschlossen",
+      "open": "Geöffnet",
+      "saved": "Öffnungszeiten gespeichert.",
+      "timezone": "Zeitzone",
+      "title": "Öffnungszeiten",
+      "to": "Bis"
     }
   }
 }

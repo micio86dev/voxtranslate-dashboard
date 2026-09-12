@@ -750,7 +750,8 @@
       "invalid_ring_mode": "Choose who should be rung.",
       "invalid_no_answer_action": "Choose what happens when nobody answers.",
       "forward_to_required": "A forward needs a number to forward to.",
-      "already_answered": "Somebody else took this call."
+      "already_answered": "Somebody else took this call.",
+      "invalid_timezone": "That is not a timezone we recognise. Try one like Europe/Rome."
     },
     "settings": {
       "title": "Phone call settings",
@@ -901,6 +902,18 @@
       "tab": "Analytics",
       "title": "Phone analytics",
       "window": "Last 30 days"
+    },
+    "hours": {
+      "always": "Open at all hours",
+      "clear": "Always open",
+      "days": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+      "from": "From",
+      "ifClosed": "When closed",
+      "open": "Open",
+      "saved": "Hours saved.",
+      "timezone": "Timezone",
+      "title": "Office hours",
+      "to": "To"
     }
   }
 }
