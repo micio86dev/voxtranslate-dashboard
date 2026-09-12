@@ -13,6 +13,7 @@ import {
   joinUrl,
   looksDialable,
   normaliseDestination,
+  numberProblem,
   phaseFromStatus,
   phaseProgress,
   refusalKey,
@@ -296,5 +297,66 @@ describe('joining the room the call happens in', () => {
     expect(canJoin('completed', 'ph-abc')).toBe(false);
     expect(canJoin('failed', 'ph-abc')).toBe(false);
     expect(canJoin('connected', null)).toBe(false);
+  });
+});
+
+describe('numberProblem', () => {
+  it('names the same problem the server would name', () => {
+    // The server already ships copy for each of these codes (`phone.reason.number_*`),
+    // so saying which rule the number broke costs no new translation and tells the user
+    // what to change. "Invalid number" tells them nothing.
+    expect(numberProblem('')).toBe('number_empty');
+    expect(numberProblem('   ')).toBe('number_empty');
+    expect(numberProblem('nope')).toBe('number_non_numeric');
+    expect(numberProblem('0320 123 4567')).toBe('number_leading_zero');
+    expect(numberProblem('+39 320')).toBe('number_too_short');
+    expect(numberProblem('+3912345678901234567')).toBe('number_too_long');
+  });
+
+  it('passes a dialable number', () => {
+    expect(numberProblem('+39 320 123 4567')).toBeNull();
+    expect(numberProblem('+8613800138000')).toBeNull();
+  });
+
+  it('agrees with looksDialable, which is the same rule asked as a question', () => {
+    for (const raw of ['', 'nope', '0320123456', '+39320', '+39 320 123 4567', '+8613800138000']) {
+      expect(looksDialable(raw)).toBe(numberProblem(raw) === null);
+    }
+  });
+});
+
+describe('estimateCost and binary floating point', () => {
+  it('does not invent a cent that is not owed', () => {
+    // `0.005 x 14` is exactly 7 cents. In binary float the product lands a hair ABOVE
+    // 7.0, and `Math.ceil` then turns that hair into a whole extra cent. Rounding up is
+    // deliberate — an estimate must never read lower than what gets settled — but it must
+    // round up the PRICE, not the representation error.
+    expect(estimateCost(0.005, 14)).toBe('0.07');
+    expect(estimateCost(0.002, 35)).toBe('0.07');
+    expect(estimateCost(0.0025, 28)).toBe('0.07');
+    expect(estimateCost(0.0025, 56)).toBe('0.14');
+  });
+
+  it('still rounds a real fraction of a cent up', () => {
+    // The property the function exists for, unchanged.
+    expect(estimateCost(0.0468, 10)).toBe('0.47');
+    expect(estimateCost(0.0001, 1)).toBe('0.01');
+  });
+
+  it('never reads lower than the exact price, across the deck', () => {
+    // Exhaustive against integer arithmetic: rate = c/10000, so the exact charge in cents
+    // is ceil(c * m / 100) with no float involved anywhere.
+    let over = 0;
+    let under = 0;
+    for (let c = 1; c <= 500; c++) {
+      for (let m = 1; m <= 60; m++) {
+        const exact = Math.ceil((c * m) / 100);
+        const got = Math.round(parseFloat(estimateCost(c / 10000, m)) * 100);
+        if (got > exact) over++;
+        if (got < exact) under++;
+      }
+    }
+    expect(under).toBe(0);
+    expect(over).toBe(0);
   });
 });

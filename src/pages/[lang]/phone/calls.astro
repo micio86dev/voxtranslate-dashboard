@@ -1,0 +1,204 @@
+---
+/**
+ * `/[lang]/phone/calls/` — the organisation's phone calls, filterable and paged
+ * (spec 0112 R9).
+ *
+ * The dialer's sidebar shows the last eight and nothing else, while `getVoipCalls` has
+ * accepted `project_id`, `page` and `limit` since 1.50.0 and nothing ever passed them.
+ *
+ * Every label here comes from the existing `history.*` namespace — this is the same list,
+ * for a different kind of session, and giving it a second vocabulary would be the kind of
+ * inconsistency a customer notices and a maintainer has to keep in step.
+ */
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import SectionNav from '../../../components/phone/SectionNav.astro';
+import { localePaths, isLocale, DEFAULT_LOCALE, useTranslations } from '../../../lib/i18n';
+
+export function getStaticPaths() {
+  return localePaths();
+}
+
+const lang = isLocale(Astro.params.lang) ? Astro.params.lang : DEFAULT_LOCALE;
+const t = useTranslations(lang);
+---
+
+<BaseLayout lang={lang} title={t('phone.allCalls')} chrome>
+  <h1 class="text-2xl font-bold">{t('phone.allCalls')}</h1>
+
+  <SectionNav lang={lang} current="calls" />
+
+  <div id="voip-off" class="card mt-6 hidden">
+    <p class="text-sm">{t('phone.disabled')}</p>
+  </div>
+
+  <div id="phone-calls" class="hidden">
+    <div class="mt-6 flex flex-wrap items-end gap-3">
+      <div>
+        <label for="project" class="label">{t('history.project')}</label>
+        <select id="project" class="field">
+          <option value="">{t('history.allProjects')}</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="card mt-4 overflow-x-auto">
+      <table class="w-full text-left text-sm">
+        <thead class="text-xs text-muted">
+          <tr>
+            <th scope="col" class="py-2 pr-3">{t('phone.routing.inbound')}</th>
+            <th scope="col" class="py-2 pr-3">{t('phone.detail.recipient')}</th>
+            <th scope="col" class="py-2 pr-3">{t('history.project')}</th>
+            <th scope="col" class="py-2 pr-3">{t('history.started')}</th>
+            <th scope="col" class="py-2 pr-3">{t('history.status')}</th>
+            <th scope="col" class="py-2 pr-3">{t('phone.duration')}</th>
+            <th scope="col" class="py-2 pr-3">{t('phone.cost')}</th>
+            <th scope="col" class="py-2"><span class="sr-only">{t('history.open')}</span></th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+      <p id="empty" class="hidden py-6 text-sm text-muted">{t('phone.empty')}</p>
+      <p id="loading" class="py-6 text-sm text-muted">{t('common.loading')}</p>
+    </div>
+
+    <div class="mt-4 flex items-center gap-3">
+      <button id="prev" type="button" class="btn-ghost text-sm">{t('history.prev')}</button>
+      <button id="next" type="button" class="btn-ghost text-sm">{t('history.next')}</button>
+    </div>
+  </div>
+</BaseLayout>
+
+<script>
+  import { onPage } from '../../../scripts/nav';
+  import { boot } from '../../../scripts/app-boot';
+  import { currentOrgId, getVoipCalls, getVoipSettings, listProjects } from '../../../lib/api';
+  import { useTranslations, type Locale } from '../../../lib/i18n';
+  import { formatCredits, formatDuration, phaseFromStatus } from '../../../scripts/phone-dialer';
+
+  const PAGE_SIZE = 25;
+
+  onPage('phone-calls', async () => {
+    const ctx = await boot();
+    if (!ctx) return;
+    const t = useTranslations(ctx.lang as Locale);
+    const locale = ctx.lang;
+    const org = ctx.activeOrg.id ?? currentOrgId();
+    if (!org) return;
+
+    const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T | null;
+
+    const settings = await getVoipSettings(org);
+    if (!settings.ok || !settings.data?.enabled) {
+      $('voip-off')?.classList.remove('hidden');
+      return;
+    }
+    $('phone-calls')?.classList.remove('hidden');
+
+    const projectSel = $<HTMLSelectElement>('project');
+    const rows = $('rows');
+    const empty = $('empty');
+    const loading = $('loading');
+    const prev = $<HTMLButtonElement>('prev');
+    const next = $<HTMLButtonElement>('next');
+
+    let page = 1;
+
+    for (const project of (await listProjects(org)).data ?? []) {
+      const option = document.createElement('option');
+      option.value = project.id;
+      option.textContent = project.name;
+      projectSel?.appendChild(option);
+    }
+
+    /** Text, never markup: every value below is server data rendered into a cell. */
+    function cell(row: HTMLTableRowElement, text: string, extra = '') {
+      const td = document.createElement('td');
+      td.className = `py-2 pr-3 ${extra}`.trim();
+      td.textContent = text;
+      row.appendChild(td);
+    }
+
+    async function load() {
+      loading?.classList.remove('hidden');
+      empty?.classList.add('hidden');
+      const res = await getVoipCalls(org, {
+        projectId: projectSel?.value || undefined,
+        page,
+        limit: PAGE_SIZE,
+      });
+      loading?.classList.add('hidden');
+      if (!rows) return;
+      rows.replaceChildren();
+
+      if (!res.ok || !res.data) {
+        // A blip is not an empty history. Telling a customer they have made no calls
+        // because a request failed is a support ticket; `loadRecent()` in the dialer gets
+        // this right, and this page did not.
+        if (empty) {
+          empty.textContent = t('common.connError');
+          empty.classList.remove('hidden');
+        }
+        return;
+      }
+
+      const calls = res.data.calls;
+      if (calls.length === 0 && empty) {
+        empty.textContent = t('phone.empty');
+        empty.classList.remove('hidden');
+      }
+
+      for (const call of calls) {
+        const tr = document.createElement('tr');
+        tr.className = 'border-t border-line';
+        // Direction first, because an inbound call and an outbound one to the same number
+        // are different events and a list that conflates them is a list nobody trusts.
+        // A missed call says so here rather than being inferred from a zero duration.
+        const direction =
+          call.direction === 'inbound' ? t('phone.routing.inbound') : t('phone.routing.outbound');
+        cell(tr, call.missed ? `${direction} · ${t('phone.routing.missed')}` : direction);
+        // The masked form only. The full number lives on the detail endpoint, which is
+        // the record the customer paid for — a list is the most-exported view there is.
+        cell(tr, call.contact_name ?? call.recipient_masked, call.contact_name ? '' : 'font-mono');
+        cell(tr, call.project_name ?? '—', 'text-muted');
+        cell(tr, new Date(call.started_at).toLocaleString(), 'text-muted');
+        // Status is a word, never a colour on its own.
+        cell(tr, t(`phase.${phaseFromStatus(call.status)}`));
+        cell(tr, formatDuration(call.duration_seconds));
+        cell(tr, `$${formatCredits(call.credits_consumed)}`);
+
+        const actions = document.createElement('td');
+        actions.className = 'py-2';
+        const link = document.createElement('a');
+        link.className = 'btn-ghost text-xs';
+        link.href = `/${locale}/phone/detail/?id=${call.id}`;
+        link.textContent = t('history.open');
+        actions.appendChild(link);
+        tr.appendChild(actions);
+
+        rows.appendChild(tr);
+      }
+
+      // The endpoint reports the page it served, not a total, so "there is a next page"
+      // is inferred from a full page rather than claimed.
+      if (prev) prev.disabled = page <= 1;
+      if (next) next.disabled = calls.length < PAGE_SIZE;
+    }
+
+    projectSel?.addEventListener('change', () => {
+      page = 1;
+      void load();
+    });
+    prev?.addEventListener('click', () => {
+      if (page > 1) {
+        page -= 1;
+        void load();
+      }
+    });
+    next?.addEventListener('click', () => {
+      page += 1;
+      void load();
+    });
+
+    await load();
+  });
+</script>

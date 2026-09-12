@@ -18,6 +18,10 @@ export default defineConfig({
         'src/lib/i18n.ts',
         'src/lib/push.ts',
         'src/scripts/app-boot.ts',
+        // The dialer's logic modules. `phone-dialer.ts` shipped with tests but was never
+        // in this list, so the 85% gate never saw it (spec 0112 D8).
+        'src/scripts/phone-catalogue.ts',
+        'src/scripts/phone-dialer.ts',
         'src/scripts/sub-banner.ts',
       ],
       reporter: ['text', 'json-summary'],

@@ -91,6 +91,14 @@ body {
   .badge {
     @apply inline-flex items-center gap-1 rounded-full border border-line bg-base px-2.5 py-0.5 text-xs font-medium text-muted;
   }
+  /* A checkbox is not a `.field`: `.field` is a full-width text input, and applying it to
+     a checkbox stretches it across the row. Three call sites in the phone dialer had
+     already invented `class="checkbox"` against nothing, so the controls rendered as
+     browser defaults — the wrong blue, the wrong size, no dark-theme awareness.
+     `shrink-0` because every one of them sits in a `flex items-center gap-2` label. */
+  .checkbox {
+    @apply h-4 w-4 shrink-0 accent-brand;
+  }
 }
 
 /* Dark theme — class-based (.dark on <html>), defaulting to the OS preference via
