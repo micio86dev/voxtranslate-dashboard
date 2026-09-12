@@ -201,6 +201,26 @@ async function stubApi(page: Page, opts: StubOptions = {}) {
         limit: 50,
       });
     }
+    if (url.includes('/voip/analytics')) {
+      return json({
+        days: 30,
+        totals: {
+          calls: 12,
+          inbound: 5,
+          outbound: 7,
+          answered: 10,
+          missed: 2,
+          seconds: 1800,
+          credits: 640,
+        },
+        by_country: [{ label: 'CN', calls: 7, credits: 400 }],
+        by_language: [{ label: 'it → zh', calls: 7, credits: 400 }],
+        by_tier: [{ label: 'standard', calls: 12, credits: 640 }],
+        by_project: [{ label: '—', calls: 12, credits: 640 }],
+        calls_by_day: [{ day: '2026-09-01', calls: 12 }],
+        telephony_credits_spent: 820,
+      });
+    }
     if (url.includes('/routing')) {
       if (route.request().method() === 'PUT') return route.fulfill({ status: 204, body: '' });
       return json({
@@ -1125,4 +1145,29 @@ test('saving routing sends what was chosen', async ({ page }) => {
   expect(saved[0].ring_mode).toBe('users');
   expect(saved[0].ring_user_ids).toEqual(['u-1']);
   expect(saved[0].ring_seconds).toBe(40);
+});
+
+// ---- telephony analytics (spec 0117) ---------------------------------------
+
+test('the analytics page answers what the telephone did and cost', async ({ page }) => {
+  await signIn(page);
+  await stubApi(page);
+  await page.goto('/en/phone/analytics/');
+
+  await expect(page.locator('#k-calls')).toHaveText('12');
+  await expect(page.locator('#k-in')).toHaveText('5');
+  await expect(page.locator('#k-out')).toHaveText('7');
+  await expect(page.locator('#k-missed')).toHaveText('2');
+  // Seconds on the wire, minutes on the screen.
+  await expect(page.locator('#k-minutes')).toHaveText('30');
+  // From the LEDGER — what was paid, including numbers — not the sum of the call meters.
+  await expect(page.locator('#k-spent')).toHaveText('$8.20');
+
+  await expect(page.locator('#by-country')).toContainText('CN');
+  await expect(page.locator('#by-language')).toContainText('it → zh');
+
+  // Spec 0112 R6 applies to every surface, not only to the call record.
+  const body = await page.locator('body').innerText();
+  expect(body).not.toMatch(/gross margin/i);
+  expect(body).not.toMatch(/provider cost/i);
 });

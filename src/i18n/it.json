@@ -689,6 +689,7 @@
     "settingsTab": "Impostazioni",
     "contactsTab": "Contatti",
     "numbersTab": "Numeri",
+    "analyticsTab": "Statistiche",
     "empty": "Ancora nessuna chiamata.",
     "emptyHint": "Qui compariranno le chiamate telefoniche tradotte della tua organizzazione.",
     "disabled": "Le chiamate telefoniche non sono attive per questa organizzazione.",
@@ -881,6 +882,25 @@
       "strangerLanguage": "Lingua per chi non conosciamo",
       "title": "Quando qualcuno chiama",
       "voicemail": "Registra un messaggio"
+    },
+    "analytics": {
+      "adminOnly": "La spesa telefonica è visibile a proprietari e amministratori.",
+      "answered": "Risposte",
+      "byCountry": "Dove hai chiamato",
+      "byLanguage": "Lingue",
+      "byProject": "Progetti",
+      "byTier": "Livelli",
+      "calls": "Chiamate",
+      "inbound": "In arrivo",
+      "minutes": "Minuti",
+      "missed": "Perse",
+      "noData": "Nessuna chiamata in questo periodo.",
+      "outbound": "In uscita",
+      "perDay": "Chiamate al giorno",
+      "spent": "Speso in telefonia",
+      "tab": "Statistiche",
+      "title": "Statistiche telefono",
+      "window": "Ultimi 30 giorni"
     }
   }
 }

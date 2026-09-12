@@ -689,6 +689,7 @@
     "settingsTab": "Settings",
     "contactsTab": "Contacts",
     "numbersTab": "Numbers",
+    "analyticsTab": "Analytics",
     "empty": "No calls yet.",
     "emptyHint": "Your organisation's translated phone calls will appear here.",
     "disabled": "Phone calls are not enabled for this organisation.",
@@ -881,6 +882,25 @@
       "strangerLanguage": "Language for callers we do not know",
       "title": "When somebody calls",
       "voicemail": "Take a message"
+    },
+    "analytics": {
+      "adminOnly": "Phone spending is visible to owners and admins.",
+      "answered": "Answered",
+      "byCountry": "Where you called",
+      "byLanguage": "Languages",
+      "byProject": "Projects",
+      "byTier": "Tiers",
+      "calls": "Calls",
+      "inbound": "Incoming",
+      "minutes": "Minutes",
+      "missed": "Missed",
+      "noData": "No calls in this window yet.",
+      "outbound": "Outgoing",
+      "perDay": "Calls per day",
+      "spent": "Spent on telephony",
+      "tab": "Analytics",
+      "title": "Phone analytics",
+      "window": "Last 30 days"
     }
   }
 }

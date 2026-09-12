@@ -689,6 +689,7 @@
     "settingsTab": "Einstellungen",
     "contactsTab": "Kontakte",
     "numbersTab": "Nummern",
+    "analyticsTab": "Auswertung",
     "empty": "Noch keine Anrufe.",
     "emptyHint": "Hier erscheinen die übersetzten Telefonanrufe Ihrer Organisation.",
     "disabled": "Telefonanrufe sind für diese Organisation nicht aktiviert.",
@@ -881,6 +882,25 @@
       "strangerLanguage": "Sprache für unbekannte Anrufer",
       "title": "Wenn jemand anruft",
       "voicemail": "Nachricht aufnehmen"
+    },
+    "analytics": {
+      "adminOnly": "Telefonkosten sehen Inhaber und Administratoren.",
+      "answered": "Angenommen",
+      "byCountry": "Wohin Sie angerufen haben",
+      "byLanguage": "Sprachen",
+      "byProject": "Projekte",
+      "byTier": "Stufen",
+      "calls": "Anrufe",
+      "inbound": "Eingehend",
+      "minutes": "Minuten",
+      "missed": "Verpasst",
+      "noData": "In diesem Zeitraum noch keine Anrufe.",
+      "outbound": "Ausgehend",
+      "perDay": "Anrufe pro Tag",
+      "spent": "Für Telefonie ausgegeben",
+      "tab": "Auswertung",
+      "title": "Telefon-Auswertung",
+      "window": "Letzte 30 Tage"
     }
   }
 }

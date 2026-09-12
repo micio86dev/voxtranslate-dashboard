@@ -689,6 +689,7 @@
     "settingsTab": "Ajustes",
     "contactsTab": "Contactos",
     "numbersTab": "Números",
+    "analyticsTab": "Analíticas",
     "empty": "Todavía no hay llamadas.",
     "emptyHint": "Aquí aparecerán las llamadas telefónicas traducidas de tu organización.",
     "disabled": "Las llamadas telefónicas no están activadas para esta organización.",
@@ -881,6 +882,25 @@
       "strangerLanguage": "Idioma para quien no conocemos",
       "title": "Cuando alguien llama",
       "voicemail": "Grabar un mensaje"
+    },
+    "analytics": {
+      "adminOnly": "El gasto telefónico lo ven propietarios y administradores.",
+      "answered": "Contestadas",
+      "byCountry": "Dónde has llamado",
+      "byLanguage": "Idiomas",
+      "byProject": "Proyectos",
+      "byTier": "Niveles",
+      "calls": "Llamadas",
+      "inbound": "Entrantes",
+      "minutes": "Minutos",
+      "missed": "Perdidas",
+      "noData": "Todavía no hay llamadas en este periodo.",
+      "outbound": "Salientes",
+      "perDay": "Llamadas por día",
+      "spent": "Gastado en telefonía",
+      "tab": "Analíticas",
+      "title": "Analíticas de teléfono",
+      "window": "Últimos 30 días"
     }
   }
 }

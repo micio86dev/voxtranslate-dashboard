@@ -929,3 +929,17 @@ describe('routing and answer wrappers (spec 0116)', () => {
     expect(res.data?.room).toBe('ph-abc');
   });
 });
+
+describe('telephony analytics wrapper (spec 0117)', () => {
+  it('asks for a window, admin-gated on the server', async () => {
+    const fn = mockFetch({ json: { days: 30, totals: { calls: 0 } } });
+    await api.getVoipAnalytics('org-1', 7);
+    expect(lastCall(fn).url).toBe(`${BASE}/api/business/organizations/org-1/voip/analytics?days=7`);
+  });
+
+  it('defaults to thirty days, the same window the meetings view uses', async () => {
+    const fn = mockFetch({ json: { days: 30, totals: { calls: 0 } } });
+    await api.getVoipAnalytics('org-1');
+    expect(lastCall(fn).url).toContain('days=30');
+  });
+});

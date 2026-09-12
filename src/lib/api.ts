@@ -1380,6 +1380,39 @@ export function answerVoipCall(
   return request('POST', `/api/business/organizations/${orgId}/voip/calls/${callId}/answer`);
 }
 
+// --- Telephony analytics (spec 0117) -----------------------------------------
+
+export interface VoipBucket {
+  label: string;
+  calls: number;
+  credits: number;
+}
+
+export interface VoipAnalytics {
+  days: number;
+  totals: {
+    calls: number;
+    inbound: number;
+    outbound: number;
+    answered: number;
+    missed: number;
+    seconds: number;
+    credits: number;
+  };
+  by_country: VoipBucket[];
+  by_language: VoipBucket[];
+  by_tier: VoipBucket[];
+  by_project: VoipBucket[];
+  calls_by_day: { day: string; calls: number }[];
+  /** From the ledger: what was actually PAID, including numbers bought and renewed. */
+  telephony_credits_spent: number;
+}
+
+/** Admin only — spend is financial data, the same gate the credits endpoint uses. */
+export function getVoipAnalytics(orgId: string, days = 30): Promise<ApiResult<VoipAnalytics>> {
+  return request('GET', `/api/business/organizations/${orgId}/voip/analytics?days=${days}`);
+}
+
 // --- Contacts (spec 0114) ----------------------------------------------------
 
 export interface VoipContactNumber {
