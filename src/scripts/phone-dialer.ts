@@ -217,6 +217,11 @@ const KNOWN_REASONS = new Set([
   'numbers_unsupported',
   'number_unavailable',
   'provider_unavailable',
+  // Spec 0116, inbound.
+  'invalid_ring_mode',
+  'invalid_no_answer_action',
+  'forward_to_required',
+  'already_answered',
 ]);
 
 export function hasReasonCopy(code: string | null | undefined): boolean {

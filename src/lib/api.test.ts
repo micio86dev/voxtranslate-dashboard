@@ -893,3 +893,39 @@ describe('number wrappers hit the paths they claim (spec 0115)', () => {
     expect(lastCall(fn).init.method).toBe('DELETE');
   });
 });
+
+describe('routing and answer wrappers (spec 0116)', () => {
+  const ORG = 'org-1';
+
+  it('reads and writes a number routing', async () => {
+    const fn = mockFetch({ json: { ring_mode: 'owners' } });
+    const prefix = `${BASE}/api/business/organizations/${ORG}/voip/numbers/n-1/routing`;
+
+    await api.getVoipRouting(ORG, 'n-1');
+    expect(lastCall(fn).url).toBe(prefix);
+    expect(lastCall(fn).init.method).toBe('GET');
+
+    await api.saveVoipRouting(ORG, 'n-1', {
+      ring_mode: 'team',
+      ring_user_ids: [],
+      ring_team_id: 't-1',
+      ring_seconds: 30,
+      no_answer_action: 'refuse',
+      forward_to: null,
+      stranger_language: 'es',
+    });
+    expect(lastCall(fn).url).toBe(prefix);
+    expect(lastCall(fn).init.method).toBe('PUT');
+    expect(lastCall(fn).body).toMatchObject({ ring_mode: 'team', ring_team_id: 't-1' });
+  });
+
+  it('claims a ringing call', async () => {
+    const fn = mockFetch({ json: { room: 'ph-abc' } });
+    const res = await api.answerVoipCall(ORG, 'c-1');
+    expect(lastCall(fn).url).toBe(
+      `${BASE}/api/business/organizations/${ORG}/voip/calls/c-1/answer`,
+    );
+    expect(lastCall(fn).init.method).toBe('POST');
+    expect(res.data?.room).toBe('ph-abc');
+  });
+});

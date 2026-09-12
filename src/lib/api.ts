@@ -1094,6 +1094,9 @@ export interface VoipCallSummary {
   consent_status: string;
   project_id: string | null;
   project_name: string | null;
+  /** True when nobody answered in time — a fact, not an inference (spec 0116). */
+  missed?: boolean;
+  contact_name?: string | null;
 }
 
 export interface VoipCallDetail extends Omit<VoipCallSummary, 'recipient_masked'> {
@@ -1336,6 +1339,45 @@ export function checkVoipVerification(
 /** Give a number back. Irreversible: somebody else may hold it an hour later. */
 export function releaseVoipNumber(orgId: string, numberId: string): Promise<ApiResult<unknown>> {
   return request('DELETE', `/api/business/organizations/${orgId}/voip/numbers/${numberId}`);
+}
+
+/** What happens when somebody calls a number (spec 0116). */
+export interface VoipRouting {
+  ring_mode: 'owners' | 'users' | 'team';
+  ring_user_ids: string[];
+  ring_team_id: string | null;
+  ring_seconds: number;
+  no_answer_action: 'voicemail' | 'forward' | 'refuse';
+  forward_to: string | null;
+  stranger_language: string | null;
+}
+
+/**
+ * Reading an unconfigured number returns the DEFAULTS, not a 404 — the form opens showing
+ * what will actually happen (ring the owners, take a message) rather than blank.
+ */
+export function getVoipRouting(orgId: string, numberId: string): Promise<ApiResult<VoipRouting>> {
+  return request('GET', `/api/business/organizations/${orgId}/voip/numbers/${numberId}/routing`);
+}
+
+export function saveVoipRouting(
+  orgId: string,
+  numberId: string,
+  body: VoipRouting,
+): Promise<ApiResult<unknown>> {
+  return request(
+    'PUT',
+    `/api/business/organizations/${orgId}/voip/numbers/${numberId}/routing`,
+    body,
+  );
+}
+
+/** Take a ringing inbound call. First to claim it wins. */
+export function answerVoipCall(
+  orgId: string,
+  callId: string,
+): Promise<ApiResult<{ room: string | null }>> {
+  return request('POST', `/api/business/organizations/${orgId}/voip/calls/${callId}/answer`);
 }
 
 // --- Contacts (spec 0114) ----------------------------------------------------

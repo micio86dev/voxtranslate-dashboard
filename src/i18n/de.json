@@ -745,7 +745,11 @@
       "name_required": "Ein Kontakt braucht einen Namen.",
       "number_not_e164": "Internationales Format verwenden, mit Ländervorwahl.",
       "numbers_unsupported": "Diese Installation kann über den Anbieter keine Nummern kaufen. Fragen Sie eine Administratorin.",
-      "number_unavailable": "Diese Nummer ist nicht mehr verfügbar. Erneut suchen."
+      "number_unavailable": "Diese Nummer ist nicht mehr verfügbar. Erneut suchen.",
+      "invalid_ring_mode": "Wählen Sie, bei wem es klingeln soll.",
+      "invalid_no_answer_action": "Wählen Sie, was passiert, wenn niemand abnimmt.",
+      "forward_to_required": "Eine Weiterleitung braucht eine Zielnummer.",
+      "already_answered": "Jemand anderes hat den Anruf angenommen."
     },
     "settings": {
       "title": "Einstellungen für Telefonanrufe",
@@ -857,6 +861,26 @@
       "title": "Nummern",
       "verify": "Verifizieren",
       "verifying": "Verifizierung gestartet"
+    },
+    "routing": {
+      "answer": "Annehmen",
+      "forward": "An eine andere Nummer weiterleiten",
+      "forwardTo": "Weiterleiten an",
+      "ifNobody": "Wenn niemand abnimmt",
+      "inbound": "Eingehend",
+      "missed": "Verpasst",
+      "outbound": "Ausgehend",
+      "refuse": "Höflich ablehnen",
+      "ringFor": "Klingeln für",
+      "ringOwners": "Den Inhabern der Organisation",
+      "ringTeam": "Einem Team",
+      "ringUsers": "Ausgewählten Personen",
+      "ringWho": "Klingeln bei",
+      "saved": "Routing gespeichert.",
+      "seconds": "Sekunden",
+      "strangerLanguage": "Sprache für unbekannte Anrufer",
+      "title": "Wenn jemand anruft",
+      "voicemail": "Nachricht aufnehmen"
     }
   }
 }

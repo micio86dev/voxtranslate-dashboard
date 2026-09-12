@@ -45,6 +45,7 @@ const t = useTranslations(lang);
       <table class="w-full text-left text-sm">
         <thead class="text-xs text-muted">
           <tr>
+            <th scope="col" class="py-2 pr-3">{t('phone.routing.inbound')}</th>
             <th scope="col" class="py-2 pr-3">{t('phone.detail.recipient')}</th>
             <th scope="col" class="py-2 pr-3">{t('history.project')}</th>
             <th scope="col" class="py-2 pr-3">{t('history.started')}</th>
@@ -149,9 +150,15 @@ const t = useTranslations(lang);
       for (const call of calls) {
         const tr = document.createElement('tr');
         tr.className = 'border-t border-line';
+        // Direction first, because an inbound call and an outbound one to the same number
+        // are different events and a list that conflates them is a list nobody trusts.
+        // A missed call says so here rather than being inferred from a zero duration.
+        const direction =
+          call.direction === 'inbound' ? t('phone.routing.inbound') : t('phone.routing.outbound');
+        cell(tr, call.missed ? `${direction} · ${t('phone.routing.missed')}` : direction);
         // The masked form only. The full number lives on the detail endpoint, which is
         // the record the customer paid for — a list is the most-exported view there is.
-        cell(tr, call.recipient_masked, 'font-mono');
+        cell(tr, call.contact_name ?? call.recipient_masked, call.contact_name ? '' : 'font-mono');
         cell(tr, call.project_name ?? '—', 'text-muted');
         cell(tr, new Date(call.started_at).toLocaleString(), 'text-muted');
         // Status is a word, never a colour on its own.

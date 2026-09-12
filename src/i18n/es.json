@@ -745,7 +745,11 @@
       "name_required": "Un contacto necesita un nombre.",
       "number_not_e164": "Usa el formato internacional, con el prefijo del país.",
       "numbers_unsupported": "Esta instalación no puede comprar números a través del proveedor. Pregunta a un administrador.",
-      "number_unavailable": "Ese número ya no está disponible. Busca de nuevo."
+      "number_unavailable": "Ese número ya no está disponible. Busca de nuevo.",
+      "invalid_ring_mode": "Elige a quién hacer sonar.",
+      "invalid_no_answer_action": "Elige qué pasa si no contesta nadie.",
+      "forward_to_required": "El desvío necesita un número al que desviar.",
+      "already_answered": "Otra persona atendió la llamada."
     },
     "settings": {
       "title": "Ajustes de llamadas telefónicas",
@@ -857,6 +861,26 @@
       "title": "Números",
       "verify": "Verificar",
       "verifying": "Verificación iniciada"
+    },
+    "routing": {
+      "answer": "Responder",
+      "forward": "Desviar a otro número",
+      "forwardTo": "Desviar a",
+      "ifNobody": "Si no contesta nadie",
+      "inbound": "Entrante",
+      "missed": "Perdida",
+      "outbound": "Saliente",
+      "refuse": "Rechazar con educación",
+      "ringFor": "Sonar durante",
+      "ringOwners": "Los propietarios de la organización",
+      "ringTeam": "Un equipo",
+      "ringUsers": "Personas elegidas",
+      "ringWho": "Hacer sonar",
+      "saved": "Enrutamiento guardado.",
+      "seconds": "segundos",
+      "strangerLanguage": "Idioma para quien no conocemos",
+      "title": "Cuando alguien llama",
+      "voicemail": "Grabar un mensaje"
     }
   }
 }

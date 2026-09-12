@@ -745,7 +745,11 @@
       "name_required": "Un contact a besoin d'un nom.",
       "number_not_e164": "Utiliser le format international, avec l'indicatif du pays.",
       "numbers_unsupported": "Cette installation ne peut pas acheter de numéros via l'opérateur. Demandez à un administrateur.",
-      "number_unavailable": "Ce numéro n'est plus disponible. Relancez la recherche."
+      "number_unavailable": "Ce numéro n'est plus disponible. Relancez la recherche.",
+      "invalid_ring_mode": "Choisissez qui doit sonner.",
+      "invalid_no_answer_action": "Choisissez ce qui se passe si personne ne répond.",
+      "forward_to_required": "Un transfert a besoin d'un numéro de destination.",
+      "already_answered": "Quelqu'un d'autre a pris cet appel."
     },
     "settings": {
       "title": "Paramètres des appels téléphoniques",
@@ -857,6 +861,26 @@
       "title": "Numéros",
       "verify": "Vérifier",
       "verifying": "Vérification lancée"
+    },
+    "routing": {
+      "answer": "Répondre",
+      "forward": "Transférer vers un autre numéro",
+      "forwardTo": "Transférer vers",
+      "ifNobody": "Si personne ne répond",
+      "inbound": "Entrant",
+      "missed": "Manqué",
+      "outbound": "Sortant",
+      "refuse": "Refuser poliment",
+      "ringFor": "Sonner pendant",
+      "ringOwners": "Les propriétaires de l'organisation",
+      "ringTeam": "Une équipe",
+      "ringUsers": "Des personnes choisies",
+      "ringWho": "Faire sonner",
+      "saved": "Routage enregistré.",
+      "seconds": "secondes",
+      "strangerLanguage": "Langue pour les appelants inconnus",
+      "title": "Quand quelqu'un appelle",
+      "voicemail": "Prendre un message"
     }
   }
 }

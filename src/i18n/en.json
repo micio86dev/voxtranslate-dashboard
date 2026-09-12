@@ -745,7 +745,11 @@
       "name_required": "A contact needs a name.",
       "number_not_e164": "Use the international format, starting with the country code.",
       "numbers_unsupported": "This deployment cannot buy numbers through the provider. Ask an administrator.",
-      "number_unavailable": "That number is no longer available. Search again."
+      "number_unavailable": "That number is no longer available. Search again.",
+      "invalid_ring_mode": "Choose who should be rung.",
+      "invalid_no_answer_action": "Choose what happens when nobody answers.",
+      "forward_to_required": "A forward needs a number to forward to.",
+      "already_answered": "Somebody else took this call."
     },
     "settings": {
       "title": "Phone call settings",
@@ -857,6 +861,26 @@
       "title": "Numbers",
       "verify": "Verify",
       "verifying": "Verification started"
+    },
+    "routing": {
+      "answer": "Answer",
+      "forward": "Forward to another number",
+      "forwardTo": "Forward to",
+      "ifNobody": "If nobody answers",
+      "inbound": "Incoming",
+      "missed": "Missed",
+      "outbound": "Outgoing",
+      "refuse": "Politely decline",
+      "ringFor": "Ring for",
+      "ringOwners": "The organisation owners",
+      "ringTeam": "A team",
+      "ringUsers": "Chosen people",
+      "ringWho": "Ring",
+      "saved": "Routing saved.",
+      "seconds": "seconds",
+      "strangerLanguage": "Language for callers we do not know",
+      "title": "When somebody calls",
+      "voicemail": "Take a message"
     }
   }
 }

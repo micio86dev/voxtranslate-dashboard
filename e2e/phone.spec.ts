@@ -201,6 +201,18 @@ async function stubApi(page: Page, opts: StubOptions = {}) {
         limit: 50,
       });
     }
+    if (url.includes('/routing')) {
+      if (route.request().method() === 'PUT') return route.fulfill({ status: 204, body: '' });
+      return json({
+        ring_mode: 'owners',
+        ring_user_ids: [],
+        ring_team_id: null,
+        ring_seconds: 25,
+        no_answer_action: 'voicemail',
+        forward_to: null,
+        stranger_language: null,
+      });
+    }
     if (url.includes('/voip/numbers/search')) {
       return json({
         offers: [
@@ -285,6 +297,14 @@ async function stubApi(page: Page, opts: StubOptions = {}) {
     }
     if (url.includes('/voip/calls')) {
       return json({ calls, page: 1, limit: 8 });
+    }
+    if (url.includes('/members')) {
+      return json([
+        { user_id: 'u-1', name: 'Dialer', email: 'dialer@example.test', role: 'owner' },
+      ]);
+    }
+    if (url.includes('/teams')) {
+      return json([{ id: 't-1', name: 'Sales' }]);
     }
     // The org list `app-boot` needs before anything else runs.
     return json([
@@ -1034,4 +1054,75 @@ test('releasing asks first, because there is no getting it back', async ({ page 
   await page.locator('#owned li').first().getByRole('button', { name: 'Release' }).click();
   await page.waitForTimeout(200);
   expect(released).toBe(0);
+});
+
+// ---- inbound routing (spec 0116) -------------------------------------------
+
+test('routing opens showing what will actually happen, not a blank form', async ({ page }) => {
+  // An unconfigured number returns the DEFAULTS rather than a 404, so an admin can see
+  // that it already rings the owners and takes a message.
+  await signIn(page);
+  await stubApi(page);
+  await page.goto('/en/phone/numbers/');
+
+  await page
+    .locator('#owned li')
+    .first()
+    .getByRole('button', { name: /When somebody calls/ })
+    .click();
+  await expect(page.locator('#routing-panel')).toBeVisible();
+  await expect(page.locator('#ring-mode')).toHaveValue('owners');
+  await expect(page.locator('#no-answer')).toHaveValue('voicemail');
+  await expect(page.locator('#ring-seconds')).toHaveValue('25');
+
+  // Progressive disclosure: the fields a mode does not use are not shown.
+  await expect(page.locator('#ring-users-box')).toBeHidden();
+  await expect(page.locator('#forward-box')).toBeHidden();
+});
+
+test('choosing a forward reveals where it forwards to', async ({ page }) => {
+  // A forward with nowhere to forward to is a call that dies silently at the moment it
+  // matters most. The server refuses it; the form asks for it.
+  await signIn(page);
+  await stubApi(page);
+  await page.goto('/en/phone/numbers/');
+  await page
+    .locator('#owned li')
+    .first()
+    .getByRole('button', { name: /When somebody calls/ })
+    .click();
+
+  await page.selectOption('#no-answer', 'forward');
+  await expect(page.locator('#forward-box')).toBeVisible();
+
+  await page.selectOption('#ring-mode', 'team');
+  await expect(page.locator('#ring-team-box')).toBeVisible();
+  await expect(page.locator('#ring-users-box')).toBeHidden();
+});
+
+test('saving routing sends what was chosen', async ({ page }) => {
+  const saved: Record<string, unknown>[] = [];
+  page.on('request', (req) => {
+    if (req.method() === 'PUT' && req.url().includes('/routing')) saved.push(req.postDataJSON());
+  });
+
+  await signIn(page);
+  await stubApi(page);
+  await page.goto('/en/phone/numbers/');
+  await page
+    .locator('#owned li')
+    .first()
+    .getByRole('button', { name: /When somebody calls/ })
+    .click();
+
+  await page.selectOption('#ring-mode', 'users');
+  await page.locator('#ring-users input').first().check();
+  await page.fill('#ring-seconds', '40');
+  await page.click('#routing-form button[type="submit"]');
+
+  await expect(page.locator('#routing-saved')).toBeVisible();
+  expect(saved).toHaveLength(1);
+  expect(saved[0].ring_mode).toBe('users');
+  expect(saved[0].ring_user_ids).toEqual(['u-1']);
+  expect(saved[0].ring_seconds).toBe(40);
 });

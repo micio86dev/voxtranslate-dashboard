@@ -745,7 +745,11 @@
       "name_required": "Un contatto ha bisogno di un nome.",
       "number_not_e164": "Usa il formato internazionale, con il prefisso del paese.",
       "numbers_unsupported": "Questa installazione non può acquistare numeri tramite il provider. Chiedi a un amministratore.",
-      "number_unavailable": "Quel numero non è più disponibile. Cerca di nuovo."
+      "number_unavailable": "Quel numero non è più disponibile. Cerca di nuovo.",
+      "invalid_ring_mode": "Scegli chi deve squillare.",
+      "invalid_no_answer_action": "Scegli cosa succede se non risponde nessuno.",
+      "forward_to_required": "L'inoltro ha bisogno di un numero a cui inoltrare.",
+      "already_answered": "Ha risposto qualcun altro."
     },
     "settings": {
       "title": "Impostazioni chiamate telefoniche",
@@ -857,6 +861,26 @@
       "title": "Numeri",
       "verify": "Verifica",
       "verifying": "Verifica avviata"
+    },
+    "routing": {
+      "answer": "Rispondi",
+      "forward": "Inoltra a un altro numero",
+      "forwardTo": "Inoltra a",
+      "ifNobody": "Se non risponde nessuno",
+      "inbound": "In arrivo",
+      "missed": "Persa",
+      "outbound": "In uscita",
+      "refuse": "Rifiuta cortesemente",
+      "ringFor": "Squilla per",
+      "ringOwners": "I proprietari dell'organizzazione",
+      "ringTeam": "Un team",
+      "ringUsers": "Persone scelte",
+      "ringWho": "Fai squillare",
+      "saved": "Instradamento salvato.",
+      "seconds": "secondi",
+      "strangerLanguage": "Lingua per chi non conosciamo",
+      "title": "Quando qualcuno chiama",
+      "voicemail": "Registra un messaggio"
     }
   }
 }
