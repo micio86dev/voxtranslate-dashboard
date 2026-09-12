@@ -60,11 +60,18 @@ describe('request() core behaviour', () => {
   });
 
   it('does not parse a 204 body', async () => {
-    const fn = mockFetch({ ok: true, status: 204 });
+    // A spy on json(), because that is the claim. The previous assertion here
+    // (`fetch` was called once) only proved the request went out, and `jsonThrows`
+    // cannot distinguish either — `request` swallows a throwing json() with
+    // `.catch(() => null)`, which is the same `data: null` a 204 produces.
+    const json = vi.fn(async () => ({ shouldNotBeRead: true }));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({ ok: true, status: 204, json })),
+    );
     const res = await api.deleteProject('o1', 'p1');
     expect(res).toEqual({ ok: true, status: 204, data: null });
-    // json() must not have been consulted on a 204 — assert via a spy-free path:
-    expect(fn).toHaveBeenCalledOnce();
+    expect(json).not.toHaveBeenCalled();
   });
 
   it('yields null data when the body is not JSON', async () => {
@@ -655,5 +662,311 @@ describe('current-org persistence', () => {
     expect(() => api.setCurrentOrgId('x')).not.toThrow();
     getSpy.mockRestore();
     setSpy.mockRestore();
+  });
+});
+
+describe('phone catalogues and numbers (spec 0112)', () => {
+  it('asks the org-scoped route for the organisation own numbers', async () => {
+    const fn = mockFetch({ json: { numbers: [] } });
+    const res = await api.listVoipNumbers('org-1');
+    expect(lastCall(fn).url).toBe(`${BASE}/api/business/organizations/org-1/voip/numbers`);
+    expect(res.ok).toBe(true);
+    expect(res.data).toEqual({ numbers: [] });
+  });
+
+  it('reads the engine catalogue from the shared, unauthenticated route', async () => {
+    // Shared with the call app on purpose: a tier list that drifts between the dialer
+    // and the room is a tier list someone will have to reconcile by hand.
+    const fn = mockFetch({ json: { engines: [{ id: 'standard' }] } });
+    const res = await api.getEngines();
+    expect(lastCall(fn).url).toBe(`${BASE}/api/engines`);
+    expect(res.data?.engines).toHaveLength(1);
+  });
+
+  it('reads the language catalogue from the shared route', async () => {
+    const fn = mockFetch({ json: { languages: [], regions: [] } });
+    const res = await api.getLanguageCatalogue();
+    expect(lastCall(fn).url).toBe(`${BASE}/api/languages`);
+    expect(res.data?.regions).toEqual([]);
+  });
+
+  it('surfaces a failure rather than inventing an empty catalogue', async () => {
+    // The dialer must be able to tell "no engines configured" from "the request failed";
+    // a silent empty list would render a tier select with nothing in it and no reason.
+    mockFetch({ rejects: true });
+    const res = await api.getEngines();
+    expect(res.ok).toBe(false);
+    expect(res.data).toBeNull();
+  });
+});
+
+describe('VoIP wrappers hit the paths they claim', () => {
+  // The e2e cannot stand in for these. Its stub matches the glob
+  // `**/api/business/organizations**`, so a wrong path — `/voip/quotes` for `/voip/quote`
+  // — still matches, misses every `url.includes()` branch and falls through to the org
+  // list. The typo would surface in production, not in CI.
+  const ORG = 'org-1';
+  const PREFIX = `${BASE}/api/business/organizations/${ORG}/voip`;
+
+  it('quote', async () => {
+    const fn = mockFetch();
+    await api.quoteVoipCall(ORG, { destination: '+390212345678' });
+    const { url, init } = lastCall(fn);
+    expect(url).toBe(`${PREFIX}/quote`);
+    expect(init.method).toBe('POST');
+  });
+
+  it('dial', async () => {
+    const fn = mockFetch();
+    await api.dialVoipCall(ORG, {
+      destination: '+390212345678',
+      source_language: 'it',
+      target_language: 'zh',
+    });
+    const { url, init } = lastCall(fn);
+    expect(url).toBe(`${PREFIX}/calls`);
+    expect(init.method).toBe('POST');
+  });
+
+  it('history, with its filters in the query string', async () => {
+    const fn = mockFetch({ json: { calls: [], page: 2, limit: 25 } });
+    await api.getVoipCalls(ORG, { projectId: 'p-1', page: 2, limit: 25 });
+    const { url, init } = lastCall(fn);
+    expect(init.method).toBe('GET');
+    expect(url).toContain(`${PREFIX}/calls?`);
+    expect(url).toContain('project_id=p-1');
+    expect(url).toContain('page=2');
+    expect(url).toContain('limit=25');
+  });
+
+  it('history, with no filters and therefore no query string', async () => {
+    const fn = mockFetch({ json: { calls: [], page: 1, limit: 8 } });
+    await api.getVoipCalls(ORG);
+    expect(lastCall(fn).url).toBe(`${PREFIX}/calls`);
+  });
+
+  it('one call', async () => {
+    const fn = mockFetch();
+    await api.getVoipCall(ORG, 'c-1');
+    expect(lastCall(fn).url).toBe(`${PREFIX}/calls/c-1`);
+  });
+
+  it('hang up', async () => {
+    const fn = mockFetch();
+    await api.hangUpVoipCall(ORG, 'c-1');
+    const { url, init } = lastCall(fn);
+    expect(url).toBe(`${PREFIX}/calls/c-1/hangup`);
+    expect(init.method).toBe('POST');
+  });
+
+  it('video invite', async () => {
+    const fn = mockFetch();
+    await api.createVoipVideoInvite(ORG, 'c-1');
+    const { url, init } = lastCall(fn);
+    expect(url).toBe(`${PREFIX}/calls/c-1/video-invite`);
+    expect(init.method).toBe('POST');
+  });
+
+  it('settings, read and write, on the same path with different verbs', async () => {
+    const fn = mockFetch();
+    await api.getVoipSettings(ORG);
+    expect(lastCall(fn).url).toBe(`${PREFIX}/settings`);
+    expect(lastCall(fn).init.method).toBe('GET');
+
+    await api.saveVoipSettings(ORG, { enabled: true, require_project: true });
+    const put = lastCall(fn);
+    expect(put.url).toBe(`${PREFIX}/settings`);
+    expect(put.init.method).toBe('PUT');
+    expect(put.body).toEqual({ enabled: true, require_project: true });
+  });
+});
+
+describe('contact wrappers hit the paths they claim (spec 0114)', () => {
+  const ORG = 'org-1';
+  const PREFIX = `${BASE}/api/business/organizations/${ORG}/voip/contacts`;
+
+  it('list, with the filters people actually use', async () => {
+    const fn = mockFetch({ json: { contacts: [], page: 1, limit: 50 } });
+    await api.listVoipContacts(ORG, {
+      q: 'zhang',
+      projectId: 'p-1',
+      tag: 'supplier',
+      language: 'zh',
+    });
+    const { url } = lastCall(fn);
+    expect(url).toContain(`${PREFIX}?`);
+    expect(url).toContain('q=zhang');
+    expect(url).toContain('project_id=p-1');
+    expect(url).toContain('tag=supplier');
+    expect(url).toContain('language=zh');
+  });
+
+  it('list, with nothing to filter and therefore no query string', async () => {
+    const fn = mockFetch({ json: { contacts: [], page: 1, limit: 50 } });
+    await api.listVoipContacts(ORG);
+    expect(lastCall(fn).url).toBe(PREFIX);
+  });
+
+  it('create, read, update and delete one contact', async () => {
+    const fn = mockFetch({ json: { id: 'k-1' } });
+
+    await api.createVoipContact(ORG, { name: 'Wei' });
+    expect(lastCall(fn).url).toBe(PREFIX);
+    expect(lastCall(fn).init.method).toBe('POST');
+
+    await api.getVoipContact(ORG, 'k-1');
+    expect(lastCall(fn).url).toBe(`${PREFIX}/k-1`);
+    expect(lastCall(fn).init.method).toBe('GET');
+
+    await api.updateVoipContact(ORG, 'k-1', { name: 'Wei Zhang' });
+    expect(lastCall(fn).url).toBe(`${PREFIX}/k-1`);
+    expect(lastCall(fn).init.method).toBe('PATCH');
+    expect(lastCall(fn).body).toEqual({ name: 'Wei Zhang' });
+
+    await api.deleteVoipContact(ORG, 'k-1');
+    expect(lastCall(fn).url).toBe(`${PREFIX}/k-1`);
+    expect(lastCall(fn).init.method).toBe('DELETE');
+  });
+
+  it('escapes the number in a lookup, because a + in a query string is a space', async () => {
+    const fn = mockFetch({ json: { id: 'k-1', name: 'Wei', company: null, language: 'zh' } });
+    await api.lookupVoipContact(ORG, '+8613800138000');
+    expect(lastCall(fn).url).toBe(`${PREFIX}/lookup?e164=%2B8613800138000`);
+  });
+
+  it('reports an unknown number as a plain miss, not an error to handle', async () => {
+    // Not knowing somebody is normal: the call page uses exactly this to decide whether
+    // to offer to save a number.
+    mockFetch({ ok: false, status: 404, json: { error: 'not found' } });
+    const res = await api.lookupVoipContact(ORG, '+8613800138000');
+    expect(res.ok).toBe(false);
+    expect(res.status).toBe(404);
+  });
+});
+
+describe('number wrappers hit the paths they claim (spec 0115)', () => {
+  const ORG = 'org-1';
+  const PREFIX = `${BASE}/api/business/organizations/${ORG}/voip/numbers`;
+
+  it('search, in the terms a person asked in', async () => {
+    const fn = mockFetch({ json: { offers: [] } });
+    await api.searchVoipNumbers(ORG, { country: 'IT', areaCode: '02', kind: 'local', limit: 5 });
+    const { url } = lastCall(fn);
+    expect(url).toContain(`${PREFIX}/search?`);
+    expect(url).toContain('country=IT');
+    expect(url).toContain('area_code=02');
+    expect(url).toContain('kind=local');
+    expect(url).toContain('limit=5');
+  });
+
+  it('search with only a country, and no empty parameters trailing it', async () => {
+    const fn = mockFetch({ json: { offers: [] } });
+    await api.searchVoipNumbers(ORG, { country: 'DE' });
+    expect(lastCall(fn).url).toBe(`${PREFIX}/search?country=DE`);
+  });
+
+  it('buy, carrying the key the whole idempotency story rests on', async () => {
+    const fn = mockFetch({ json: { id: 'n-1' } });
+    await api.buyVoipNumber(ORG, {
+      e164: '+390212340001',
+      country: 'IT',
+      purchase_key: 'key-1',
+    });
+    const { url, init, body } = lastCall(fn);
+    expect(url).toBe(PREFIX);
+    expect(init.method).toBe('POST');
+    expect(body.purchase_key).toBe('key-1');
+  });
+
+  it('verify, check and release', async () => {
+    const fn = mockFetch({ json: { verification_status: 'pending' } });
+
+    await api.verifyVoipNumber(ORG, 'n-1');
+    expect(lastCall(fn).url).toBe(`${PREFIX}/n-1/verify`);
+    expect(lastCall(fn).init.method).toBe('POST');
+
+    await api.checkVoipVerification(ORG, 'n-1');
+    expect(lastCall(fn).url).toBe(`${PREFIX}/n-1/verify/check`);
+
+    await api.releaseVoipNumber(ORG, 'n-1');
+    expect(lastCall(fn).url).toBe(`${PREFIX}/n-1`);
+    expect(lastCall(fn).init.method).toBe('DELETE');
+  });
+});
+
+describe('routing and answer wrappers (spec 0116)', () => {
+  const ORG = 'org-1';
+
+  it('reads and writes a number routing', async () => {
+    const fn = mockFetch({ json: { ring_mode: 'owners' } });
+    const prefix = `${BASE}/api/business/organizations/${ORG}/voip/numbers/n-1/routing`;
+
+    await api.getVoipRouting(ORG, 'n-1');
+    expect(lastCall(fn).url).toBe(prefix);
+    expect(lastCall(fn).init.method).toBe('GET');
+
+    await api.saveVoipRouting(ORG, 'n-1', {
+      ring_mode: 'team',
+      ring_user_ids: [],
+      ring_team_id: 't-1',
+      ring_seconds: 30,
+      no_answer_action: 'refuse',
+      forward_to: null,
+      stranger_language: 'es',
+    });
+    expect(lastCall(fn).url).toBe(prefix);
+    expect(lastCall(fn).init.method).toBe('PUT');
+    expect(lastCall(fn).body).toMatchObject({ ring_mode: 'team', ring_team_id: 't-1' });
+  });
+
+  it('claims a ringing call', async () => {
+    const fn = mockFetch({ json: { room: 'ph-abc' } });
+    const res = await api.answerVoipCall(ORG, 'c-1');
+    expect(lastCall(fn).url).toBe(
+      `${BASE}/api/business/organizations/${ORG}/voip/calls/c-1/answer`,
+    );
+    expect(lastCall(fn).init.method).toBe('POST');
+    expect(res.data?.room).toBe('ph-abc');
+  });
+});
+
+describe('telephony analytics wrapper (spec 0117)', () => {
+  it('asks for a window, admin-gated on the server', async () => {
+    const fn = mockFetch({ json: { days: 30, totals: { calls: 0 } } });
+    await api.getVoipAnalytics('org-1', 7);
+    expect(lastCall(fn).url).toBe(`${BASE}/api/business/organizations/org-1/voip/analytics?days=7`);
+  });
+
+  it('defaults to thirty days, the same window the meetings view uses', async () => {
+    const fn = mockFetch({ json: { days: 30, totals: { calls: 0 } } });
+    await api.getVoipAnalytics('org-1');
+    expect(lastCall(fn).url).toContain('days=30');
+  });
+});
+
+describe('office hours wrappers (spec 0118)', () => {
+  const ORG = 'org-1';
+  const PREFIX = `${BASE}/api/business/organizations/${ORG}/voip/numbers/n-1/hours`;
+
+  it('reads, writes and clears', async () => {
+    const fn = mockFetch({ json: { configured: false } });
+
+    await api.getVoipHours(ORG, 'n-1');
+    expect(lastCall(fn).url).toBe(PREFIX);
+    expect(lastCall(fn).init.method).toBe('GET');
+
+    await api.saveVoipHours(ORG, 'n-1', {
+      timezone: 'Europe/Rome',
+      opens_at: [540, -1, -1, -1, -1, -1, -1],
+      closes_at: [1020, -1, -1, -1, -1, -1, -1],
+      closed_action: 'voicemail',
+    });
+    expect(lastCall(fn).init.method).toBe('PUT');
+    expect(lastCall(fn).body).toMatchObject({ timezone: 'Europe/Rome' });
+
+    // Clearing, rather than storing an empty week — "always open" is the absence of a
+    // row, and the two must not be confusable.
+    await api.clearVoipHours(ORG, 'n-1');
+    expect(lastCall(fn).init.method).toBe('DELETE');
   });
 });

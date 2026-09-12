@@ -1,0 +1,54 @@
+---
+/**
+ * Tab bar for the Business Phone section (spec 0112 §4).
+ *
+ * The header nav is a single flat row of fourteen links already relying on
+ * `overflow-x-auto`; adding four more would make the app's primary navigation unusable on
+ * a narrow viewport to serve one section. A tab bar local to `/phone/*` keeps the header's
+ * cost flat and puts the section's pages next to each other, where they belong.
+ *
+ * The active tab is marked with `aria-current="page"` and carries weight and colour, not
+ * colour alone — the same rule the dialer follows for call state.
+ */
+import { localizePath, useTranslations, type Locale } from '../../lib/i18n';
+
+interface Props {
+  lang: Locale;
+  current: 'dialer' | 'calls' | 'contacts' | 'numbers' | 'analytics' | 'settings';
+}
+
+const { lang, current } = Astro.props;
+const t = useTranslations(lang);
+
+const tabs = [
+  { key: 'dialer', href: localizePath(lang, 'phone'), label: t('phone.new') },
+  { key: 'calls', href: localizePath(lang, 'phone/calls'), label: t('phone.allCalls') },
+  { key: 'contacts', href: localizePath(lang, 'phone/contacts'), label: t('phone.contactsTab') },
+  { key: 'numbers', href: localizePath(lang, 'phone/numbers'), label: t('phone.numbersTab') },
+  {
+    key: 'analytics',
+    href: localizePath(lang, 'phone/analytics'),
+    label: t('phone.analyticsTab'),
+  },
+  { key: 'settings', href: localizePath(lang, 'phone/settings'), label: t('phone.settingsTab') },
+];
+---
+
+<nav class="mt-4 flex gap-1 overflow-x-auto border-b border-line" aria-label={t('phone.nav')}>
+  {
+    tabs.map((tab) => (
+      <a
+        href={tab.href}
+        aria-current={tab.key === current ? 'page' : undefined}
+        class:list={[
+          '-mb-px whitespace-nowrap border-b-2 px-3 py-2 text-sm',
+          tab.key === current
+            ? 'border-brand font-semibold text-ink'
+            : 'border-transparent text-muted hover:text-ink',
+        ]}
+      >
+        {tab.label}
+      </a>
+    ))
+  }
+</nav>

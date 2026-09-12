@@ -1,0 +1,623 @@
+---
+/**
+ * `/[lang]/phone/numbers/` — the organisation's telephone numbers (spec 0115).
+ *
+ * Two halves: the numbers you have, and finding one you do not. Search speaks in a
+ * country and a place rather than in provider query syntax, and every price shown is what
+ * the customer pays — what the carrier charges us never crosses the wire.
+ *
+ * Buying is confirmed before it happens and carries a purchase key that survives a retry.
+ * The failure that key prevents is not hypothetical: a timeout, retried, buys a second
+ * number the organisation then pays for monthly, for ever, without having asked.
+ */
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import SectionNav from '../../../components/phone/SectionNav.astro';
+import { localePaths, isLocale, DEFAULT_LOCALE, useTranslations } from '../../../lib/i18n';
+
+export function getStaticPaths() {
+  return localePaths();
+}
+
+const lang = isLocale(Astro.params.lang) ? Astro.params.lang : DEFAULT_LOCALE;
+const t = useTranslations(lang);
+---
+
+<BaseLayout lang={lang} title={t('phone.numbers.title')} chrome>
+  <h1 class="text-2xl font-bold">{t('phone.numbers.title')}</h1>
+
+  <SectionNav lang={lang} current="numbers" />
+
+  <div id="voip-off" class="card mt-6 hidden">
+    <p class="text-sm">{t('phone.disabled')}</p>
+  </div>
+
+  <div id="numbers-page" class="mt-6 hidden grid gap-6">
+    <section class="card" aria-labelledby="owned-h">
+      <h2 id="owned-h" class="text-lg font-semibold">{t('phone.numbers.owned')}</h2>
+      <p id="owned-loading" class="mt-3 text-sm text-muted">{t('common.loading')}</p>
+      <p id="owned-empty" class="mt-3 hidden text-sm text-muted">{t('phone.numbers.empty')}</p>
+      <p id="owned-hint" class="mt-1 hidden text-xs text-muted">{t('phone.numbers.emptyHint')}</p>
+      <ul id="owned" class="mt-3 grid"></ul>
+    </section>
+
+    <!--
+      What happens when somebody calls THIS number. On the numbers page rather than a
+      screen of its own, because that is the question in its own context — a routing
+      setting divorced from the number it routes is a setting nobody can check.
+    -->
+    <section id="routing-panel" class="card hidden grid gap-4" aria-labelledby="routing-h">
+      <h2 id="routing-h" class="text-lg font-semibold">
+        {t('phone.routing.title')}
+        <span id="routing-for" class="font-mono text-sm"></span>
+      </h2>
+      <form id="routing-form" class="grid gap-4" novalidate>
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label for="ring-mode" class="label">{t('phone.routing.ringWho')}</label>
+            <select id="ring-mode" class="field">
+              <option value="owners">{t('phone.routing.ringOwners')}</option>
+              <option value="users">{t('phone.routing.ringUsers')}</option>
+              <option value="team">{t('phone.routing.ringTeam')}</option>
+            </select>
+          </div>
+          <div>
+            <label for="ring-seconds" class="label">{t('phone.routing.ringFor')}</label>
+            <input id="ring-seconds" type="number" min="5" max="120" class="field" />
+          </div>
+        </div>
+
+        <div id="ring-users-box" class="hidden">
+          <span class="label">{t('phone.routing.ringUsers')}</span>
+          <div id="ring-users" class="grid gap-1"></div>
+        </div>
+
+        <div id="ring-team-box" class="hidden">
+          <label for="ring-team" class="label">{t('phone.routing.ringTeam')}</label>
+          <select id="ring-team" class="field"></select>
+        </div>
+
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label for="no-answer" class="label">{t('phone.routing.ifNobody')}</label>
+            <select id="no-answer" class="field">
+              <option value="voicemail">{t('phone.routing.voicemail')}</option>
+              <option value="forward">{t('phone.routing.forward')}</option>
+              <option value="refuse">{t('phone.routing.refuse')}</option>
+            </select>
+          </div>
+          <div id="forward-box" class="hidden">
+            <label for="forward-to" class="label">{t('phone.routing.forwardTo')}</label>
+            <input id="forward-to" class="field" placeholder={t('phone.numberPh')} />
+          </div>
+        </div>
+
+        <div>
+          <label for="stranger-lang" class="label">{t('phone.routing.strangerLanguage')}</label>
+          <select id="stranger-lang" class="field"></select>
+        </div>
+
+        <!--
+          Office hours (spec 0118). Same panel as the rest of a number's routing, because
+          "when is the office open" is part of "what happens when somebody calls" rather
+          than a separate subject.
+        -->
+        <fieldset class="grid gap-3 rounded-lg border border-line p-3">
+          <legend class="label">{t('phone.hours.title')}</legend>
+          <label class="flex items-center gap-2 text-sm">
+            <input id="hours-always" type="checkbox" class="checkbox" checked />
+            {t('phone.hours.always')}
+          </label>
+          <div id="hours-detail" class="hidden grid gap-3">
+            <div>
+              <label for="hours-tz" class="label">{t('phone.hours.timezone')}</label>
+              <input id="hours-tz" class="field" placeholder="Europe/Rome" autocomplete="off" />
+            </div>
+            <div id="hours-days" class="grid gap-2"></div>
+            <div>
+              <label for="closed-action" class="label">{t('phone.hours.ifClosed')}</label>
+              <select id="closed-action" class="field">
+                <option value="voicemail">{t('phone.routing.voicemail')}</option>
+                <option value="refuse">{t('phone.routing.refuse')}</option>
+              </select>
+            </div>
+          </div>
+        </fieldset>
+
+        <div class="flex flex-wrap items-center gap-3">
+          <button type="submit" class="btn-primary text-sm">{t('common.save')}</button>
+          <button id="routing-close" type="button" class="btn-ghost text-sm"
+            >{t('common.cancel')}</button
+          >
+          <p id="routing-saved" class="hidden text-sm text-ok" role="status">
+            {t('phone.routing.saved')}
+          </p>
+          <p id="routing-error" class="hidden text-sm text-danger" role="alert"></p>
+        </div>
+      </form>
+    </section>
+
+    <section class="card" aria-labelledby="find-h">
+      <h2 id="find-h" class="text-lg font-semibold">{t('phone.numbers.search')}</h2>
+      <form id="find-form" class="mt-3 flex flex-wrap items-end gap-3" novalidate>
+        <div>
+          <label for="country" class="label">{t('phone.numbers.country')}</label>
+          <input id="country" class="field" maxlength="2" value="IT" autocomplete="off" />
+        </div>
+        <div>
+          <label for="area" class="label">{t('phone.numbers.areaCode')}</label>
+          <input id="area" class="field" autocomplete="off" />
+        </div>
+        <div>
+          <label for="kind" class="label">{t('phone.numbers.kind')}</label>
+          <select id="kind" class="field">
+            <option value="local">{t('phone.numbers.kindLocal')}</option>
+            <option value="national">{t('phone.numbers.kindNational')}</option>
+            <option value="toll_free">{t('phone.numbers.kindTollFree')}</option>
+          </select>
+        </div>
+        <button type="submit" class="btn-primary text-sm">{t('phone.numbers.find')}</button>
+      </form>
+
+      <p id="no-offers" class="mt-3 hidden text-sm text-muted">{t('phone.numbers.noOffers')}</p>
+      <ul id="offers" class="mt-3 grid"></ul>
+      <p id="numbers-error" class="mt-3 hidden text-sm text-danger" role="alert"></p>
+      <p id="bought" class="mt-3 hidden text-sm text-ok" role="status">
+        {t('phone.numbers.bought')}
+      </p>
+    </section>
+  </div>
+</BaseLayout>
+
+<script>
+  import { onPage } from '../../../scripts/nav';
+  import { boot } from '../../../scripts/app-boot';
+  import {
+    buyVoipNumber,
+    currentOrgId,
+    getVoipSettings,
+    getLanguageCatalogue,
+    clearVoipHours,
+    getVoipHours,
+    getVoipRouting,
+    listMembers,
+    listTeams,
+    listVoipNumbers,
+    releaseVoipNumber,
+    saveVoipHours,
+    saveVoipRouting,
+    searchVoipNumbers,
+    verifyVoipNumber,
+    type VoipNumberOffer,
+    type VoipRouting,
+  } from '../../../lib/api';
+  import { languageOptions, type LanguageCatalogue } from '../../../scripts/phone-catalogue';
+  import { tList, useTranslations, type Locale } from '../../../lib/i18n';
+  import { refusalKey } from '../../../scripts/phone-dialer';
+
+  onPage('numbers-page', async () => {
+    const ctx = await boot();
+    if (!ctx) return;
+    const t = useTranslations(ctx.lang as Locale);
+    const org = ctx.activeOrg.id ?? currentOrgId();
+    if (!org) return;
+
+    const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T | null;
+
+    const settings = await getVoipSettings(org);
+    if (!settings.ok || !settings.data?.enabled) {
+      $('voip-off')?.classList.remove('hidden');
+      return;
+    }
+    $('numbers-page')?.classList.remove('hidden');
+
+    const isAdmin = ctx.activeOrg.role === 'admin' || ctx.activeOrg.role === 'owner';
+    const error = $('numbers-error');
+
+    // Loaded once: the routing form needs people, teams and languages, and a number's
+    // routing is opened often enough that fetching them per click would be rude.
+    const [members, teams, langRes] = await Promise.all([
+      listMembers(org),
+      listTeams(org),
+      getLanguageCatalogue(),
+    ]);
+    const catalogue: LanguageCatalogue = langRes.data
+      ? { languages: langRes.data.languages, regions: langRes.data.regions }
+      : { languages: [], regions: [] };
+
+    let routingFor: string | null = null;
+    const routingPanel = $('routing-panel');
+    const ringMode = $<HTMLSelectElement>('ring-mode');
+    const noAnswer = $<HTMLSelectElement>('no-answer');
+    const strangerLang = $<HTMLSelectElement>('stranger-lang');
+    const ringTeam = $<HTMLSelectElement>('ring-team');
+
+    if (strangerLang) {
+      const none = document.createElement('option');
+      none.value = '';
+      none.textContent = t('common.none');
+      strangerLang.appendChild(none);
+      for (const option of languageOptions(
+        catalogue,
+        catalogue.languages.map((l) => l.code),
+      )) {
+        const el = document.createElement('option');
+        el.value = option.code;
+        el.textContent = option.label;
+        strangerLang.appendChild(el);
+      }
+    }
+    if (ringTeam) {
+      for (const team of teams.data ?? []) {
+        const el = document.createElement('option');
+        el.value = team.id;
+        el.textContent = team.name;
+        ringTeam.appendChild(el);
+      }
+    }
+
+    /** Only the fields the chosen mode actually uses. Progressive disclosure, not clutter. */
+    function syncRoutingFields() {
+      $('ring-users-box')?.classList.toggle('hidden', ringMode?.value !== 'users');
+      $('ring-team-box')?.classList.toggle('hidden', ringMode?.value !== 'team');
+      $('forward-box')?.classList.toggle('hidden', noAnswer?.value !== 'forward');
+    }
+    ringMode?.addEventListener('change', syncRoutingFields);
+    noAnswer?.addEventListener('change', syncRoutingFields);
+
+    function fillRouting(routing: VoipRouting) {
+      if (ringMode) ringMode.value = routing.ring_mode;
+      if (noAnswer) noAnswer.value = routing.no_answer_action;
+      if (ringTeam) ringTeam.value = routing.ring_team_id ?? '';
+      if (strangerLang) strangerLang.value = routing.stranger_language ?? '';
+      ($<HTMLInputElement>('ring-seconds') as HTMLInputElement).value = String(
+        routing.ring_seconds,
+      );
+      ($<HTMLInputElement>('forward-to') as HTMLInputElement).value = routing.forward_to ?? '';
+
+      const box = $('ring-users');
+      box?.replaceChildren();
+      for (const m of members.data ?? []) {
+        const label = document.createElement('label');
+        label.className = 'flex items-center gap-2 text-sm';
+        const check = document.createElement('input');
+        check.type = 'checkbox';
+        check.className = 'checkbox';
+        check.value = m.user_id;
+        check.checked = routing.ring_user_ids.includes(m.user_id);
+        label.append(check, document.createTextNode(m.name || m.email));
+        box?.appendChild(label);
+      }
+      syncRoutingFields();
+    }
+
+    const DAYS = tList(ctx.lang as Locale, 'phone.hours.days');
+
+    /** Minutes from midnight to `HH:MM`, and back. The wire speaks minutes; a person
+     *  speaks o'clock, and the conversion belongs here rather than in the schema. */
+    const toClock = (m: number) =>
+      `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+    const toMinutes = (v: string) => {
+      const [h, m] = v.split(':').map(Number);
+      return Number.isFinite(h) && Number.isFinite(m) ? h * 60 + m : -1;
+    };
+
+    function renderDays(opens: number[] = [], closes: number[] = []) {
+      const box = $('hours-days');
+      box?.replaceChildren();
+      DAYS.forEach((name, i) => {
+        const open = opens[i] ?? -1;
+        const close = closes[i] ?? -1;
+        const row = document.createElement('div');
+        row.className = 'flex flex-wrap items-center gap-2 text-sm';
+        row.dataset.day = String(i);
+
+        const on = document.createElement('input');
+        on.type = 'checkbox';
+        on.className = 'checkbox';
+        on.dataset.field = 'on';
+        on.checked = open >= 0 && close >= 0;
+
+        const label = document.createElement('span');
+        label.className = 'w-24';
+        label.textContent = name;
+
+        const from = document.createElement('input');
+        from.type = 'time';
+        from.className = 'field w-auto';
+        from.dataset.field = 'from';
+        from.value = open >= 0 ? toClock(open) : '09:00';
+        from.setAttribute('aria-label', `${name} ${t('phone.hours.from')}`);
+
+        const to = document.createElement('input');
+        to.type = 'time';
+        to.className = 'field w-auto';
+        to.dataset.field = 'to';
+        to.value = close >= 0 ? toClock(close) : '17:00';
+        to.setAttribute('aria-label', `${name} ${t('phone.hours.to')}`);
+
+        row.append(on, label, from, to);
+        box?.appendChild(row);
+      });
+    }
+
+    $('hours-always')?.addEventListener('change', () => {
+      const always = ($<HTMLInputElement>('hours-always') as HTMLInputElement).checked;
+      $('hours-detail')?.classList.toggle('hidden', always);
+      $('hours-detail')?.classList.toggle('grid', !always);
+    });
+
+    async function openRouting(numberId: string, e164: string) {
+      routingFor = numberId;
+      const res = await getVoipRouting(org, numberId);
+      if (!res.ok || !res.data) return;
+      const label = $('routing-for');
+      if (label) label.textContent = e164;
+      fillRouting(res.data);
+
+      const hours = await getVoipHours(org, numberId);
+      const configured = !!hours.data?.configured;
+      ($<HTMLInputElement>('hours-always') as HTMLInputElement).checked = !configured;
+      $('hours-detail')?.classList.toggle('hidden', !configured);
+      $('hours-detail')?.classList.toggle('grid', configured);
+      ($<HTMLInputElement>('hours-tz') as HTMLInputElement).value =
+        hours.data?.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
+      if ($<HTMLSelectElement>('closed-action')) {
+        ($<HTMLSelectElement>('closed-action') as HTMLSelectElement).value =
+          hours.data?.closed_action ?? 'voicemail';
+      }
+      renderDays(hours.data?.opens_at, hours.data?.closes_at);
+
+      routingPanel?.classList.remove('hidden');
+      routingPanel?.classList.add('grid');
+      $('routing-saved')?.classList.add('hidden');
+      $('routing-error')?.classList.add('hidden');
+    }
+
+    $('routing-close')?.addEventListener('click', () => {
+      routingPanel?.classList.add('hidden');
+      routingFor = null;
+    });
+
+    $('routing-form')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!routingFor) return;
+      $('routing-saved')?.classList.add('hidden');
+      $('routing-error')?.classList.add('hidden');
+
+      const res = await saveVoipRouting(org, routingFor, {
+        ring_mode: (ringMode?.value ?? 'owners') as VoipRouting['ring_mode'],
+        ring_user_ids: [...($('ring-users')?.querySelectorAll('input:checked') ?? [])].map(
+          (el) => (el as HTMLInputElement).value,
+        ),
+        ring_team_id: ringTeam?.value || null,
+        ring_seconds: Number(($<HTMLInputElement>('ring-seconds') as HTMLInputElement).value || 25),
+        no_answer_action: (noAnswer?.value ?? 'voicemail') as VoipRouting['no_answer_action'],
+        forward_to: ($<HTMLInputElement>('forward-to') as HTMLInputElement).value || null,
+        stranger_language: strangerLang?.value || null,
+      });
+      if (!res.ok) {
+        const code = (res.data as unknown as { error?: string } | null)?.error ?? null;
+        const box = $('routing-error');
+        if (box) {
+          box.textContent = t(refusalKey(code));
+          box.classList.remove('hidden');
+        }
+        return;
+      }
+      // Hours are saved with the rest of the routing: one button, because from an
+      // admin's point of view it is one answer to one question.
+      const always = ($<HTMLInputElement>('hours-always') as HTMLInputElement).checked;
+      if (always) {
+        await clearVoipHours(org, routingFor);
+      } else {
+        const opens: number[] = [];
+        const closes: number[] = [];
+        for (const row of $('hours-days')?.querySelectorAll('[data-day]') ?? []) {
+          const field = (name: string) =>
+            row.querySelector<HTMLInputElement>(`[data-field="${name}"]`);
+          const on = field('on')?.checked ?? false;
+          opens.push(on ? toMinutes(field('from')?.value ?? '') : -1);
+          closes.push(on ? toMinutes(field('to')?.value ?? '') : -1);
+        }
+        const saved = await saveVoipHours(org, routingFor, {
+          timezone: ($<HTMLInputElement>('hours-tz') as HTMLInputElement).value.trim(),
+          opens_at: opens,
+          closes_at: closes,
+          closed_action:
+            ($<HTMLSelectElement>('closed-action') as HTMLSelectElement)?.value ?? 'voicemail',
+        });
+        if (!saved.ok) {
+          const code = (saved.data as unknown as { error?: string } | null)?.error ?? null;
+          const box = $('routing-error');
+          if (box) {
+            box.textContent = t(refusalKey(code));
+            box.classList.remove('hidden');
+          }
+          return;
+        }
+      }
+
+      $('routing-saved')?.classList.remove('hidden');
+    });
+
+    function showError(code: string | null) {
+      if (!error) return;
+      error.classList.toggle('hidden', !code);
+      if (code) error.textContent = t(refusalKey(code));
+    }
+
+    function money(value: string | null | undefined): string {
+      // Decimal strings from the server, rendered rather than re-computed: doing
+      // arithmetic on a price in the browser is how a displayed total stops matching an
+      // invoice.
+      return value ? `$${Number(value).toFixed(2)}` : '—';
+    }
+
+    async function loadOwned() {
+      const list = $<HTMLUListElement>('owned');
+      $('owned-loading')?.classList.add('hidden');
+      if (!list) return;
+      const res = await listVoipNumbers(org);
+      list.replaceChildren();
+
+      const numbers = res.data?.numbers ?? [];
+      $('owned-empty')?.classList.toggle('hidden', numbers.length > 0);
+      $('owned-hint')?.classList.toggle('hidden', numbers.length > 0);
+
+      for (const n of numbers) {
+        const li = document.createElement('li');
+        li.className =
+          'flex flex-wrap items-center justify-between gap-2 border-b border-line py-2 last:border-0';
+
+        const left = document.createElement('span');
+        const e164 = document.createElement('span');
+        e164.className = 'font-mono';
+        e164.textContent = n.e164;
+        const meta = document.createElement('span');
+        meta.className = 'block text-xs text-muted';
+        // The state is a word. `pending_regulatory` is shown as itself rather than
+        // flattened into "active", because a regulator being the blocker is the thing the
+        // admin has to act on.
+        const bits = [n.label, n.status ?? '', n.verification_status].filter(Boolean);
+        if (n.customer_monthly_usd) {
+          bits.push(`${money(n.customer_monthly_usd)} ${t('phone.numbers.monthly')}`);
+        }
+        meta.textContent = bits.join(' · ');
+        left.append(e164, meta);
+
+        if (n.regulatory_requirement) {
+          const flag = document.createElement('span');
+          flag.className = 'block text-xs text-warn';
+          flag.textContent = `${t('phone.numbers.regulatory')}: ${n.regulatory_requirement}`;
+          left.appendChild(flag);
+        }
+
+        const actions = document.createElement('span');
+        actions.className = 'flex gap-2';
+        if (isAdmin && n.verification_status !== 'verified') {
+          const verify = document.createElement('button');
+          verify.type = 'button';
+          verify.className = 'btn-ghost text-xs';
+          verify.textContent = t('phone.numbers.verify');
+          verify.addEventListener('click', async () => {
+            const res = await verifyVoipNumber(org, n.id);
+            if (!res.ok) {
+              showError((res.data as unknown as { error?: string } | null)?.error ?? null);
+              return;
+            }
+            verify.textContent = t('phone.numbers.verifying');
+            verify.disabled = true;
+          });
+          actions.appendChild(verify);
+        }
+        if (isAdmin) {
+          const routing = document.createElement('button');
+          routing.type = 'button';
+          routing.className = 'btn-ghost text-xs';
+          routing.textContent = t('phone.routing.title');
+          routing.addEventListener('click', () => void openRouting(n.id, n.e164));
+          actions.appendChild(routing);
+        }
+        if (isAdmin) {
+          const release = document.createElement('button');
+          release.type = 'button';
+          release.className = 'btn-danger text-xs';
+          release.textContent = t('phone.numbers.release');
+          release.addEventListener('click', async () => {
+            // Asked twice, because somebody else may hold this number within the hour and
+            // there is no getting it back.
+            if (!confirm(t('phone.numbers.releaseConfirm'))) return;
+            await releaseVoipNumber(org, n.id);
+            await loadOwned();
+          });
+          actions.appendChild(release);
+        }
+
+        li.append(left, actions);
+        list.appendChild(li);
+      }
+    }
+
+    function offerRow(offer: VoipNumberOffer) {
+      const li = document.createElement('li');
+      li.className =
+        'flex flex-wrap items-center justify-between gap-2 border-b border-line py-2 last:border-0';
+
+      const left = document.createElement('span');
+      const e164 = document.createElement('span');
+      e164.className = 'font-mono';
+      e164.textContent = offer.e164;
+      const price = document.createElement('span');
+      price.className = 'block text-xs text-muted';
+      // Both figures, before anything is bought: what it costs to start and what it costs
+      // to keep. A monthly charge nobody was shown is the surprise this line prevents.
+      price.textContent = `${money(offer.monthly)} ${t('phone.numbers.monthly')} · ${money(
+        offer.setup,
+      )} ${t('phone.numbers.setup')}`;
+      left.append(e164, price);
+
+      if (offer.regulatory_requirement) {
+        const flag = document.createElement('span');
+        flag.className = 'block text-xs text-warn';
+        flag.textContent = `${t('phone.numbers.regulatory')}: ${offer.regulatory_requirement}`;
+        left.appendChild(flag);
+      }
+
+      const buy = document.createElement('button');
+      buy.type = 'button';
+      buy.className = 'btn-primary text-xs';
+      buy.textContent = t('phone.numbers.buy');
+      buy.disabled = !isAdmin;
+      // Generated once per button, not per click: a double-click must not buy twice, and
+      // neither must a retry after a timeout. This key is the whole idempotency story.
+      const purchaseKey = crypto.randomUUID();
+      buy.addEventListener('click', async () => {
+        showError(null);
+        buy.disabled = true;
+        buy.textContent = t('phone.numbers.buying');
+        const res = await buyVoipNumber(org, {
+          e164: offer.e164,
+          country: offer.country,
+          area_code: ($<HTMLInputElement>('area') as HTMLInputElement).value || undefined,
+          purchase_key: purchaseKey,
+        });
+        if (!res.ok) {
+          showError((res.data as unknown as { error?: string } | null)?.error ?? null);
+          buy.disabled = false;
+          buy.textContent = t('phone.numbers.buy');
+          return;
+        }
+        $('bought')?.classList.remove('hidden');
+        li.remove();
+        await loadOwned();
+      });
+
+      li.append(left, buy);
+      return li;
+    }
+
+    $('find-form')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      showError(null);
+      $('bought')?.classList.add('hidden');
+      const offers = $<HTMLUListElement>('offers');
+      offers?.replaceChildren();
+
+      const res = await searchVoipNumbers(org, {
+        country: ($<HTMLInputElement>('country') as HTMLInputElement).value.trim(),
+        areaCode: ($<HTMLInputElement>('area') as HTMLInputElement).value.trim() || undefined,
+        kind: ($<HTMLSelectElement>('kind') as HTMLSelectElement).value,
+        limit: 10,
+      });
+      if (!res.ok) {
+        showError((res.data as unknown as { error?: string } | null)?.error ?? null);
+        return;
+      }
+      const list = res.data?.offers ?? [];
+      $('no-offers')?.classList.toggle('hidden', list.length > 0);
+      for (const offer of list) offers?.appendChild(offerRow(offer));
+    });
+
+    await loadOwned();
+  });
+</script>

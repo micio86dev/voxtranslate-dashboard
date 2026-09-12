@@ -81,12 +81,45 @@ export function normaliseDestination(raw: string): string {
 }
 
 /**
+ * Why a typed number cannot be dialled, named with the **server's own reason code**.
+ *
+ * The server already ships localised copy for each of these under `phone.reason.number_*`
+ * (see `KNOWN_REASONS`), so reporting which rule was broken costs no new translation in
+ * any of the five locales and tells the user what to change. "Invalid number" does not.
+ *
+ * This stays a convenience: `E164::parse` on the server is authoritative, and it is the
+ * server that spends the money. Duplicating the full E.164 rules here would guarantee the
+ * two drift.
+ */
+export type NumberProblem =
+  | 'number_empty'
+  | 'number_non_numeric'
+  | 'number_leading_zero'
+  | 'number_too_short'
+  | 'number_too_long';
+
+export function numberProblem(raw: string | null | undefined): NumberProblem | null {
+  const trimmed = (raw ?? '').trim();
+  if (!trimmed) return 'number_empty';
+  const digits = normaliseDestination(trimmed).replace(/^\+/, '');
+  // Something was typed, and none of it was a digit.
+  if (!digits) return 'number_non_numeric';
+  // A national trunk prefix, not an international number: `+0…` is never dialable.
+  if (digits.startsWith('0')) return 'number_leading_zero';
+  if (digits.length < 8) return 'number_too_short';
+  if (digits.length > 15) return 'number_too_long';
+  return null;
+}
+
+/**
  * A cheap "is this worth asking the server about" check, so the dialer does not fire a
  * quote on every keystroke of a half-typed number.
+ *
+ * The same rule as [`numberProblem`], asked as a yes/no question — one set of thresholds,
+ * so the number the dialer quotes and the number it will let you send cannot disagree.
  */
 export function looksDialable(raw: string): boolean {
-  const digits = normaliseDestination(raw).replace(/^\+/, '');
-  return digits.length >= 8 && digits.length <= 15 && !digits.startsWith('0');
+  return numberProblem(raw) === null;
 }
 
 /** Credits (integers, 1 = $0.01) as a currency amount. */
@@ -107,7 +140,15 @@ export function estimateCost(pricePerMinute: string | number, minutes: number): 
     return '0.00';
   }
   // Work in cents and ceil, so the displayed figure is never under the settled one.
-  return (Math.ceil(rate * minutes * 100) / 100).toFixed(2);
+  //
+  // `toFixed(6)` first, because ceiling a binary float is not the same as ceiling the
+  // price it stands for: `0.005 * 14 * 100` evaluates to 7.000000000000001, and the ceil
+  // turns that hair into a whole extra cent. Snapping to a hundredth of a cent — the
+  // precision the server's `MONEY_DP` works to — removes the tail without touching any
+  // real fraction of a cent, which must still round up. 167 rate/minute pairs under
+  // $0.05 were affected, every one of them against the customer.
+  const cents = Math.ceil(Number((rate * minutes * 100).toFixed(6)));
+  return (cents / 100).toFixed(2);
 }
 
 /** `95` → `1:35`. */
@@ -158,6 +199,31 @@ const KNOWN_REASONS = new Set([
   'number_unknown_country',
   'voip_misconfigured',
   'storage_error',
+  // Spec 0112: these refusals used to cross the boundary as raw English in a `text/plain`
+  // body, which this client cannot parse — so every one of them surfaced as the generic
+  // message. They are stable codes now, and a code without copy still degrades to generic
+  // rather than printing itself at a customer.
+  'project_required',
+  'project_not_in_org',
+  'caller_id_unverified',
+  'caller_id_missing',
+  'invalid_country_code',
+  'consent_required_for_capture',
+  // Spec 0114, the address book.
+  'number_already_known',
+  'name_required',
+  'number_not_e164',
+  // Spec 0115, buying numbers.
+  'numbers_unsupported',
+  'number_unavailable',
+  'provider_unavailable',
+  // Spec 0116, inbound.
+  'invalid_ring_mode',
+  'invalid_no_answer_action',
+  'forward_to_required',
+  'already_answered',
+  // Spec 0118, office hours.
+  'invalid_timezone',
 ]);
 
 export function hasReasonCopy(code: string | null | undefined): boolean {
@@ -258,9 +324,12 @@ export function joinUrl(appBase: string, room: string | null | undefined): strin
 /**
  * Whether the "join the call" action should be offered.
  *
- * Only while the call is live. Offering it after the call is over sends someone into a
- * room nobody is in, and offering it before the recipient has answered would have the
- * caller sitting in an empty room listening to nothing.
+ * Only while the call is not over: offering it afterwards sends someone into a room
+ * nobody is in.
+ *
+ * It deliberately does NOT wait for the recipient to answer. The caller wants to be in
+ * the room before the call connects, not after — and in practice the question does not
+ * arise before dialling, because `activeRoom` is null until the server returns one.
  */
 export function canJoin(phase: CallPhase, room: string | null | undefined): boolean {
   if (isTerminal(phase)) return false;

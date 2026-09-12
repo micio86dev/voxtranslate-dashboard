@@ -91,18 +91,54 @@ const link = (p: string) => localizePath(lang, p);
   </div>
   <div id="upcoming" class="mt-3"></div>
 
+  <!--
+    The phone KPI spec 0112 deferred. It was deferred deliberately: a metric with no data
+    behind it is worse than no metric, and until 0117 there was no telephony aggregate to
+    read. Owners and admins only, because spend is financial data.
+  -->
+  <section id="phone-kpis" class="mt-8 hidden">
+    <h2 class="text-lg font-semibold">{t('phone.title')}</h2>
+    <div class="mt-3 grid gap-3 sm:grid-cols-3">
+      <a href={link('phone/analytics')} class="card">
+        <p class="text-xs text-muted">{t('phone.analytics.calls')}</p>
+        <p id="pk-calls" class="text-2xl font-bold">—</p>
+      </a>
+      <a href={link('phone/analytics')} class="card">
+        <p class="text-xs text-muted">{t('phone.analytics.minutes')}</p>
+        <p id="pk-minutes" class="text-2xl font-bold">—</p>
+      </a>
+      <a href={link('phone/calls')} class="card">
+        <p class="text-xs text-muted">{t('phone.analytics.missed')}</p>
+        <p id="pk-missed" class="text-2xl font-bold">—</p>
+      </a>
+    </div>
+  </section>
+
   <h2 class="mt-8 text-lg font-semibold">{t('dashboard.quickActions')}</h2>
   <div class="mt-3 flex flex-wrap gap-2">
     <a href={link('members')} class="btn-ghost">{t('dashboard.inviteMember')}</a>
     <a href={link('projects/new')} class="btn-ghost">{t('dashboard.newProject')}</a>
     <a href={link('meetings')} class="btn-ghost">{t('dashboard.newMeeting')}</a>
+    <!--
+      Revealed only for an organisation that has actually turned phone calls on. A quick
+      action for a feature you do not have is clutter, and one that leads to a "not
+      enabled" card is worse than absent.
+    -->
+    <a id="quick-call" href={link('phone')} class="btn-ghost hidden">{t('dashboard.newCall')}</a>
   </div>
 </BaseLayout>
 
 <script>
   import { onPage } from '../../scripts/nav';
   import { boot } from '../../scripts/app-boot';
-  import { listMembers, listProjects, getAnalytics, listMeetings } from '../../lib/api';
+  import {
+    listMembers,
+    listProjects,
+    getAnalytics,
+    listMeetings,
+    getVoipAnalytics,
+    getVoipSettings,
+  } from '../../lib/api';
   import { useTranslations, type Locale } from '../../lib/i18n';
   import { barChart, esc, hbars } from '../../lib/charts';
 
@@ -111,6 +147,30 @@ const link = (p: string) => localizePath(lang, p);
     if (!ctx) return;
     const t = useTranslations(ctx.lang as Locale);
     const orgId = ctx.activeOrg.id;
+
+    // Phone calls need a live subscription, so an org without one cannot have them and
+    // there is nothing to ask the server about. Checking that first keeps this page's
+    // request count where it was for everyone else.
+    if (ctx.activeOrg.subscription_active) {
+      void getVoipSettings(orgId).then(async (res) => {
+        if (!res.ok || !res.data?.enabled) return;
+        document.getElementById('quick-call')?.classList.remove('hidden');
+
+        // The numbers, for the people allowed to see spend. A member gets the quick
+        // action and no figures, which is the same split the analytics page makes.
+        if (ctx.activeOrg.role !== 'admin' && ctx.activeOrg.role !== 'owner') return;
+        const stats = await getVoipAnalytics(orgId, 30);
+        if (!stats.ok || !stats.data) return;
+        document.getElementById('phone-kpis')?.classList.remove('hidden');
+        const put = (id: string, value: string) => {
+          const el = document.getElementById(id);
+          if (el) el.textContent = value;
+        };
+        put('pk-calls', String(stats.data.totals.calls));
+        put('pk-minutes', String(Math.round(stats.data.totals.seconds / 60)));
+        put('pk-missed', String(stats.data.totals.missed));
+      });
+    }
     const set = (id: string, v: string) => {
       const el = document.getElementById(id);
       if (el) el.textContent = v;
