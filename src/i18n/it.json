@@ -688,6 +688,7 @@
     "allCalls": "Tutte le chiamate",
     "settingsTab": "Impostazioni",
     "contactsTab": "Contatti",
+    "numbersTab": "Numeri",
     "empty": "Ancora nessuna chiamata.",
     "emptyHint": "Qui compariranno le chiamate telefoniche tradotte della tua organizzazione.",
     "disabled": "Le chiamate telefoniche non sono attive per questa organizzazione.",
@@ -723,7 +724,7 @@
       "concurrency_limit": "Ci sono già troppe chiamate in corso. Riprova tra poco.",
       "max_duration_reached": "La chiamata ha raggiunto la durata massima consentita.",
       "media_lost": "La connessione audio è caduta.",
-      "provider_unavailable": "Il provider telefonico non è al momento disponibile.",
+      "provider_unavailable": "L'operatore telefonico non ha risposto. Riprova tra poco.",
       "consent_declined": "L'altra persona ha rifiutato di essere registrata.",
       "unmapped": "La chiamata è terminata.",
       "number_empty": "Inserisci un numero di telefono.",
@@ -742,7 +743,9 @@
       "consent_required_for_capture": "Il consenso non può essere disattivato mentre registrazione o trascrizione sono attive.",
       "number_already_known": "Un altro contatto di questa organizzazione ha già quel numero.",
       "name_required": "Un contatto ha bisogno di un nome.",
-      "number_not_e164": "Usa il formato internazionale, con il prefisso del paese."
+      "number_not_e164": "Usa il formato internazionale, con il prefisso del paese.",
+      "numbers_unsupported": "Questa installazione non può acquistare numeri tramite il provider. Chiedi a un amministratore.",
+      "number_unavailable": "Quel numero non è più disponibile. Cerca di nuovo."
     },
     "settings": {
       "title": "Impostazioni chiamate telefoniche",
@@ -827,6 +830,33 @@
       "tags": "Etichette",
       "tagsHint": "Separate da virgola.",
       "title": "Contatti"
+    },
+    "numbers": {
+      "areaCode": "Prefisso",
+      "bought": "Numero acquistato.",
+      "buy": "Acquista",
+      "buying": "Acquisto in corso…",
+      "country": "Paese",
+      "empty": "Nessun numero.",
+      "emptyHint": "Acquistane uno, oppure aggiungi un numero che hai già e verificalo.",
+      "find": "Cerca",
+      "kind": "Tipo",
+      "kindLocal": "Locale",
+      "kindNational": "Nazionale",
+      "kindTollFree": "Numero verde",
+      "monthly": "al mese",
+      "noOffers": "Nessun numero trovato. Prova un altro prefisso.",
+      "owned": "I tuoi numeri",
+      "regulatory": "Servono documenti",
+      "release": "Rilascia",
+      "releaseConfirm": "Rilasciare questo numero? Entro un'ora potrebbe averlo qualcun altro, e non lo riavrai.",
+      "renewal": "Si rinnova",
+      "search": "Trova un numero",
+      "setup": "una tantum",
+      "tab": "Numeri",
+      "title": "Numeri",
+      "verify": "Verifica",
+      "verifying": "Verifica avviata"
     }
   }
 }

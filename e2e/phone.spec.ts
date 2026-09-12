@@ -201,6 +201,45 @@ async function stubApi(page: Page, opts: StubOptions = {}) {
         limit: 50,
       });
     }
+    if (url.includes('/voip/numbers/search')) {
+      return json({
+        offers: [
+          {
+            e164: '+390212340001',
+            country: 'IT',
+            kind: 'local',
+            monthly: '1.620000',
+            setup: '1.200000',
+            currency: 'USD',
+            regulatory_requirement: null,
+          },
+          {
+            e164: '+390212340002',
+            country: 'IT',
+            kind: 'local',
+            monthly: '1.620000',
+            setup: '1.200000',
+            currency: 'USD',
+            regulatory_requirement: 'A local address in this country is required.',
+          },
+        ],
+      });
+    }
+    if (url.match(/\/voip\/numbers\/[^/]+$/) && route.request().method() === 'DELETE') {
+      return route.fulfill({ status: 204, body: '' });
+    }
+    if (url.includes('/voip/numbers') && route.request().method() === 'POST') {
+      return json(
+        {
+          id: 'n-9',
+          e164: '+390212340001',
+          status: 'active',
+          monthly: '1.620000',
+          setup: '1.200000',
+        },
+        201,
+      );
+    }
     if (url.includes('/voip/numbers')) {
       return json({
         numbers: [
@@ -918,4 +957,81 @@ test('a call to somebody already known offers nothing, and names them', async ({
   await page.goto('/en/phone/detail/?id=c-8');
   await expect(page.locator('#contact-name')).toHaveText('Wei Zhang');
   await expect(page.locator('#save-contact')).toBeHidden();
+});
+
+// ---- numbers (spec 0115) ---------------------------------------------------
+
+test('a search shows both prices before anything is bought', async ({ page }) => {
+  // A monthly charge nobody was shown is the surprise this line exists to prevent.
+  await signIn(page);
+  await stubApi(page);
+  await page.goto('/en/phone/numbers/');
+
+  await page.click('#find-form button[type="submit"]');
+  const offers = page.locator('#offers li');
+  await expect(offers).toHaveCount(2);
+  await expect(offers.first()).toContainText('$1.62');
+  await expect(offers.first()).toContainText('per month');
+  await expect(offers.first()).toContainText('$1.20');
+  await expect(offers.first()).toContainText('one-off');
+
+  // A number a regulator has not cleared says so rather than being quietly omitted.
+  await expect(offers.nth(1)).toContainText(/paperwork required/i);
+});
+
+test('buying carries a key, and the same button cannot buy twice', async ({ page }) => {
+  const keys: string[] = [];
+  page.on('request', (req) => {
+    if (req.method() === 'POST' && /\/voip\/numbers$/.test(new URL(req.url()).pathname)) {
+      keys.push(req.postDataJSON().purchase_key);
+    }
+  });
+
+  await signIn(page);
+  await stubApi(page);
+  await page.goto('/en/phone/numbers/');
+  await page.click('#find-form button[type="submit"]');
+
+  const buy = page.locator('#offers li').first().getByRole('button', { name: 'Buy' });
+  await buy.click();
+  await expect(page.locator('#bought')).toBeVisible();
+
+  expect(keys).toHaveLength(1);
+  expect(keys[0]).toMatch(/^[0-9a-f-]{36}$/);
+});
+
+test('a provider that cannot sell numbers says so, in the reader language', async ({ page }) => {
+  await signIn(page);
+  await stubApi(page);
+  await page.route('**/voip/numbers/search**', (route) =>
+    route.fulfill({
+      status: 501,
+      contentType: 'application/json',
+      body: JSON.stringify({ error: 'numbers_unsupported' }),
+    }),
+  );
+
+  await page.goto('/en/phone/numbers/');
+  await page.click('#find-form button[type="submit"]');
+  await expect(page.locator('#numbers-error')).toBeVisible();
+  await expect(page.locator('#numbers-error')).toHaveText(/cannot buy numbers/i);
+});
+
+test('releasing asks first, because there is no getting it back', async ({ page }) => {
+  await signIn(page);
+  await stubApi(page);
+
+  // Refuse the confirmation: nothing must be released.
+  await page.addInitScript(() => {
+    window.confirm = () => false;
+  });
+  let released = 0;
+  page.on('request', (req) => {
+    if (req.method() === 'DELETE' && req.url().includes('/voip/numbers/')) released += 1;
+  });
+
+  await page.goto('/en/phone/numbers/');
+  await page.locator('#owned li').first().getByRole('button', { name: 'Release' }).click();
+  await page.waitForTimeout(200);
+  expect(released).toBe(0);
 });

@@ -1,0 +1,282 @@
+---
+/**
+ * `/[lang]/phone/numbers/` — the organisation's telephone numbers (spec 0115).
+ *
+ * Two halves: the numbers you have, and finding one you do not. Search speaks in a
+ * country and a place rather than in provider query syntax, and every price shown is what
+ * the customer pays — what the carrier charges us never crosses the wire.
+ *
+ * Buying is confirmed before it happens and carries a purchase key that survives a retry.
+ * The failure that key prevents is not hypothetical: a timeout, retried, buys a second
+ * number the organisation then pays for monthly, for ever, without having asked.
+ */
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import SectionNav from '../../../components/phone/SectionNav.astro';
+import { localePaths, isLocale, DEFAULT_LOCALE, useTranslations } from '../../../lib/i18n';
+
+export function getStaticPaths() {
+  return localePaths();
+}
+
+const lang = isLocale(Astro.params.lang) ? Astro.params.lang : DEFAULT_LOCALE;
+const t = useTranslations(lang);
+---
+
+<BaseLayout lang={lang} title={t('phone.numbers.title')} chrome>
+  <h1 class="text-2xl font-bold">{t('phone.numbers.title')}</h1>
+
+  <SectionNav lang={lang} current="numbers" />
+
+  <div id="voip-off" class="card mt-6 hidden">
+    <p class="text-sm">{t('phone.disabled')}</p>
+  </div>
+
+  <div id="numbers-page" class="mt-6 hidden grid gap-6">
+    <section class="card" aria-labelledby="owned-h">
+      <h2 id="owned-h" class="text-lg font-semibold">{t('phone.numbers.owned')}</h2>
+      <p id="owned-loading" class="mt-3 text-sm text-muted">{t('common.loading')}</p>
+      <p id="owned-empty" class="mt-3 hidden text-sm text-muted">{t('phone.numbers.empty')}</p>
+      <p id="owned-hint" class="mt-1 hidden text-xs text-muted">{t('phone.numbers.emptyHint')}</p>
+      <ul id="owned" class="mt-3 grid"></ul>
+    </section>
+
+    <section class="card" aria-labelledby="find-h">
+      <h2 id="find-h" class="text-lg font-semibold">{t('phone.numbers.search')}</h2>
+      <form id="find-form" class="mt-3 flex flex-wrap items-end gap-3" novalidate>
+        <div>
+          <label for="country" class="label">{t('phone.numbers.country')}</label>
+          <input id="country" class="field" maxlength="2" value="IT" autocomplete="off" />
+        </div>
+        <div>
+          <label for="area" class="label">{t('phone.numbers.areaCode')}</label>
+          <input id="area" class="field" autocomplete="off" />
+        </div>
+        <div>
+          <label for="kind" class="label">{t('phone.numbers.kind')}</label>
+          <select id="kind" class="field">
+            <option value="local">{t('phone.numbers.kindLocal')}</option>
+            <option value="national">{t('phone.numbers.kindNational')}</option>
+            <option value="toll_free">{t('phone.numbers.kindTollFree')}</option>
+          </select>
+        </div>
+        <button type="submit" class="btn-primary text-sm">{t('phone.numbers.find')}</button>
+      </form>
+
+      <p id="no-offers" class="mt-3 hidden text-sm text-muted">{t('phone.numbers.noOffers')}</p>
+      <ul id="offers" class="mt-3 grid"></ul>
+      <p id="numbers-error" class="mt-3 hidden text-sm text-danger" role="alert"></p>
+      <p id="bought" class="mt-3 hidden text-sm text-ok" role="status">
+        {t('phone.numbers.bought')}
+      </p>
+    </section>
+  </div>
+</BaseLayout>
+
+<script>
+  import { onPage } from '../../../scripts/nav';
+  import { boot } from '../../../scripts/app-boot';
+  import {
+    buyVoipNumber,
+    currentOrgId,
+    getVoipSettings,
+    listVoipNumbers,
+    releaseVoipNumber,
+    searchVoipNumbers,
+    verifyVoipNumber,
+    type VoipNumberOffer,
+  } from '../../../lib/api';
+  import { useTranslations, type Locale } from '../../../lib/i18n';
+  import { refusalKey } from '../../../scripts/phone-dialer';
+
+  onPage('numbers-page', async () => {
+    const ctx = await boot();
+    if (!ctx) return;
+    const t = useTranslations(ctx.lang as Locale);
+    const org = ctx.activeOrg.id ?? currentOrgId();
+    if (!org) return;
+
+    const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T | null;
+
+    const settings = await getVoipSettings(org);
+    if (!settings.ok || !settings.data?.enabled) {
+      $('voip-off')?.classList.remove('hidden');
+      return;
+    }
+    $('numbers-page')?.classList.remove('hidden');
+
+    const isAdmin = ctx.activeOrg.role === 'admin' || ctx.activeOrg.role === 'owner';
+    const error = $('numbers-error');
+
+    function showError(code: string | null) {
+      if (!error) return;
+      error.classList.toggle('hidden', !code);
+      if (code) error.textContent = t(refusalKey(code));
+    }
+
+    function money(value: string | null | undefined): string {
+      // Decimal strings from the server, rendered rather than re-computed: doing
+      // arithmetic on a price in the browser is how a displayed total stops matching an
+      // invoice.
+      return value ? `$${Number(value).toFixed(2)}` : '—';
+    }
+
+    async function loadOwned() {
+      const list = $<HTMLUListElement>('owned');
+      $('owned-loading')?.classList.add('hidden');
+      if (!list) return;
+      const res = await listVoipNumbers(org);
+      list.replaceChildren();
+
+      const numbers = res.data?.numbers ?? [];
+      $('owned-empty')?.classList.toggle('hidden', numbers.length > 0);
+      $('owned-hint')?.classList.toggle('hidden', numbers.length > 0);
+
+      for (const n of numbers) {
+        const li = document.createElement('li');
+        li.className =
+          'flex flex-wrap items-center justify-between gap-2 border-b border-line py-2 last:border-0';
+
+        const left = document.createElement('span');
+        const e164 = document.createElement('span');
+        e164.className = 'font-mono';
+        e164.textContent = n.e164;
+        const meta = document.createElement('span');
+        meta.className = 'block text-xs text-muted';
+        // The state is a word. `pending_regulatory` is shown as itself rather than
+        // flattened into "active", because a regulator being the blocker is the thing the
+        // admin has to act on.
+        const bits = [n.label, n.status ?? '', n.verification_status].filter(Boolean);
+        if (n.customer_monthly_usd) {
+          bits.push(`${money(n.customer_monthly_usd)} ${t('phone.numbers.monthly')}`);
+        }
+        meta.textContent = bits.join(' · ');
+        left.append(e164, meta);
+
+        if (n.regulatory_requirement) {
+          const flag = document.createElement('span');
+          flag.className = 'block text-xs text-warn';
+          flag.textContent = `${t('phone.numbers.regulatory')}: ${n.regulatory_requirement}`;
+          left.appendChild(flag);
+        }
+
+        const actions = document.createElement('span');
+        actions.className = 'flex gap-2';
+        if (isAdmin && n.verification_status !== 'verified') {
+          const verify = document.createElement('button');
+          verify.type = 'button';
+          verify.className = 'btn-ghost text-xs';
+          verify.textContent = t('phone.numbers.verify');
+          verify.addEventListener('click', async () => {
+            const res = await verifyVoipNumber(org, n.id);
+            if (!res.ok) {
+              showError((res.data as unknown as { error?: string } | null)?.error ?? null);
+              return;
+            }
+            verify.textContent = t('phone.numbers.verifying');
+            verify.disabled = true;
+          });
+          actions.appendChild(verify);
+        }
+        if (isAdmin) {
+          const release = document.createElement('button');
+          release.type = 'button';
+          release.className = 'btn-danger text-xs';
+          release.textContent = t('phone.numbers.release');
+          release.addEventListener('click', async () => {
+            // Asked twice, because somebody else may hold this number within the hour and
+            // there is no getting it back.
+            if (!confirm(t('phone.numbers.releaseConfirm'))) return;
+            await releaseVoipNumber(org, n.id);
+            await loadOwned();
+          });
+          actions.appendChild(release);
+        }
+
+        li.append(left, actions);
+        list.appendChild(li);
+      }
+    }
+
+    function offerRow(offer: VoipNumberOffer) {
+      const li = document.createElement('li');
+      li.className =
+        'flex flex-wrap items-center justify-between gap-2 border-b border-line py-2 last:border-0';
+
+      const left = document.createElement('span');
+      const e164 = document.createElement('span');
+      e164.className = 'font-mono';
+      e164.textContent = offer.e164;
+      const price = document.createElement('span');
+      price.className = 'block text-xs text-muted';
+      // Both figures, before anything is bought: what it costs to start and what it costs
+      // to keep. A monthly charge nobody was shown is the surprise this line prevents.
+      price.textContent = `${money(offer.monthly)} ${t('phone.numbers.monthly')} · ${money(
+        offer.setup,
+      )} ${t('phone.numbers.setup')}`;
+      left.append(e164, price);
+
+      if (offer.regulatory_requirement) {
+        const flag = document.createElement('span');
+        flag.className = 'block text-xs text-warn';
+        flag.textContent = `${t('phone.numbers.regulatory')}: ${offer.regulatory_requirement}`;
+        left.appendChild(flag);
+      }
+
+      const buy = document.createElement('button');
+      buy.type = 'button';
+      buy.className = 'btn-primary text-xs';
+      buy.textContent = t('phone.numbers.buy');
+      buy.disabled = !isAdmin;
+      // Generated once per button, not per click: a double-click must not buy twice, and
+      // neither must a retry after a timeout. This key is the whole idempotency story.
+      const purchaseKey = crypto.randomUUID();
+      buy.addEventListener('click', async () => {
+        showError(null);
+        buy.disabled = true;
+        buy.textContent = t('phone.numbers.buying');
+        const res = await buyVoipNumber(org, {
+          e164: offer.e164,
+          country: offer.country,
+          area_code: ($<HTMLInputElement>('area') as HTMLInputElement).value || undefined,
+          purchase_key: purchaseKey,
+        });
+        if (!res.ok) {
+          showError((res.data as unknown as { error?: string } | null)?.error ?? null);
+          buy.disabled = false;
+          buy.textContent = t('phone.numbers.buy');
+          return;
+        }
+        $('bought')?.classList.remove('hidden');
+        li.remove();
+        await loadOwned();
+      });
+
+      li.append(left, buy);
+      return li;
+    }
+
+    $('find-form')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      showError(null);
+      $('bought')?.classList.add('hidden');
+      const offers = $<HTMLUListElement>('offers');
+      offers?.replaceChildren();
+
+      const res = await searchVoipNumbers(org, {
+        country: ($<HTMLInputElement>('country') as HTMLInputElement).value.trim(),
+        areaCode: ($<HTMLInputElement>('area') as HTMLInputElement).value.trim() || undefined,
+        kind: ($<HTMLSelectElement>('kind') as HTMLSelectElement).value,
+        limit: 10,
+      });
+      if (!res.ok) {
+        showError((res.data as unknown as { error?: string } | null)?.error ?? null);
+        return;
+      }
+      const list = res.data?.offers ?? [];
+      $('no-offers')?.classList.toggle('hidden', list.length > 0);
+      for (const offer of list) offers?.appendChild(offerRow(offer));
+    });
+
+    await loadOwned();
+  });
+</script>

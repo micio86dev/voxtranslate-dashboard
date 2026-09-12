@@ -213,6 +213,10 @@ const KNOWN_REASONS = new Set([
   'number_already_known',
   'name_required',
   'number_not_e164',
+  // Spec 0115, buying numbers.
+  'numbers_unsupported',
+  'number_unavailable',
+  'provider_unavailable',
 ]);
 
 export function hasReasonCopy(code: string | null | undefined): boolean {
