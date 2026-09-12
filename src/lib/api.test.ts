@@ -843,3 +843,53 @@ describe('contact wrappers hit the paths they claim (spec 0114)', () => {
     expect(res.status).toBe(404);
   });
 });
+
+describe('number wrappers hit the paths they claim (spec 0115)', () => {
+  const ORG = 'org-1';
+  const PREFIX = `${BASE}/api/business/organizations/${ORG}/voip/numbers`;
+
+  it('search, in the terms a person asked in', async () => {
+    const fn = mockFetch({ json: { offers: [] } });
+    await api.searchVoipNumbers(ORG, { country: 'IT', areaCode: '02', kind: 'local', limit: 5 });
+    const { url } = lastCall(fn);
+    expect(url).toContain(`${PREFIX}/search?`);
+    expect(url).toContain('country=IT');
+    expect(url).toContain('area_code=02');
+    expect(url).toContain('kind=local');
+    expect(url).toContain('limit=5');
+  });
+
+  it('search with only a country, and no empty parameters trailing it', async () => {
+    const fn = mockFetch({ json: { offers: [] } });
+    await api.searchVoipNumbers(ORG, { country: 'DE' });
+    expect(lastCall(fn).url).toBe(`${PREFIX}/search?country=DE`);
+  });
+
+  it('buy, carrying the key the whole idempotency story rests on', async () => {
+    const fn = mockFetch({ json: { id: 'n-1' } });
+    await api.buyVoipNumber(ORG, {
+      e164: '+390212340001',
+      country: 'IT',
+      purchase_key: 'key-1',
+    });
+    const { url, init, body } = lastCall(fn);
+    expect(url).toBe(PREFIX);
+    expect(init.method).toBe('POST');
+    expect(body.purchase_key).toBe('key-1');
+  });
+
+  it('verify, check and release', async () => {
+    const fn = mockFetch({ json: { verification_status: 'pending' } });
+
+    await api.verifyVoipNumber(ORG, 'n-1');
+    expect(lastCall(fn).url).toBe(`${PREFIX}/n-1/verify`);
+    expect(lastCall(fn).init.method).toBe('POST');
+
+    await api.checkVoipVerification(ORG, 'n-1');
+    expect(lastCall(fn).url).toBe(`${PREFIX}/n-1/verify/check`);
+
+    await api.releaseVoipNumber(ORG, 'n-1');
+    expect(lastCall(fn).url).toBe(`${PREFIX}/n-1`);
+    expect(lastCall(fn).init.method).toBe('DELETE');
+  });
+});
