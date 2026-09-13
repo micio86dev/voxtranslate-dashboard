@@ -11,19 +11,15 @@ export default defineConfig({
     environment: 'jsdom',
     coverage: {
       provider: 'v8',
-      include: [
-        'src/lib/api.ts',
-        'src/lib/auth.ts',
-        'src/lib/charts.ts',
-        'src/lib/i18n.ts',
-        'src/lib/push.ts',
-        'src/scripts/app-boot.ts',
-        // The dialer's logic modules. `phone-dialer.ts` shipped with tests but was never
-        // in this list, so the 85% gate never saw it (spec 0112 D8).
-        'src/scripts/phone-catalogue.ts',
-        'src/scripts/phone-dialer.ts',
-        'src/scripts/sub-banner.ts',
-      ],
+      // Every TypeScript module under src/, not an allowlist. The list this
+      // replaced named nine files, so a module with no tests simply did not exist
+      // for the gate: `phone-dialer.ts` shipped with tests and was left out for a
+      // whole release (spec 0112 D8), and `help-assistant.ts`, `voice-assistant.ts`,
+      // `nav.ts` and the SharedWorker were never measured at all. `all` (the vitest
+      // default) reports untouched files too, so a new untested module now shows up
+      // as a gap instead of leaving the average alone.
+      include: ['src/**/*.ts'],
+      exclude: ['src/**/*.test.ts', 'src/**/*.d.ts'],
       reporter: ['text', 'json-summary'],
       reportsDirectory: './coverage-unit',
       thresholds: { lines: 85, functions: 85 },
