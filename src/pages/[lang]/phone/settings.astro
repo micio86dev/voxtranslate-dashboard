@@ -305,7 +305,7 @@ const t = useTranslations(lang);
         // a form the admin can fix and one that just says no.
         const code = (out.data as unknown as { error?: string } | null)?.error ?? null;
         if (saveError) {
-          saveError.textContent = t(refusalKey(code));
+          saveError.textContent = t(refusalKey(code, 'phone.error.saveFailed'));
           saveError.classList.remove('hidden');
         }
         return;

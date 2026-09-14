@@ -399,7 +399,7 @@ const t = useTranslations(lang);
         const code = (res.data as unknown as { error?: string } | null)?.error ?? null;
         const box = $('routing-error');
         if (box) {
-          box.textContent = t(refusalKey(code));
+          box.textContent = t(refusalKey(code, 'phone.error.saveFailed'));
           box.classList.remove('hidden');
         }
         return;
@@ -430,7 +430,7 @@ const t = useTranslations(lang);
           const code = (saved.data as unknown as { error?: string } | null)?.error ?? null;
           const box = $('routing-error');
           if (box) {
-            box.textContent = t(refusalKey(code));
+            box.textContent = t(refusalKey(code, 'phone.error.saveFailed'));
             box.classList.remove('hidden');
           }
           return;
@@ -443,7 +443,7 @@ const t = useTranslations(lang);
     function showError(code: string | null) {
       if (!error) return;
       error.classList.toggle('hidden', !code);
-      if (code) error.textContent = t(refusalKey(code));
+      if (code) error.textContent = t(refusalKey(code, 'phone.error.actionFailed'));
     }
 
     function money(value: string | null | undefined): string {

@@ -704,8 +704,10 @@
       "language": "Spoken in {language}."
     },
     "error": {
+      "actionFailed": "That could not be completed. Try again.",
       "languageNotInTier": "This tier does not support that language. Choose another language, or another tier.",
       "projectRequired": "This organisation links every call to a project. Choose one.",
+      "saveFailed": "The changes could not be saved. Try again.",
       "sourceLanguageRequired": "Choose the language you will speak.",
       "targetLanguageRequired": "Choose the language they speak.",
       "tierRequired": "Choose a translation tier."

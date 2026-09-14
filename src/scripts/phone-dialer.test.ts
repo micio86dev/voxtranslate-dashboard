@@ -166,6 +166,26 @@ describe('refusal copy', () => {
     expect(refusalKey('')).toBe('phone.reason.generic');
   });
 
+  it('lets a surface that is not placing a call choose its own fallback', () => {
+    // `phone.reason.generic` reads "the call could not be placed". On the settings form,
+    // the address book and the numbers page that sentence is not vague — it is FALSE, and
+    // it sent an admin looking for a call that never existed. The named codes still win;
+    // only the fallback moves.
+    expect(refusalKey(null, 'phone.settings.saveFailed')).toBe('phone.settings.saveFailed');
+    expect(refusalKey('whatever_is_new', 'phone.settings.saveFailed')).toBe(
+      'phone.settings.saveFailed',
+    );
+    expect(refusalKey('invalid_country_code', 'phone.settings.saveFailed')).toBe(
+      'phone.reason.invalid_country_code',
+    );
+  });
+
+  it('keeps the call fallback for the surfaces that really are placing a call', () => {
+    // A transport failure has no code at all — that is the shape a CORS error takes, and
+    // it is exactly the path that produced the wrong sentence.
+    expect(refusalKey(undefined)).toBe('phone.reason.generic');
+  });
+
   it('still distinguishes an unknown reason, so missing copy is findable', () => {
     expect(hasReasonCopy('busy')).toBe(true);
     expect(hasReasonCopy('something_new_from_the_server')).toBe(false);
