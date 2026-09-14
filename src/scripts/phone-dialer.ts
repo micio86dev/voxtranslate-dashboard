@@ -169,9 +169,22 @@ export function formatDuration(seconds: number | null | undefined): string {
  * An unknown code falls back to a generic message rather than printing the raw code at a
  * customer — but it is still distinguishable in `hasReasonCopy`, so a new server reason
  * shows up as missing copy rather than as silence.
+ *
+ * `fallback` exists because this function is shared by surfaces that are not placing a
+ * call. The default sentence is "the call could not be placed", which on the settings
+ * form, the address book and the numbers page is not merely vague — it is false, and it
+ * describes an event that never happened. The worst case is the one with no code at all:
+ * a transport failure (a CORS preflight the API refused, the network dropping) gives the
+ * client an empty body, so every one of those surfaces reported a failed telephone call
+ * when a form had failed to save.
+ *
+ * A named code always wins over the fallback: only the last resort moves.
  */
-export function refusalKey(code: string | null | undefined): string {
-  return hasReasonCopy(code) ? `phone.reason.${code}` : 'phone.reason.generic';
+export function refusalKey(
+  code: string | null | undefined,
+  fallback: string = 'phone.reason.generic',
+): string {
+  return hasReasonCopy(code) ? `phone.reason.${code}` : fallback;
 }
 
 const KNOWN_REASONS = new Set([

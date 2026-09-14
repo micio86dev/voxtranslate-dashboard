@@ -704,8 +704,10 @@
       "language": "Se dice en {language}."
     },
     "error": {
+      "actionFailed": "No se ha podido completar la operación. Inténtalo de nuevo.",
       "languageNotInTier": "Este nivel no admite ese idioma. Elige otro idioma, u otro nivel.",
       "projectRequired": "Esta organización vincula cada llamada a un proyecto. Elige uno.",
+      "saveFailed": "No se han podido guardar los cambios. Inténtalo de nuevo.",
       "sourceLanguageRequired": "Elige el idioma en el que hablarás.",
       "targetLanguageRequired": "Elige el idioma que habla el destinatario.",
       "tierRequired": "Elige un nivel de traducción."

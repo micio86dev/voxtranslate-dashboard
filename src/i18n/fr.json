@@ -704,8 +704,10 @@
       "language": "Énoncée en {language}."
     },
     "error": {
+      "actionFailed": "L’opération n’a pas pu aboutir. Réessayer.",
       "languageNotInTier": "Ce niveau ne prend pas en charge cette langue. Choisir une autre langue, ou un autre niveau.",
       "projectRequired": "Cette organisation rattache chaque appel à un projet. En choisir un.",
+      "saveFailed": "Les modifications n’ont pas pu être enregistrées. Réessayer.",
       "sourceLanguageRequired": "Choisir votre langue.",
       "targetLanguageRequired": "Choisir la langue de votre correspondant.",
       "tierRequired": "Choisir un niveau de traduction."

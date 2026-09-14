@@ -704,8 +704,10 @@
       "language": "Gesprochen auf {language}."
     },
     "error": {
+      "actionFailed": "Der Vorgang konnte nicht abgeschlossen werden. Erneut versuchen.",
       "languageNotInTier": "Diese Stufe unterstützt diese Sprache nicht. Andere Sprache oder andere Stufe wählen.",
       "projectRequired": "Diese Organisation ordnet jeden Anruf einem Projekt zu. Projekt wählen.",
+      "saveFailed": "Die Änderungen konnten nicht gespeichert werden. Erneut versuchen.",
       "sourceLanguageRequired": "Eigene Sprache wählen.",
       "targetLanguageRequired": "Sprache der Gegenstelle wählen.",
       "tierRequired": "Übersetzungsstufe wählen."

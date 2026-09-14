@@ -704,8 +704,10 @@
       "language": "Pronunciato in {language}."
     },
     "error": {
+      "actionFailed": "Non è stato possibile completare l’operazione. Riprova.",
       "languageNotInTier": "Questo livello non supporta quella lingua. Scegli un'altra lingua, o un altro livello.",
       "projectRequired": "Questa organizzazione collega ogni chiamata a un progetto. Scegline uno.",
+      "saveFailed": "Non è stato possibile salvare le modifiche. Riprova.",
       "sourceLanguageRequired": "Scegli la lingua in cui parlerai.",
       "targetLanguageRequired": "Scegli la lingua che parla il destinatario.",
       "tierRequired": "Scegli un livello di traduzione."

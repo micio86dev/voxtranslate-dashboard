@@ -246,7 +246,7 @@ const t = useTranslations(lang);
         if (!res.ok) {
           const code = (res.data as unknown as { error?: string } | null)?.error ?? null;
           if (error) {
-            error.textContent = t(refusalKey(code));
+            error.textContent = t(refusalKey(code, 'phone.error.saveFailed'));
             error.classList.remove('hidden');
           }
           return;
