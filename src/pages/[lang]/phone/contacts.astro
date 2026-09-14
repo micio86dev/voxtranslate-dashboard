@@ -388,7 +388,7 @@ const t = useTranslations(lang);
       if (!res.ok) {
         const code = (res.data as unknown as { error?: string } | null)?.error ?? null;
         if (formError) {
-          formError.textContent = t(refusalKey(code));
+          formError.textContent = t(refusalKey(code, 'phone.error.saveFailed'));
           formError.classList.remove('hidden');
         }
         return;
