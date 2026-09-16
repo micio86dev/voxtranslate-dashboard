@@ -786,15 +786,307 @@ test('the call detail page shows what was charged and never our margin', async (
 
   // The conversation is linked, not re-implemented: history/detail already renders the
   // transcript, its translation, the recording and the exports for this session.
+  // `kind=phone` (hotfix 0.16.1) tells that page to hide its always-404 room-recording
+  // control for a telephone leg.
   await expect(page.locator('#open-transcript')).toHaveAttribute(
     'href',
-    '/en/history/detail/?session=s-9',
+    '/en/history/detail/?session=s-9&kind=phone',
   );
 
   // R6: our cost and our margin are not in the page, under any name.
   const body = await page.locator('body').innerText();
   expect(body).not.toMatch(/gross margin/i);
   expect(body).not.toMatch(/provider cost/i);
+});
+
+// ---- phone call recording + AI summary/sentiment (hotfix 0.16.1) -----------
+
+test('a phone call recording loads on demand and offers a download, never the room-recording flow', async ({
+  page,
+}) => {
+  await signIn(page);
+  await stubApi(page);
+  await page.route('**/voip/calls/c-10', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        id: 'c-10',
+        session_id: 's-10',
+        status: 'completed',
+        failure_reason: null,
+        direction: 'outbound',
+        recipient_e164: '+393201234567',
+        recipient_country: 'IT',
+        source_language: 'en',
+        target_language: 'it',
+        engine_id: 'standard',
+        started_at: '2026-09-01T10:00:00Z',
+        ended_at: '2026-09-01T10:01:35Z',
+        duration_seconds: 95,
+        credits_consumed: 120,
+        quoted_price_per_min: '0.0468',
+        cost_status: 'final',
+        recording_status: 'ready',
+        transcription_status: 'ready',
+        consent_status: 'granted',
+        project_id: null,
+        contact_id: null,
+        contact_name: null,
+        recording_available: true,
+      }),
+    }),
+  );
+  await page.route('**/voip/calls/c-10/recording', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        url: 'https://cdn.test/rec-c10.mp3',
+        expires_at: '2099-01-01T00:00:00Z',
+      }),
+    }),
+  );
+
+  await page.goto('/en/phone/detail/?id=c-10');
+  await expect(page.locator('#recording')).toBeVisible();
+  await page.click('#rec-load');
+  await expect(page.locator('#rec-player')).toBeVisible();
+  await expect(page.locator('#rec-download')).toHaveAttribute(
+    'href',
+    'https://cdn.test/rec-c10.mp3',
+  );
+
+  // The transcript link points into the shared session-detail page and marks the
+  // session as a phone call, so that page hides its own (always-404) room-recording
+  // control rather than repeating the bug this section exists to fix.
+  await expect(page.locator('#open-transcript')).toHaveAttribute(
+    'href',
+    '/en/history/detail/?session=s-10&kind=phone',
+  );
+});
+
+test('a phone call recording that fails to load says so, and never claims success', async ({
+  page,
+}) => {
+  await signIn(page);
+  await stubApi(page);
+  await page.route('**/voip/calls/c-11', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        id: 'c-11',
+        session_id: 's-11',
+        status: 'completed',
+        failure_reason: null,
+        direction: 'outbound',
+        recipient_e164: '+393201234567',
+        recipient_country: 'IT',
+        source_language: 'en',
+        target_language: 'it',
+        engine_id: 'standard',
+        started_at: '2026-09-01T10:00:00Z',
+        ended_at: '2026-09-01T10:01:35Z',
+        duration_seconds: 95,
+        credits_consumed: 120,
+        quoted_price_per_min: '0.0468',
+        cost_status: 'final',
+        recording_status: 'ready',
+        transcription_status: 'ready',
+        consent_status: 'granted',
+        project_id: null,
+        contact_id: null,
+        contact_name: null,
+        recording_available: true,
+      }),
+    }),
+  );
+  await page.route('**/voip/calls/c-11/recording', (route) =>
+    route.fulfill({
+      status: 404,
+      contentType: 'application/json',
+      body: JSON.stringify({ error: 'recording_unavailable' }),
+    }),
+  );
+
+  await page.goto('/en/phone/detail/?id=c-11');
+  await page.click('#rec-load');
+  await expect(page.locator('#rec-error')).toBeVisible();
+  await expect(page.locator('#rec-error')).toContainText(/no recording is available/i);
+  await expect(page.locator('#rec-player')).toBeHidden();
+});
+
+test('a call with no recording does not offer to load one', async ({ page }) => {
+  await signIn(page);
+  await stubApi(page);
+  await page.route('**/voip/calls/c-12', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        id: 'c-12',
+        session_id: 's-12',
+        status: 'completed',
+        failure_reason: null,
+        direction: 'outbound',
+        recipient_e164: '+393201234567',
+        recipient_country: 'IT',
+        source_language: 'en',
+        target_language: 'it',
+        engine_id: 'standard',
+        started_at: '2026-09-01T10:00:00Z',
+        ended_at: '2026-09-01T10:01:35Z',
+        duration_seconds: 95,
+        credits_consumed: 120,
+        quoted_price_per_min: '0.0468',
+        cost_status: 'final',
+        recording_status: 'none',
+        transcription_status: 'none',
+        consent_status: 'granted',
+        project_id: null,
+        contact_id: null,
+        contact_name: null,
+        recording_available: false,
+      }),
+    }),
+  );
+
+  await page.goto('/en/phone/detail/?id=c-12');
+  await expect(page.locator('#recording')).toBeHidden();
+});
+
+test('a session detail page shows the AI summary and sentiment together with the transcript', async ({
+  page,
+}) => {
+  await signIn(page);
+  await stubApi(page);
+  await page.route('**/rooms/s-20/transcript**', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        status: 'ready',
+        source: 'recording',
+        source_language: 'en',
+        segments: [
+          {
+            speaker_id: 'p1',
+            speaker_name: 'Alex',
+            text: 'Hello everyone',
+            start_ms: 0,
+            end_ms: 500,
+          },
+        ],
+        duration_seconds: 60,
+        word_count: 10,
+        translated_languages: [],
+      }),
+    }),
+  );
+  await page.route('**/sessions/s-20/report', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        id: 'r-1',
+        format: 'structured',
+        lang: 'en',
+        guidelines: null,
+        markdown: 'Great meeting, action items agreed.',
+        model: 'openai/gpt-oss-20b',
+        cost: 0.05,
+        created_at: '2026-09-01T10:02:00Z',
+      }),
+    }),
+  );
+  await page.route('**/sessions/s-20/sentiment', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        id: 'se-1',
+        result: {
+          overall: { score: 0.6, mood: 'positive' },
+          timeline: [{ t: 0, score: 0.6 }],
+          speakers: [{ name: 'Alex', talk_pct: 100, score: 0.6, mood: 'positive' }],
+          key_moments: [{ t: 0, label: 'kickoff enthusiasm', score: 0.6 }],
+          window_secs: 120,
+        },
+        model: 'openai/gpt-oss-20b',
+        cost: 0.09,
+        created_at: '2026-09-01T10:02:00Z',
+        cached: true,
+      }),
+    }),
+  );
+
+  await page.goto('/en/history/detail/?session=s-20');
+  await expect(page.locator('#report')).toBeVisible();
+  await expect(page.locator('#report-body')).toContainText('Great meeting');
+  await expect(page.locator('#sentiment')).toBeVisible();
+  // The disclaimer this feature must carry: this is text analysis, not voice analysis.
+  await expect(page.locator('#sentiment')).toContainText(/text transcript only/i);
+  await expect(page.locator('#sentiment-body')).toContainText('Positive');
+  await expect(page.locator('#sentiment-body')).toContainText('Alex');
+});
+
+test('a still-processing transcript shows the AI summary and sentiment as pending, not missing', async ({
+  page,
+}) => {
+  await signIn(page);
+  await stubApi(page);
+  await page.route('**/rooms/s-21/transcript**', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ status: 'processing', source: 'recording', segments: [] }),
+    }),
+  );
+  await page.route('**/sessions/s-21/report', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: 'null' }),
+  );
+  await page.route('**/sessions/s-21/sentiment', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: 'null' }),
+  );
+
+  await page.goto('/en/history/detail/?session=s-21');
+  await expect(page.locator('#report-body')).toContainText(/being generated/i);
+  await expect(page.locator('#sentiment-body')).toContainText(/in progress/i);
+});
+
+test('a phone call linked into the session detail page hides its always-broken room-recording control', async ({
+  page,
+}) => {
+  await signIn(page);
+  await stubApi(page);
+  await page.route('**/rooms/s-22/transcript**', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        status: 'ready',
+        source: 'recording',
+        source_language: 'en',
+        segments: [],
+        duration_seconds: 10,
+        word_count: 2,
+        translated_languages: [],
+      }),
+    }),
+  );
+  await page.route('**/sessions/s-22/report', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: 'null' }),
+  );
+  await page.route('**/sessions/s-22/sentiment', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: 'null' }),
+  );
+
+  await page.goto('/en/history/detail/?session=s-22&kind=phone');
+  await expect(page.locator('#tools')).toBeVisible();
+  await expect(page.locator('#rec-load')).toBeHidden();
+  // The rest of the toolbar — translate, export — is unaffected by the phone marker.
+  await expect(page.locator('#ex-txt')).toBeVisible();
 });
 
 test('the quote is asked for the tier and destination actually selected', async ({ page }) => {

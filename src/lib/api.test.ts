@@ -245,6 +245,18 @@ const ROWS: Row[] = [
     path: '/api/business/rooms/s1/recording/url',
   },
   {
+    name: 'getSessionReport',
+    run: () => api.getSessionReport('s1'),
+    method: 'GET',
+    path: '/api/sessions/s1/report',
+  },
+  {
+    name: 'getSessionSentiment',
+    run: () => api.getSessionSentiment('s1'),
+    method: 'GET',
+    path: '/api/sessions/s1/sentiment',
+  },
+  {
     name: 'getCredits',
     run: () => api.getCredits('o1'),
     method: 'GET',
@@ -765,6 +777,14 @@ describe('VoIP wrappers hit the paths they claim', () => {
     const { url, init } = lastCall(fn);
     expect(url).toBe(`${PREFIX}/calls/c-1/video-invite`);
     expect(init.method).toBe('POST');
+  });
+
+  it('recording (hotfix 0.16.1)', async () => {
+    const fn = mockFetch();
+    await api.getVoipCallRecording(ORG, 'c-1');
+    const { url, init } = lastCall(fn);
+    expect(url).toBe(`${PREFIX}/calls/c-1/recording`);
+    expect(init.method).toBe('GET');
   });
 
   it('settings, read and write, on the same path with different verbs', async () => {

@@ -257,7 +257,21 @@
     "exportPdf": "Esporta PDF",
     "recording": "Registrazione",
     "loadRecording": "Carica registrazione",
-    "noRecording": "Nessuna registrazione per questa chiamata."
+    "noRecording": "Nessuna registrazione per questa chiamata.",
+    "reportTitle": "Riepilogo AI",
+    "reportPending": "Il riepilogo AI è in fase di generazione. Riprova a breve.",
+    "reportNone": "Nessun riepilogo AI per questa chiamata.",
+    "sentimentTitle": "Sentiment",
+    "sentimentPending": "L'analisi del sentiment è in corso. Riprova a breve.",
+    "sentimentNone": "Nessuna analisi del sentiment per questa chiamata.",
+    "sentimentTextOnly": "Basata solo sulla trascrizione testuale, non sulla voce o sul tono.",
+    "sentimentOverall": "Complessivo",
+    "sentimentBySpeaker": "Per interlocutore",
+    "sentimentKeyMoments": "Momenti chiave",
+    "sentimentMoodPositive": "Positivo",
+    "sentimentMoodNegative": "Negativo",
+    "sentimentMoodNeutral": "Neutro",
+    "sentimentMoodMixed": "Contrastante"
   },
   "credits": {
     "title": "Crediti e fatturazione",
@@ -753,7 +767,8 @@
       "invalid_no_answer_action": "Scegli cosa succede se non risponde nessuno.",
       "forward_to_required": "L'inoltro ha bisogno di un numero a cui inoltrare.",
       "already_answered": "Ha risposto qualcun altro.",
-      "invalid_timezone": "Non è un fuso orario che conosciamo. Prova con Europe/Rome."
+      "invalid_timezone": "Non è un fuso orario che conosciamo. Prova con Europe/Rome.",
+      "recording_unavailable": "Nessuna registrazione disponibile per questa chiamata."
     },
     "settings": {
       "title": "Impostazioni chiamate telefoniche",
@@ -803,7 +818,9 @@
       "consentGranted": "Consenso ottenuto",
       "consentDenied": "Consenso negato",
       "consentTimeout": "Nessuna risposta alla richiesta di consenso",
-      "consentPending": "In attesa di consenso"
+      "consentPending": "In attesa di consenso",
+      "recordingDownload": "Scarica registrazione",
+      "summaryHint": "Il riepilogo AI e l'analisi del sentiment, se disponibili, sono mostrati insieme alla trascrizione."
     },
     "join": "Entra nella chiamata",
     "joinHint": "Apre la chiamata nell'app VoxTranslate, dove si trovano il tuo microfono e l'audio tradotto.",

@@ -257,7 +257,21 @@
     "exportPdf": "PDF exportieren",
     "recording": "Aufnahme",
     "loadRecording": "Aufnahme laden",
-    "noRecording": "Keine Aufnahme für diesen Anruf."
+    "noRecording": "Keine Aufnahme für diesen Anruf.",
+    "reportTitle": "KI-Zusammenfassung",
+    "reportPending": "Die KI-Zusammenfassung wird gerade erstellt. Bitte in Kürze erneut prüfen.",
+    "reportNone": "Keine KI-Zusammenfassung für diesen Anruf.",
+    "sentimentTitle": "Stimmung",
+    "sentimentPending": "Die Stimmungsanalyse läuft. Bitte in Kürze erneut prüfen.",
+    "sentimentNone": "Keine Stimmungsanalyse für diesen Anruf.",
+    "sentimentTextOnly": "Basiert nur auf dem Text-Transkript, nicht auf Stimme oder Tonfall.",
+    "sentimentOverall": "Insgesamt",
+    "sentimentBySpeaker": "Nach Sprecher",
+    "sentimentKeyMoments": "Wichtige Momente",
+    "sentimentMoodPositive": "Positiv",
+    "sentimentMoodNegative": "Negativ",
+    "sentimentMoodNeutral": "Neutral",
+    "sentimentMoodMixed": "Gemischt"
   },
   "credits": {
     "title": "Guthaben & Abrechnung",
@@ -753,7 +767,8 @@
       "invalid_no_answer_action": "Wählen Sie, was passiert, wenn niemand abnimmt.",
       "forward_to_required": "Eine Weiterleitung braucht eine Zielnummer.",
       "already_answered": "Jemand anderes hat den Anruf angenommen.",
-      "invalid_timezone": "Diese Zeitzone kennen wir nicht. Versuchen Sie Europe/Berlin."
+      "invalid_timezone": "Diese Zeitzone kennen wir nicht. Versuchen Sie Europe/Berlin.",
+      "recording_unavailable": "Für diesen Anruf ist keine Aufnahme verfügbar."
     },
     "settings": {
       "title": "Einstellungen für Telefonanrufe",
@@ -803,7 +818,9 @@
       "consentGranted": "Einwilligung erteilt",
       "consentDenied": "Einwilligung verweigert",
       "consentTimeout": "Keine Antwort auf die Einwilligungsabfrage",
-      "consentPending": "Warten auf Einwilligung"
+      "consentPending": "Warten auf Einwilligung",
+      "recordingDownload": "Aufnahme herunterladen",
+      "summaryHint": "Die KI-Zusammenfassung und die Stimmungsanalyse werden, sofern verfügbar, zusammen mit der Abschrift angezeigt."
     },
     "join": "Anruf beitreten",
     "joinHint": "Öffnet den Anruf in der VoxTranslate-App, wo Ihr Mikrofon und die übersetzte Audioausgabe sind.",

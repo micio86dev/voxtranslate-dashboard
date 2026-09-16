@@ -88,6 +88,23 @@ const t = useTranslations(lang);
     </section>
 
     <!--
+      This call's own recording (hotfix 0.16.1) — distinct from the browser room-recording
+      flow in history/detail.astro, which a telephone leg never populates (#hotfix-0.16.1).
+      Fetched on demand: the URL is short-lived, so it is never cached with the call detail.
+    -->
+    <section id="recording" class="card hidden grid gap-3" aria-labelledby="recording-h">
+      <h2 id="recording-h" class="text-sm font-semibold">{t('phone.detail.recording')}</h2>
+      <button id="rec-load" type="button" class="btn-ghost self-start text-sm"
+        >{t('transcript.loadRecording')}</button
+      >
+      <p id="rec-error" class="hidden text-sm text-danger" role="alert"></p>
+      <audio id="rec-player" class="hidden w-full" controls></audio>
+      <a id="rec-download" class="btn-ghost hidden self-start text-sm" href="#" download
+        >{t('phone.detail.recordingDownload')}</a
+      >
+    </section>
+
+    <!--
       Keeping a number nobody in the address book holds. One field, because everything
       else is already known: the number, its country, the language the call was actually
       conducted in, and the project it was filed under (spec 0114 R6).
@@ -120,6 +137,7 @@ const t = useTranslations(lang);
       <a id="open-transcript" class="btn-ghost hidden self-start text-sm" href="#"
         >{t('phone.detail.transcript')}</a
       >
+      <p id="summary-hint" class="hidden text-sm text-muted">{t('phone.detail.summaryHint')}</p>
     </section>
   </div>
 </BaseLayout>
@@ -127,7 +145,12 @@ const t = useTranslations(lang);
 <script>
   import { onPage } from '../../../scripts/nav';
   import { boot } from '../../../scripts/app-boot';
-  import { createVoipContact, currentOrgId, getVoipCall } from '../../../lib/api';
+  import {
+    createVoipContact,
+    currentOrgId,
+    getVoipCall,
+    getVoipCallRecording,
+  } from '../../../lib/api';
   import { useTranslations, type Locale } from '../../../lib/i18n';
   import {
     formatCredits,
@@ -136,6 +159,7 @@ const t = useTranslations(lang);
     refusalKey,
   } from '../../../scripts/phone-dialer';
   import { shouldOfferSave } from '../../../scripts/phone-catalogue';
+  import { isRecordingUrlFresh } from '../../../scripts/phone-recording';
 
   onPage('call-detail', async () => {
     const ctx = await boot();
@@ -267,9 +291,58 @@ const t = useTranslations(lang);
       set('capture-state', processing ? t('transcript.processing') : '');
       const link = $<HTMLAnchorElement>('open-transcript');
       if (link && !processing) {
-        link.setAttribute('href', `/${locale}/history/detail/?session=${call.session_id}`);
+        // `kind=phone` tells history/detail.astro to hide its own room-recording
+        // control — a telephone leg is never room-recorded, so that button 404s every
+        // time for a phone call (#hotfix-0.16.1). The transcript, its translation and
+        // exports there are unaffected.
+        link.setAttribute(
+          'href',
+          `/${locale}/history/detail/?session=${call.session_id}&kind=phone`,
+        );
         link.classList.remove('hidden');
+        $('summary-hint')?.classList.remove('hidden');
       }
+    }
+
+    // This call's own recording (hotfix 0.16.1) — the VoIP-specific endpoint, never the
+    // browser room-recording one, which a telephone leg cannot populate.
+    if (call.recording_available) {
+      $('recording')?.classList.remove('hidden');
+      $('recording')?.classList.add('grid');
+      let recordingExpiresAt: string | null = null;
+      const recPlayer = $<HTMLAudioElement>('rec-player');
+      const recDownload = $<HTMLAnchorElement>('rec-download');
+      const recError = $('rec-error');
+
+      $('rec-load')?.addEventListener('click', async () => {
+        recError?.classList.add('hidden');
+        // Reuse the last URL while it is still valid — no need to spend a fetch on a
+        // second click within the same expiry window.
+        if (recPlayer?.src && isRecordingUrlFresh(recordingExpiresAt)) {
+          recPlayer.classList.remove('hidden');
+          void recPlayer.play().catch(() => {});
+          return;
+        }
+        const res = await getVoipCallRecording(org, callId);
+        if (!res.ok || !res.data) {
+          const code = (res.data as unknown as { error?: string } | null)?.error ?? null;
+          if (recError) {
+            recError.textContent = t(refusalKey(code, 'phone.reason.recording_unavailable'));
+            recError.classList.remove('hidden');
+          }
+          return;
+        }
+        recordingExpiresAt = res.data.expires_at;
+        if (recPlayer) {
+          recPlayer.src = res.data.url;
+          recPlayer.classList.remove('hidden');
+          void recPlayer.play().catch(() => {});
+        }
+        if (recDownload) {
+          recDownload.setAttribute('href', res.data.url);
+          recDownload.classList.remove('hidden');
+        }
+      });
     }
   });
 </script>

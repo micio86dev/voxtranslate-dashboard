@@ -190,6 +190,10 @@ describe('refusal copy', () => {
     expect(hasReasonCopy('busy')).toBe(true);
     expect(hasReasonCopy('something_new_from_the_server')).toBe(false);
   });
+
+  it('carries copy for a phone call recording that is not available (hotfix 0.16.1)', () => {
+    expect(hasReasonCopy('recording_unavailable')).toBe(true);
+  });
 });
 
 describe('announcement (R30)', () => {

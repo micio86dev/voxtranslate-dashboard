@@ -1,0 +1,25 @@
+/**
+ * Phone call recording decision logic (hotfix 0.16.1).
+ *
+ * The recording URL from `GET .../voip/calls/{id}/recording` is short-lived (it is a
+ * signed link to storage), so it is fetched on demand rather than cached with the call
+ * detail — and a previously-fetched one must be checked for freshness before reuse
+ * instead of being handed to `<audio>` again, where an expired link fails silently or
+ * stops mid-playback.
+ */
+
+/**
+ * Whether a previously-fetched recording URL is still safe to (re)use, given `now`.
+ *
+ * Anything that cannot be parsed as a date — missing, empty, malformed — is treated as
+ * stale: the caller should re-fetch rather than guess.
+ */
+export function isRecordingUrlFresh(
+  expiresAt: string | null | undefined,
+  now: Date = new Date(),
+): boolean {
+  if (!expiresAt) return false;
+  const t = Date.parse(expiresAt);
+  if (Number.isNaN(t)) return false;
+  return t > now.getTime();
+}

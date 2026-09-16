@@ -439,6 +439,70 @@ export const recordingUrl = (sessionId: string) =>
     `/api/business/rooms/${sessionId}/recording/url`,
   );
 
+// --- AI report + sentiment (session-scoped, hotfix 0.16.1) -------------------
+
+/** A stored AI report, as `GET /api/sessions/{id}/report` returns it (server/src/api.rs,
+ *  `report_json`). `null` means "no report generated yet" — a normal state this endpoint
+ *  itself returns as 200 + null, never a 404. */
+export interface SessionReport {
+  id: string;
+  format: string;
+  lang: string;
+  guidelines: string | null;
+  markdown: string;
+  model: string;
+  cost: number;
+  created_at: string;
+}
+
+export const getSessionReport = (sessionId: string) =>
+  request<SessionReport | null>('GET', `/api/sessions/${sessionId}/report`);
+
+/** One speaker's sentiment for the whole call. `score`/`mood` are `null` for a speaker
+ *  the model never scored (e.g. they never spoke) — not the same as a neutral score. */
+export interface SentimentSpeaker {
+  name: string;
+  talk_pct: number;
+  score: number | null;
+  mood: string | null;
+}
+
+export interface SentimentTimelinePoint {
+  t: number;
+  score: number;
+}
+
+export interface SentimentKeyMoment {
+  t: number;
+  label: string;
+  score: number;
+}
+
+/** Text-only sentiment analysis over the transcript (`server/src/ai/sentiment.rs`). Never
+ *  reads audio — the score is derived entirely from what was said. */
+export interface SentimentResult {
+  overall: { score: number; mood: string };
+  timeline: SentimentTimelinePoint[];
+  speakers: SentimentSpeaker[];
+  key_moments: SentimentKeyMoment[];
+  window_secs: number;
+}
+
+/** A stored sentiment analysis, as `GET /api/sessions/{id}/sentiment` returns it
+ *  (server/src/api.rs, `sentiment_json`). `null` means "not analyzed yet", returned as
+ *  200 + null like the report endpoint above. */
+export interface SessionSentiment {
+  id: string;
+  result: SentimentResult;
+  model: string;
+  cost: number;
+  created_at: string;
+  cached: boolean;
+}
+
+export const getSessionSentiment = (sessionId: string) =>
+  request<SessionSentiment | null>('GET', `/api/sessions/${sessionId}/sentiment`);
+
 /** Fetch the transcript export (auth header needed) and trigger a download. */
 export async function downloadTranscript(
   sessionId: string,
@@ -1119,6 +1183,13 @@ export interface VoipCallDetail extends Omit<VoipCallSummary, 'recipient_masked'
   /** Who was called, when the address book knew. Null once that contact is deleted. */
   contact_id: string | null;
   contact_name: string | null;
+  /**
+   * Whether this call has a recording available through the VoIP-specific recording
+   * endpoint (hotfix 0.16.1). A phone call is never room-recorded — it is a telephone
+   * leg, not a WebRTC room — so this is the only reliable signal for it; `recording_status`
+   * describes capture in progress, not whether a played-back file exists afterwards.
+   */
+  recording_available: boolean;
 }
 
 export interface VoipSettings {
@@ -1223,6 +1294,21 @@ export function createVoipVideoInvite(
 
 export function hangUpVoipCall(orgId: string, callId: string): Promise<ApiResult<unknown>> {
   return request('POST', `/api/business/organizations/${orgId}/voip/calls/${callId}/hangup`);
+}
+
+/**
+ * A short-lived signed URL to this call's own recording (hotfix 0.16.1) — distinct from
+ * the browser room-recording endpoint above, which a telephone leg never populates.
+ *
+ * 404 `{"error":"recording_unavailable"}` when the call has none (mapped through
+ * `refusalKey` like every other voip error code). Fetched on demand — the URL expires, so
+ * it is never cached alongside the call detail.
+ */
+export function getVoipCallRecording(
+  orgId: string,
+  callId: string,
+): Promise<ApiResult<{ url: string; expires_at: string }>> {
+  return request('GET', `/api/business/organizations/${orgId}/voip/calls/${callId}/recording`);
 }
 
 export function getVoipSettings(orgId: string): Promise<ApiResult<VoipSettings>> {

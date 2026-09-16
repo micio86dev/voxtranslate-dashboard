@@ -257,7 +257,21 @@
     "exportPdf": "Exporter PDF",
     "recording": "Enregistrement",
     "loadRecording": "Charger l'enregistrement",
-    "noRecording": "Aucun enregistrement pour cet appel."
+    "noRecording": "Aucun enregistrement pour cet appel.",
+    "reportTitle": "Résumé IA",
+    "reportPending": "Le résumé IA est en cours de génération. Revenez bientôt.",
+    "reportNone": "Aucun résumé IA pour cet appel.",
+    "sentimentTitle": "Sentiment",
+    "sentimentPending": "L'analyse de sentiment est en cours. Revenez bientôt.",
+    "sentimentNone": "Aucune analyse de sentiment pour cet appel.",
+    "sentimentTextOnly": "Basée uniquement sur la transcription textuelle, pas sur la voix ni le ton.",
+    "sentimentOverall": "Ensemble",
+    "sentimentBySpeaker": "Par interlocuteur",
+    "sentimentKeyMoments": "Moments clés",
+    "sentimentMoodPositive": "Positif",
+    "sentimentMoodNegative": "Négatif",
+    "sentimentMoodNeutral": "Neutre",
+    "sentimentMoodMixed": "Mitigé"
   },
   "credits": {
     "title": "Crédits et facturation",
@@ -753,7 +767,8 @@
       "invalid_no_answer_action": "Choisissez ce qui se passe si personne ne répond.",
       "forward_to_required": "Un transfert a besoin d'un numéro de destination.",
       "already_answered": "Quelqu'un d'autre a pris cet appel.",
-      "invalid_timezone": "Ce fuseau horaire nous est inconnu. Essayez Europe/Paris."
+      "invalid_timezone": "Ce fuseau horaire nous est inconnu. Essayez Europe/Paris.",
+      "recording_unavailable": "Aucun enregistrement n'est disponible pour cet appel."
     },
     "settings": {
       "title": "Paramètres des appels téléphoniques",
@@ -803,7 +818,9 @@
       "consentGranted": "Consentement obtenu",
       "consentDenied": "Consentement refusé",
       "consentTimeout": "Aucune réponse à la demande de consentement",
-      "consentPending": "En attente de consentement"
+      "consentPending": "En attente de consentement",
+      "recordingDownload": "Télécharger l'enregistrement",
+      "summaryHint": "Le résumé IA et l'analyse de sentiment, lorsqu'ils sont disponibles, sont affichés avec la transcription."
     },
     "join": "Rejoindre l'appel",
     "joinHint": "Ouvre l'appel dans l'application VoxTranslate, où se trouvent votre micro et l'audio traduit.",
