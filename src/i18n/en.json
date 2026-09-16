@@ -257,7 +257,25 @@
     "exportPdf": "Export PDF",
     "recording": "Recording",
     "loadRecording": "Load recording",
-    "noRecording": "No recording for this call."
+    "noRecording": "No recording for this call.",
+    "reportTitle": "AI summary",
+    "reportPending": "The AI summary is being generated. Check back shortly.",
+    "reportNone": "No AI summary for this call.",
+    "reportNotRequested": "AI summary was not requested for this call.",
+    "reportError": "The AI summary could not be loaded. Try again shortly.",
+    "sentimentTitle": "Sentiment",
+    "sentimentPending": "Sentiment analysis is in progress. Check back shortly.",
+    "sentimentNone": "No sentiment analysis for this call.",
+    "sentimentNotRequested": "Sentiment analysis was not requested for this call.",
+    "sentimentError": "The sentiment analysis could not be loaded. Try again shortly.",
+    "sentimentTextOnly": "Based on the text transcript only, not on voice or tone.",
+    "sentimentOverall": "Overall",
+    "sentimentBySpeaker": "By speaker",
+    "sentimentKeyMoments": "Key moments",
+    "sentimentMoodPositive": "Positive",
+    "sentimentMoodNegative": "Negative",
+    "sentimentMoodNeutral": "Neutral",
+    "sentimentMoodMixed": "Mixed"
   },
   "credits": {
     "title": "Credits & billing",
@@ -753,7 +771,8 @@
       "invalid_no_answer_action": "Choose what happens when nobody answers.",
       "forward_to_required": "A forward needs a number to forward to.",
       "already_answered": "Somebody else took this call.",
-      "invalid_timezone": "That is not a timezone we recognise. Try one like Europe/Rome."
+      "invalid_timezone": "That is not a timezone we recognise. Try one like Europe/Rome.",
+      "recording_unavailable": "No recording is available for this call."
     },
     "settings": {
       "title": "Phone call settings",
@@ -803,7 +822,10 @@
       "consentGranted": "Consent given",
       "consentDenied": "Consent declined",
       "consentTimeout": "No answer to the consent prompt",
-      "consentPending": "Waiting for consent"
+      "consentPending": "Waiting for consent",
+      "recordingDownload": "Download recording",
+      "summaryHint": "The AI summary and sentiment analysis, when available, are shown together with the transcript.",
+      "aiNotRequested": "AI summary and sentiment were not requested for this call."
     },
     "join": "Join the call",
     "joinHint": "Opens the call in the VoxTranslate app, where your microphone and the translated audio are.",

@@ -237,6 +237,8 @@ const KNOWN_REASONS = new Set([
   'already_answered',
   // Spec 0118, office hours.
   'invalid_timezone',
+  // Hotfix 0.16.1: the VoIP-specific call recording, distinct from a room recording.
+  'recording_unavailable',
 ]);
 
 export function hasReasonCopy(code: string | null | undefined): boolean {
