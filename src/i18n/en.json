@@ -261,9 +261,13 @@
     "reportTitle": "AI summary",
     "reportPending": "The AI summary is being generated. Check back shortly.",
     "reportNone": "No AI summary for this call.",
+    "reportNotRequested": "AI summary was not requested for this call.",
+    "reportError": "The AI summary could not be loaded. Try again shortly.",
     "sentimentTitle": "Sentiment",
     "sentimentPending": "Sentiment analysis is in progress. Check back shortly.",
     "sentimentNone": "No sentiment analysis for this call.",
+    "sentimentNotRequested": "Sentiment analysis was not requested for this call.",
+    "sentimentError": "The sentiment analysis could not be loaded. Try again shortly.",
     "sentimentTextOnly": "Based on the text transcript only, not on voice or tone.",
     "sentimentOverall": "Overall",
     "sentimentBySpeaker": "By speaker",
@@ -820,7 +824,8 @@
       "consentTimeout": "No answer to the consent prompt",
       "consentPending": "Waiting for consent",
       "recordingDownload": "Download recording",
-      "summaryHint": "The AI summary and sentiment analysis, when available, are shown together with the transcript."
+      "summaryHint": "The AI summary and sentiment analysis, when available, are shown together with the transcript.",
+      "aiNotRequested": "AI summary and sentiment were not requested for this call."
     },
     "join": "Join the call",
     "joinHint": "Opens the call in the VoxTranslate app, where your microphone and the translated audio are.",

@@ -261,9 +261,13 @@
     "reportTitle": "Riepilogo AI",
     "reportPending": "Il riepilogo AI è in fase di generazione. Riprova a breve.",
     "reportNone": "Nessun riepilogo AI per questa chiamata.",
+    "reportNotRequested": "Il riepilogo AI non è stato richiesto per questa chiamata.",
+    "reportError": "Impossibile caricare il riepilogo AI. Riprova a breve.",
     "sentimentTitle": "Sentiment",
     "sentimentPending": "L'analisi del sentiment è in corso. Riprova a breve.",
     "sentimentNone": "Nessuna analisi del sentiment per questa chiamata.",
+    "sentimentNotRequested": "L'analisi del sentiment non è stata richiesta per questa chiamata.",
+    "sentimentError": "Impossibile caricare l'analisi del sentiment. Riprova a breve.",
     "sentimentTextOnly": "Basata solo sulla trascrizione testuale, non sulla voce o sul tono.",
     "sentimentOverall": "Complessivo",
     "sentimentBySpeaker": "Per interlocutore",
@@ -820,7 +824,8 @@
       "consentTimeout": "Nessuna risposta alla richiesta di consenso",
       "consentPending": "In attesa di consenso",
       "recordingDownload": "Scarica registrazione",
-      "summaryHint": "Il riepilogo AI e l'analisi del sentiment, se disponibili, sono mostrati insieme alla trascrizione."
+      "summaryHint": "Il riepilogo AI e l'analisi del sentiment, se disponibili, sono mostrati insieme alla trascrizione.",
+      "aiNotRequested": "Il riepilogo AI e l'analisi del sentiment non sono stati richiesti per questa chiamata."
     },
     "join": "Entra nella chiamata",
     "joinHint": "Apre la chiamata nell'app VoxTranslate, dove si trovano il tuo microfono e l'audio tradotto.",

@@ -68,70 +68,113 @@ const TRANSLATE_LANGS = ['it', 'en', 'es', 'de', 'fr', 'pt', 'ja', 'zh', 'ar', '
     recordingUrl,
     translateTranscript,
     type Segment,
-    type SentimentResult,
   } from '../../../lib/api';
   import { useTranslations, type Locale } from '../../../lib/i18n';
-  import { aiFeatureState, formatSentimentScore, sentimentMoodKey } from '../../../scripts/call-ai';
+  import {
+    aiFeatureState,
+    classifyAiFetch,
+    formatSentimentScore,
+    isReportRow,
+    isSentimentRow,
+    sentimentMoodKey,
+    type AiFeatureState,
+  } from '../../../scripts/call-ai';
   import { showsRoomRecording } from '../../../scripts/session-recording';
 
-  function esc(s: string): string {
-    return s.replace(
+  // Coerces before escaping: some fields below come from a loosely-shape-checked array
+  // (`isSentimentRow` only guarantees `speakers`/`key_moments` ARE arrays, not that every
+  // entry inside them is well-formed), so a missing `name`/`label` must render as an
+  // empty string rather than throw on `undefined.replace`.
+  function esc(s: unknown): string {
+    return String(s ?? '').replace(
       /[&<>"]/g,
       (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c] || c,
     );
   }
+
+  const REPORT_COPY: Record<Exclude<AiFeatureState, 'ready'>, string> = {
+    pending: 'transcript.reportPending',
+    notRequested: 'transcript.reportNotRequested',
+    error: 'transcript.reportError',
+    none: 'transcript.reportNone',
+  };
+  const SENTIMENT_COPY: Record<Exclude<AiFeatureState, 'ready'>, string> = {
+    pending: 'transcript.sentimentPending',
+    notRequested: 'transcript.sentimentNotRequested',
+    error: 'transcript.sentimentError',
+    none: 'transcript.sentimentNone',
+  };
 
   /**
    * AI summary + sentiment (hotfix 0.16.1), reusing the webinars/detail.astro report
    * pattern for every non-webinar session — phone calls included. Runs independently of
    * the transcript render above it: a report/sentiment row can exist (or be pending)
    * whatever state the transcript body itself ends up in.
+   *
+   * Each fetch is classified on its own (`Promise.allSettled`, not `Promise.all`), so a
+   * failure on one side never blanks the other, and the whole thing is wrapped so a
+   * genuinely unexpected rejection renders an error state instead of leaving both
+   * sections empty with an unhandled rejection in the console.
    */
   async function loadAiSections(
     sessionId: string,
     transcriptStatus: string | null | undefined,
+    aiRequested: boolean | null | undefined,
     t: (key: string) => string,
   ) {
-    const reportSection = document.getElementById('report')!;
-    const reportBody = document.getElementById('report-body')!;
-    const sentimentSection = document.getElementById('sentiment')!;
-    const sentimentBody = document.getElementById('sentiment-body')!;
+    const reportSection = document.getElementById('report');
+    const reportBody = document.getElementById('report-body');
+    const sentimentSection = document.getElementById('sentiment');
+    const sentimentBody = document.getElementById('sentiment-body');
+    if (!reportSection || !reportBody || !sentimentSection || !sentimentBody) return;
 
-    const [reportRes, sentimentRes] = await Promise.all([
-      getSessionReport(sessionId),
-      getSessionSentiment(sessionId),
-    ]);
+    try {
+      const [reportSettled, sentimentSettled] = await Promise.allSettled([
+        getSessionReport(sessionId),
+        getSessionSentiment(sessionId),
+      ]);
 
-    reportSection.classList.remove('hidden');
-    const reportRow = reportRes.ok ? reportRes.data : null;
-    switch (aiFeatureState(reportRow, transcriptStatus)) {
-      case 'ready':
-        reportBody.innerHTML = `<div class="whitespace-pre-wrap">${esc(reportRow!.markdown)}</div>`;
-        break;
-      case 'pending':
-        reportBody.textContent = t('transcript.reportPending');
-        break;
-      default:
+      reportSection.classList.remove('hidden');
+      const reportOutcome = classifyAiFetch(reportSettled);
+      const reportState = aiFeatureState(reportOutcome, isReportRow, transcriptStatus, aiRequested);
+      if (reportState !== 'ready') {
+        reportBody.textContent = t(REPORT_COPY[reportState]);
+      } else if (reportOutcome.kind === 'ok' && isReportRow(reportOutcome.row)) {
+        reportBody.innerHTML = `<div class="whitespace-pre-wrap">${esc(reportOutcome.row.markdown)}</div>`;
+      } else {
+        // Cannot happen — `aiFeatureState` only returns 'ready' when this holds — but
+        // keeps the branch total rather than rendering nothing if that ever drifts.
         reportBody.textContent = t('transcript.reportNone');
-    }
+      }
 
-    sentimentSection.classList.remove('hidden');
-    const sentimentRow = sentimentRes.ok ? sentimentRes.data : null;
-    switch (aiFeatureState(sentimentRow, transcriptStatus)) {
-      case 'ready': {
-        const r: SentimentResult = sentimentRow!.result;
+      sentimentSection.classList.remove('hidden');
+      const sentimentOutcome = classifyAiFetch(sentimentSettled);
+      const sentimentState = aiFeatureState(
+        sentimentOutcome,
+        isSentimentRow,
+        transcriptStatus,
+        aiRequested,
+      );
+      if (sentimentState !== 'ready') {
+        sentimentBody.textContent = t(SENTIMENT_COPY[sentimentState]);
+      } else if (sentimentOutcome.kind === 'ok' && isSentimentRow(sentimentOutcome.row)) {
+        const r = sentimentOutcome.row.result;
         const speakersHtml = r.speakers
-          .map(
-            (s) =>
-              `<div class="flex justify-between border-b border-line py-1.5 last:border-0">
+          .map((s: { name?: unknown; mood?: unknown; score?: unknown }) => {
+            const mood = typeof s.mood === 'string' ? s.mood : null;
+            const score = typeof s.score === 'number' ? s.score : null;
+            return `<div class="flex justify-between border-b border-line py-1.5 last:border-0">
                 <span>${esc(s.name)}</span>
-                <span class="text-muted">${s.mood ? esc(t(sentimentMoodKey(s.mood))) : '—'} (${formatSentimentScore(s.score)})</span>
-              </div>`,
-          )
+                <span class="text-muted">${mood ? esc(t(sentimentMoodKey(mood))) : '—'} (${formatSentimentScore(score)})</span>
+              </div>`;
+          })
           .join('');
         const momentsHtml = r.key_moments.length
           ? `<ul class="mt-1 list-disc pl-5">${r.key_moments
-              .map((m) => `<li>${esc(m.label)} (${formatSentimentScore(m.score)})</li>`)
+              .map((m: { label?: unknown; score?: unknown }) => {
+                const score = typeof m.score === 'number' ? m.score : null;
+                return `<li>${esc(m.label)} (${formatSentimentScore(score)})</li>`;
+              })
               .join('')}</ul>`
           : '';
         sentimentBody.innerHTML = `
@@ -146,13 +189,20 @@ const TRANSLATE_LANGS = ['it', 'en', 'es', 'de', 'fr', 'pt', 'ja', 'zh', 'ar', '
               ? `<div class="mt-3 text-xs font-semibold text-muted">${esc(t('transcript.sentimentKeyMoments'))}</div>${momentsHtml}`
               : ''
           }`;
-        break;
-      }
-      case 'pending':
-        sentimentBody.textContent = t('transcript.sentimentPending');
-        break;
-      default:
+      } else {
+        // Cannot happen — `aiFeatureState` only returns 'ready' when this holds — but
+        // keeps the branch total rather than rendering nothing if that ever drifts.
         sentimentBody.textContent = t('transcript.sentimentNone');
+      }
+    } catch (e) {
+      // `getSessionReport`/`getSessionSentiment` do not throw today (lib/api.ts's
+      // `request()` catches its own fetch failures), but this must not silently vanish
+      // as an unhandled rejection if that ever changes.
+      console.error('AI summary/sentiment failed to load', e);
+      reportSection.classList.remove('hidden');
+      sentimentSection.classList.remove('hidden');
+      reportBody.textContent = t('transcript.reportError');
+      sentimentBody.textContent = t('transcript.sentimentError');
     }
   }
 
@@ -165,6 +215,12 @@ const TRANSLATE_LANGS = ['it', 'en', 'es', 'de', 'fr', 'pt', 'ja', 'zh', 'ar', '
     // Set by phone/detail.astro's link into this page (#hotfix-0.16.1): a phone call is
     // never room-recorded, so the room-recording control below is suppressed for it.
     const sessionKind = params.get('kind');
+    // `1`/`0` from `call.ai_analysis_requested` (server hotfix 1.58.5); absent (`null`)
+    // for a browser call or an older server that has not shipped the flag — kept as
+    // `undefined` rather than guessed at, so aiFeatureState falls back to the
+    // transcript-status heuristic instead of a false "not requested".
+    const aiParam = params.get('ai');
+    const aiRequested = aiParam === null ? undefined : aiParam === '1';
     const msg = document.getElementById('msg')!;
     const body = document.getElementById('body')!;
     if (!sessionId) {
@@ -181,7 +237,7 @@ const TRANSLATE_LANGS = ['it', 'en', 'es', 'de', 'fr', 'pt', 'ja', 'zh', 'ar', '
       return;
     }
     const doc = res.data;
-    void loadAiSections(sessionId, doc.status, t);
+    void loadAiSections(sessionId, doc.status, aiRequested, t);
     if (doc.status === 'processing' || doc.status === 'none') {
       msg.textContent = t(
         doc.status === 'processing' ? 'transcript.processing' : 'transcript.none',

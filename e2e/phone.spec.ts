@@ -917,6 +917,126 @@ test('a phone call recording that fails to load says so, and never claims succes
   await expect(page.locator('#rec-player')).toBeHidden();
 });
 
+test('a recording reload that fails after a successful load clears the player rather than leaving a stale one', async ({
+  page,
+}) => {
+  await signIn(page);
+  await stubApi(page);
+  await page.route('**/voip/calls/c-13', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        id: 'c-13',
+        session_id: 's-13',
+        status: 'completed',
+        failure_reason: null,
+        direction: 'outbound',
+        recipient_e164: '+393201234567',
+        recipient_country: 'IT',
+        source_language: 'en',
+        target_language: 'it',
+        engine_id: 'standard',
+        started_at: '2026-09-01T10:00:00Z',
+        ended_at: '2026-09-01T10:01:35Z',
+        duration_seconds: 95,
+        credits_consumed: 120,
+        quoted_price_per_min: '0.0468',
+        cost_status: 'final',
+        recording_status: 'ready',
+        transcription_status: 'ready',
+        consent_status: 'granted',
+        project_id: null,
+        contact_id: null,
+        contact_name: null,
+        recording_available: true,
+      }),
+    }),
+  );
+  let recordingCalls = 0;
+  await page.route('**/voip/calls/c-13/recording', (route) => {
+    recordingCalls += 1;
+    if (recordingCalls === 1) {
+      // Already expired by "now" (2026), so the second click below is forced to
+      // refetch rather than silently reusing the cached URL.
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          url: 'https://cdn.test/rec-c13.mp3',
+          expires_at: '2020-01-01T00:00:00Z',
+        }),
+      });
+    }
+    return route.fulfill({
+      status: 500,
+      contentType: 'application/json',
+      body: JSON.stringify({ error: 'db_error' }),
+    });
+  });
+
+  await page.goto('/en/phone/detail/?id=c-13');
+  await page.click('#rec-load');
+  await expect(page.locator('#rec-player')).toBeVisible();
+  await expect(page.locator('#rec-download')).toBeVisible();
+
+  await page.click('#rec-load');
+  await expect(page.locator('#rec-error')).toBeVisible();
+  // The retry copy, not the "no recording available" one — a 500 with no
+  // `recording_unavailable` code is a transient failure, not proof nothing exists.
+  await expect(page.locator('#rec-error')).toContainText(/try again/i);
+  await expect(page.locator('#rec-error')).not.toContainText(/no recording is available/i);
+  await expect(page.locator('#rec-player')).toBeHidden();
+  await expect(page.locator('#rec-download')).toBeHidden();
+});
+
+test('a call that never requested AI analysis says so on its own page, not a pending guess', async ({
+  page,
+}) => {
+  await signIn(page);
+  await stubApi(page);
+  await page.route('**/voip/calls/c-14', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        id: 'c-14',
+        session_id: 's-14',
+        status: 'completed',
+        failure_reason: null,
+        direction: 'outbound',
+        recipient_e164: '+393201234567',
+        recipient_country: 'IT',
+        source_language: 'en',
+        target_language: 'it',
+        engine_id: 'standard',
+        started_at: '2026-09-01T10:00:00Z',
+        ended_at: '2026-09-01T10:01:35Z',
+        duration_seconds: 95,
+        credits_consumed: 120,
+        quoted_price_per_min: '0.0468',
+        cost_status: 'final',
+        recording_status: 'none',
+        transcription_status: 'ready',
+        consent_status: 'granted',
+        project_id: null,
+        contact_id: null,
+        contact_name: null,
+        recording_available: false,
+        ai_analysis_requested: false,
+      }),
+    }),
+  );
+
+  await page.goto('/en/phone/detail/?id=c-14');
+  await expect(page.locator('#summary-none')).toBeVisible();
+  await expect(page.locator('#summary-hint')).toBeHidden();
+  await expect(page.locator('#open-transcript')).toHaveAttribute(
+    'href',
+    '/en/history/detail/?session=s-14&kind=phone&ai=0',
+  );
+});
+
 test('a call with no recording does not offer to load one', async ({ page }) => {
   await signIn(page);
   await stubApi(page);
@@ -1053,6 +1173,78 @@ test('a still-processing transcript shows the AI summary and sentiment as pendin
   await page.goto('/en/history/detail/?session=s-21');
   await expect(page.locator('#report-body')).toContainText(/being generated/i);
   await expect(page.locator('#sentiment-body')).toContainText(/in progress/i);
+});
+
+test('a 500 on the AI summary or sentiment endpoint shows a retry message, not an empty section', async ({
+  page,
+}) => {
+  await signIn(page);
+  await stubApi(page);
+  await page.route('**/rooms/s-23/transcript**', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        status: 'ready',
+        source: 'recording',
+        source_language: 'en',
+        segments: [],
+        duration_seconds: 10,
+        word_count: 2,
+        translated_languages: [],
+      }),
+    }),
+  );
+  await page.route('**/sessions/s-23/report', (route) =>
+    route.fulfill({
+      status: 500,
+      contentType: 'application/json',
+      body: JSON.stringify({ error: 'db_error' }),
+    }),
+  );
+  await page.route('**/sessions/s-23/sentiment', (route) =>
+    route.fulfill({
+      status: 500,
+      contentType: 'application/json',
+      body: JSON.stringify({ error: 'db_error' }),
+    }),
+  );
+
+  await page.goto('/en/history/detail/?session=s-23');
+  await expect(page.locator('#report-body')).toContainText(/try again/i);
+  await expect(page.locator('#sentiment-body')).toContainText(/try again/i);
+});
+
+test('a phone call session marked "AI not requested" reads that way, not as pending or missing', async ({
+  page,
+}) => {
+  await signIn(page);
+  await stubApi(page);
+  await page.route('**/rooms/s-24/transcript**', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        status: 'ready',
+        source: 'recording',
+        source_language: 'en',
+        segments: [],
+        duration_seconds: 10,
+        word_count: 2,
+        translated_languages: [],
+      }),
+    }),
+  );
+  await page.route('**/sessions/s-24/report', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: 'null' }),
+  );
+  await page.route('**/sessions/s-24/sentiment', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: 'null' }),
+  );
+
+  await page.goto('/en/history/detail/?session=s-24&kind=phone&ai=0');
+  await expect(page.locator('#report-body')).toContainText(/not requested/i);
+  await expect(page.locator('#sentiment-body')).toContainText(/not requested/i);
 });
 
 test('a phone call linked into the session detail page hides its always-broken room-recording control', async ({

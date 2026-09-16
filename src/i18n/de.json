@@ -261,9 +261,13 @@
     "reportTitle": "KI-Zusammenfassung",
     "reportPending": "Die KI-Zusammenfassung wird gerade erstellt. Bitte in Kürze erneut prüfen.",
     "reportNone": "Keine KI-Zusammenfassung für diesen Anruf.",
+    "reportNotRequested": "Für diesen Anruf wurde keine KI-Zusammenfassung angefordert.",
+    "reportError": "Die KI-Zusammenfassung konnte nicht geladen werden. Bitte in Kürze erneut versuchen.",
     "sentimentTitle": "Stimmung",
     "sentimentPending": "Die Stimmungsanalyse läuft. Bitte in Kürze erneut prüfen.",
     "sentimentNone": "Keine Stimmungsanalyse für diesen Anruf.",
+    "sentimentNotRequested": "Für diesen Anruf wurde keine Stimmungsanalyse angefordert.",
+    "sentimentError": "Die Stimmungsanalyse konnte nicht geladen werden. Bitte in Kürze erneut versuchen.",
     "sentimentTextOnly": "Basiert nur auf dem Text-Transkript, nicht auf Stimme oder Tonfall.",
     "sentimentOverall": "Insgesamt",
     "sentimentBySpeaker": "Nach Sprecher",
@@ -820,7 +824,8 @@
       "consentTimeout": "Keine Antwort auf die Einwilligungsabfrage",
       "consentPending": "Warten auf Einwilligung",
       "recordingDownload": "Aufnahme herunterladen",
-      "summaryHint": "Die KI-Zusammenfassung und die Stimmungsanalyse werden, sofern verfügbar, zusammen mit der Abschrift angezeigt."
+      "summaryHint": "Die KI-Zusammenfassung und die Stimmungsanalyse werden, sofern verfügbar, zusammen mit der Abschrift angezeigt.",
+      "aiNotRequested": "Für diesen Anruf wurden weder eine KI-Zusammenfassung noch eine Stimmungsanalyse angefordert."
     },
     "join": "Anruf beitreten",
     "joinHint": "Öffnet den Anruf in der VoxTranslate-App, wo Ihr Mikrofon und die übersetzte Audioausgabe sind.",

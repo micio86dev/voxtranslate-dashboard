@@ -138,6 +138,7 @@ const t = useTranslations(lang);
         >{t('phone.detail.transcript')}</a
       >
       <p id="summary-hint" class="hidden text-sm text-muted">{t('phone.detail.summaryHint')}</p>
+      <p id="summary-none" class="hidden text-sm text-muted">{t('phone.detail.aiNotRequested')}</p>
     </section>
   </div>
 </BaseLayout>
@@ -159,7 +160,7 @@ const t = useTranslations(lang);
     refusalKey,
   } from '../../../scripts/phone-dialer';
   import { shouldOfferSave } from '../../../scripts/phone-catalogue';
-  import { isRecordingUrlFresh } from '../../../scripts/phone-recording';
+  import { isRecordingUrlFresh, recordingFailureKey } from '../../../scripts/phone-recording';
 
   onPage('call-detail', async () => {
     const ctx = await boot();
@@ -294,13 +295,25 @@ const t = useTranslations(lang);
         // `kind=phone` tells history/detail.astro to hide its own room-recording
         // control — a telephone leg is never room-recorded, so that button 404s every
         // time for a phone call (#hotfix-0.16.1). The transcript, its translation and
-        // exports there are unaffected.
+        // exports there are unaffected. `ai=` (hotfix 1.58.5) carries whether AI
+        // analysis was requested for this call, so that page does not have to guess.
+        const aiParam =
+          call.ai_analysis_requested === undefined
+            ? ''
+            : `&ai=${call.ai_analysis_requested ? '1' : '0'}`;
         link.setAttribute(
           'href',
-          `/${locale}/history/detail/?session=${call.session_id}&kind=phone`,
+          `/${locale}/history/detail/?session=${call.session_id}&kind=phone${aiParam}`,
         );
         link.classList.remove('hidden');
-        $('summary-hint')?.classList.remove('hidden');
+        // Only a confirmed "no" gets the harder claim — an unknown flag (older server)
+        // keeps the optimistic hint rather than telling a caller AI was skipped when the
+        // dashboard simply does not know.
+        if (call.ai_analysis_requested === false) {
+          $('summary-none')?.classList.remove('hidden');
+        } else {
+          $('summary-hint')?.classList.remove('hidden');
+        }
       }
     }
 
@@ -325,9 +338,18 @@ const t = useTranslations(lang);
         }
         const res = await getVoipCallRecording(org, callId);
         if (!res.ok || !res.data) {
+          // Clear anything shown from an earlier successful load — a stale player left
+          // on screen after a failed reload would read as "this still works" when the
+          // fetch that would refresh it just failed.
+          recordingExpiresAt = null;
+          if (recPlayer) {
+            recPlayer.removeAttribute('src');
+            recPlayer.classList.add('hidden');
+          }
+          recDownload?.classList.add('hidden');
           const code = (res.data as unknown as { error?: string } | null)?.error ?? null;
           if (recError) {
-            recError.textContent = t(refusalKey(code, 'phone.reason.recording_unavailable'));
+            recError.textContent = t(recordingFailureKey(code));
             recError.classList.remove('hidden');
           }
           return;

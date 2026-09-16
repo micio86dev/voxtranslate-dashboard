@@ -261,9 +261,13 @@
     "reportTitle": "Résumé IA",
     "reportPending": "Le résumé IA est en cours de génération. Revenez bientôt.",
     "reportNone": "Aucun résumé IA pour cet appel.",
+    "reportNotRequested": "Le résumé IA n'a pas été demandé pour cet appel.",
+    "reportError": "Le résumé IA n'a pas pu être chargé. Réessayez bientôt.",
     "sentimentTitle": "Sentiment",
     "sentimentPending": "L'analyse de sentiment est en cours. Revenez bientôt.",
     "sentimentNone": "Aucune analyse de sentiment pour cet appel.",
+    "sentimentNotRequested": "L'analyse de sentiment n'a pas été demandée pour cet appel.",
+    "sentimentError": "L'analyse de sentiment n'a pas pu être chargée. Réessayez bientôt.",
     "sentimentTextOnly": "Basée uniquement sur la transcription textuelle, pas sur la voix ni le ton.",
     "sentimentOverall": "Ensemble",
     "sentimentBySpeaker": "Par interlocuteur",
@@ -820,7 +824,8 @@
       "consentTimeout": "Aucune réponse à la demande de consentement",
       "consentPending": "En attente de consentement",
       "recordingDownload": "Télécharger l'enregistrement",
-      "summaryHint": "Le résumé IA et l'analyse de sentiment, lorsqu'ils sont disponibles, sont affichés avec la transcription."
+      "summaryHint": "Le résumé IA et l'analyse de sentiment, lorsqu'ils sont disponibles, sont affichés avec la transcription.",
+      "aiNotRequested": "Le résumé IA et l'analyse de sentiment n'ont pas été demandés pour cet appel."
     },
     "join": "Rejoindre l'appel",
     "joinHint": "Ouvre l'appel dans l'application VoxTranslate, où se trouvent votre micro et l'audio traduit.",

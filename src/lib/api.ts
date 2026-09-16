@@ -1190,6 +1190,13 @@ export interface VoipCallDetail extends Omit<VoipCallSummary, 'recipient_masked'
    * describes capture in progress, not whether a played-back file exists afterwards.
    */
   recording_available: boolean;
+  /**
+   * Whether AI summary/sentiment analysis was requested for this call (server hotfix
+   * 1.58.5, `VoipDialRequest.ai_analysis` at dial time). `undefined` on an older server
+   * that has not shipped the field yet — treated as unknown, never as a negative, so a
+   * missing field does not read as "this call explicitly opted out."
+   */
+  ai_analysis_requested?: boolean;
 }
 
 export interface VoipSettings {
