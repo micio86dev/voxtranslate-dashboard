@@ -257,7 +257,25 @@
     "exportPdf": "Exportar PDF",
     "recording": "Grabación",
     "loadRecording": "Cargar grabación",
-    "noRecording": "No hay grabación para esta llamada."
+    "noRecording": "No hay grabación para esta llamada.",
+    "reportTitle": "Resumen de IA",
+    "reportPending": "El resumen de IA se está generando. Vuelve a comprobarlo en breve.",
+    "reportNone": "No hay resumen de IA para esta llamada.",
+    "reportNotRequested": "No se solicitó un resumen de IA para esta llamada.",
+    "reportError": "No se pudo cargar el resumen de IA. Vuelve a intentarlo en breve.",
+    "sentimentTitle": "Sentimiento",
+    "sentimentPending": "El análisis de sentimiento está en curso. Vuelve a comprobarlo en breve.",
+    "sentimentNone": "No hay análisis de sentimiento para esta llamada.",
+    "sentimentNotRequested": "No se solicitó un análisis de sentimiento para esta llamada.",
+    "sentimentError": "No se pudo cargar el análisis de sentimiento. Vuelve a intentarlo en breve.",
+    "sentimentTextOnly": "Basado únicamente en la transcripción de texto, no en la voz ni el tono.",
+    "sentimentOverall": "General",
+    "sentimentBySpeaker": "Por interlocutor",
+    "sentimentKeyMoments": "Momentos clave",
+    "sentimentMoodPositive": "Positivo",
+    "sentimentMoodNegative": "Negativo",
+    "sentimentMoodNeutral": "Neutro",
+    "sentimentMoodMixed": "Mixto"
   },
   "credits": {
     "title": "Créditos y facturación",
@@ -753,7 +771,8 @@
       "invalid_no_answer_action": "Elige qué pasa si no contesta nadie.",
       "forward_to_required": "El desvío necesita un número al que desviar.",
       "already_answered": "Otra persona atendió la llamada.",
-      "invalid_timezone": "No reconocemos esa zona horaria. Prueba con Europe/Madrid."
+      "invalid_timezone": "No reconocemos esa zona horaria. Prueba con Europe/Madrid.",
+      "recording_unavailable": "No hay ninguna grabación disponible para esta llamada."
     },
     "settings": {
       "title": "Ajustes de llamadas telefónicas",
@@ -803,7 +822,10 @@
       "consentGranted": "Consentimiento concedido",
       "consentDenied": "Consentimiento denegado",
       "consentTimeout": "Sin respuesta a la petición de consentimiento",
-      "consentPending": "Esperando el consentimiento"
+      "consentPending": "Esperando el consentimiento",
+      "recordingDownload": "Descargar grabación",
+      "summaryHint": "El resumen de IA y el análisis de sentimiento, cuando estén disponibles, se muestran junto con la transcripción.",
+      "aiNotRequested": "No se solicitaron resumen de IA ni análisis de sentimiento para esta llamada."
     },
     "join": "Unirse a la llamada",
     "joinHint": "Abre la llamada en la aplicación VoxTranslate, donde están tu micrófono y el audio traducido.",
