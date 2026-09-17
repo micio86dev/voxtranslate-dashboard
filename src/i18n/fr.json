@@ -15,7 +15,9 @@
     "none": "Aucun",
     "copy": "Copier le lien",
     "copied": "Copié",
-    "openApp": "Ouvrir l'app d'appels"
+    "openApp": "Ouvrir l'app d'appels",
+    "close": "Fermer",
+    "saved": "Enregistré"
   },
   "meetings": {
     "title": "Réunions",
@@ -772,7 +774,24 @@
       "forward_to_required": "Un transfert a besoin d'un numéro de destination.",
       "already_answered": "Quelqu'un d'autre a pris cet appel.",
       "invalid_timezone": "Ce fuseau horaire nous est inconnu. Essayez Europe/Paris.",
-      "recording_unavailable": "Aucun enregistrement n'est disponible pour cet appel."
+      "recording_unavailable": "Aucun enregistrement n'est disponible pour cet appel.",
+      "regulatory_not_required": "Ce numéro ne nécessite pas de documents réglementaires.",
+      "regulatory_unlinked": "Ce numéro n'est pas encore lié à une soumission réglementaire. Essayez d'actualiser.",
+      "requirements_busy": "L'opérateur traite encore la modification précédente. Réessayez sous peu.",
+      "requirements_not_editable": "Ces exigences ne peuvent plus être modifiées.",
+      "requirements_incomplete": "Renseignez toutes les exigences avant de soumettre.",
+      "submission_already_pending": "Une soumission pour ce numéro est déjà en cours d'examen.",
+      "requirement_unknown": "Cette exigence n'est pas reconnue. Rechargez la page et réessayez.",
+      "requirement_kind_mismatch": "Cette valeur ne correspond pas à ce qu'attend cette exigence.",
+      "value_too_long": "Cette valeur est trop longue.",
+      "malformed_upload": "Ce fichier n'a pas pu être lu. Essayez un autre fichier.",
+      "provider_rejected_value": "L'opérateur téléphonique a rejeté cette valeur.",
+      "document_too_large": "Ce fichier dépasse la limite de 10 Mo.",
+      "document_type_unsupported": "Seuls les fichiers PDF, PNG ou JPEG sont acceptés.",
+      "document_link_failed": "Le document n'a pas pu être associé. Réessayez.",
+      "requirements_unsupported": "Cette installation ne peut pas gérer les exigences via l'opérateur. Contactez un administrateur.",
+      "provider_rate_limited": "L'opérateur téléphonique limite actuellement les requêtes. Réessayez sous peu.",
+      "refresh_too_soon": "Attendez un instant avant d'actualiser à nouveau."
     },
     "settings": {
       "title": "Paramètres des appels téléphoniques",
@@ -881,6 +900,47 @@
       "release": "Libérer",
       "releaseConfirm": "Libérer ce numéro ? Quelqu'un d'autre peut le détenir dans l'heure, et vous ne le récupérerez pas.",
       "renewal": "Se renouvelle",
+      "requirements": {
+        "title": "Exigences du numéro",
+        "reused": "Nous avons réutilisé des documents déjà approuvés pour votre organisation.",
+        "rejectedTitle": "Cette commande a été rejetée",
+        "rejectedHint": "Corrigez les champs ci-dessous et soumettez-les à nouveau.",
+        "reviewHint": "Votre soumission est en cours d'examen par l'opérateur téléphonique.",
+        "refresh": "Actualiser le statut",
+        "approved": "Exigences approuvées. Ce numéro est maintenant actif.",
+        "failed": "Cette commande n'a pas pu être finalisée. Contactez le support.",
+        "submit": "Soumettre pour examen",
+        "cta": {
+          "fill": "Compléter les exigences",
+          "fix": "Corriger les exigences",
+          "review": "Voir le statut des exigences"
+        },
+        "scan": {
+          "pending": "Analyse en cours…",
+          "passed": "Vérifié",
+          "failed": "Rejeté — veuillez le retélécharger"
+        },
+        "status": {
+          "loading": "Chargement des exigences…",
+          "saving": "Enregistrement…",
+          "uploading": "Téléchargement du document…",
+          "submitting": "Envoi en cours…",
+          "review": "Soumission en cours d'examen",
+          "active": "Exigences approuvées",
+          "failed": "Exigences non satisfaites"
+        },
+        "address": {
+          "firstName": "Prénom",
+          "lastName": "Nom",
+          "businessName": "Raison sociale",
+          "street": "Adresse",
+          "extended": "Appartement, étage, etc. (facultatif)",
+          "city": "Ville",
+          "region": "Région / département (facultatif)",
+          "postalCode": "Code postal",
+          "countryCode": "Code pays (ex. FR)"
+        }
+      },
       "search": "Trouver un numéro",
       "setup": "frais uniques",
       "tab": "Numéros",

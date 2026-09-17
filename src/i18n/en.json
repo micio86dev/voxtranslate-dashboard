@@ -15,7 +15,9 @@
     "none": "None",
     "copy": "Copy link",
     "copied": "Copied",
-    "openApp": "Open call app"
+    "openApp": "Open call app",
+    "close": "Close",
+    "saved": "Saved"
   },
   "meetings": {
     "title": "Meetings",
@@ -772,7 +774,24 @@
       "forward_to_required": "A forward needs a number to forward to.",
       "already_answered": "Somebody else took this call.",
       "invalid_timezone": "That is not a timezone we recognise. Try one like Europe/Rome.",
-      "recording_unavailable": "No recording is available for this call."
+      "recording_unavailable": "No recording is available for this call.",
+      "regulatory_not_required": "This number does not require regulatory paperwork.",
+      "regulatory_unlinked": "This number is not linked to a regulatory submission yet. Try refreshing.",
+      "requirements_busy": "The provider is still processing the previous change. Try again shortly.",
+      "requirements_not_editable": "These requirements can no longer be edited.",
+      "requirements_incomplete": "Fill in every requirement before submitting.",
+      "submission_already_pending": "A submission for this number is already under review.",
+      "requirement_unknown": "That requirement is not recognised. Reload and try again.",
+      "requirement_kind_mismatch": "That value does not match what this requirement expects.",
+      "value_too_long": "That value is too long.",
+      "malformed_upload": "That upload could not be read. Try a different file.",
+      "provider_rejected_value": "The phone provider rejected that value.",
+      "document_too_large": "That file is larger than the 10 MB limit.",
+      "document_type_unsupported": "Only PDF, PNG or JPEG files are accepted.",
+      "document_link_failed": "The document could not be attached. Try again.",
+      "requirements_unsupported": "This deployment cannot manage requirements through the provider. Ask an administrator.",
+      "provider_rate_limited": "The phone provider is rate-limiting requests. Try again shortly.",
+      "refresh_too_soon": "Wait a moment before refreshing again."
     },
     "settings": {
       "title": "Phone call settings",
@@ -881,6 +900,47 @@
       "release": "Release",
       "releaseConfirm": "Release this number? Somebody else may hold it within the hour, and you will not get it back.",
       "renewal": "Renews",
+      "requirements": {
+        "title": "Number requirements",
+        "reused": "We reused documents already approved for your organisation.",
+        "rejectedTitle": "This order was rejected",
+        "rejectedHint": "Fix the fields below and resubmit.",
+        "reviewHint": "Your submission is under review by the phone provider.",
+        "refresh": "Refresh status",
+        "approved": "Requirements approved. This number is now active.",
+        "failed": "This order could not be completed. Contact support.",
+        "submit": "Submit for review",
+        "cta": {
+          "fill": "Complete requirements",
+          "fix": "Fix requirements",
+          "review": "View requirements status"
+        },
+        "scan": {
+          "pending": "Scanning…",
+          "passed": "Verified",
+          "failed": "Rejected — please re-upload"
+        },
+        "status": {
+          "loading": "Loading requirements…",
+          "saving": "Saving…",
+          "uploading": "Uploading document…",
+          "submitting": "Submitting…",
+          "review": "Submission under review",
+          "active": "Requirements approved",
+          "failed": "Requirements failed"
+        },
+        "address": {
+          "firstName": "First name",
+          "lastName": "Last name",
+          "businessName": "Business name",
+          "street": "Street address",
+          "extended": "Apartment, suite, etc. (optional)",
+          "city": "City",
+          "region": "State / region (optional)",
+          "postalCode": "Postal code",
+          "countryCode": "Country code (e.g. IT)"
+        }
+      },
       "search": "Find a number",
       "setup": "one-off",
       "tab": "Numbers",
