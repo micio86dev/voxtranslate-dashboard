@@ -1030,3 +1030,59 @@ describe('a stale background result after the panel already left review', () => 
     );
   });
 });
+
+describe('typed input is protected while a save is in flight', () => {
+  it('disables textual and address inputs so nothing typed during a pending save can be silently wiped by its own echo', async () => {
+    // R3-saved-rebuild-drops-edits-typed-during-save: `saved` treats every field that
+    // was part of the PUT as authoritative and refills it from the server's echo,
+    // discarding anything typed in the window between the request and its response.
+    // Disabling those inputs while the save is in flight — exactly like the file input
+    // already is — means there is no window in which a real customer could type
+    // something that then gets wiped.
+    const api = makeApi();
+    api.getNumberRequirements.mockResolvedValue(
+      ok(
+        view({
+          requirements: [
+            { id: 'r1', name: 'Business name', description: '', example: '', kind: 'textual' },
+            {
+              id: 'r2',
+              name: 'Registered address',
+              description: '',
+              example: '',
+              kind: 'address',
+            },
+          ],
+        }),
+      ),
+    );
+    const gate = deferred<ReturnType<typeof ok<RequirementsView>>>();
+    api.putNumberRequirements.mockReturnValue(gate.promise);
+    const controller = createRequirementsController({ orgId: 'org-1', t, api });
+    await controller.open('num-1', '+390212345678');
+
+    document
+      .getElementById('requirements-save')!
+      .dispatchEvent(new Event('click', { bubbles: true }));
+
+    const textInput = document.querySelector<HTMLInputElement>(
+      '[data-requirement-id="r1"] [data-field="value"]',
+    )!;
+    const addressInput = document.querySelector<HTMLInputElement>(
+      '[data-requirement-id="r2"] [data-field="locality"]',
+    )!;
+    expect(textInput.disabled).toBe(true);
+    expect(addressInput.disabled).toBe(true);
+
+    gate.resolve(ok(view()));
+    await Promise.resolve();
+    await Promise.resolve();
+
+    // `renderList` replaces every field node on a `saved` rebuild — re-query rather
+    // than trust the detached pre-rebuild reference.
+    const rebuiltTextInput = document.querySelector<HTMLInputElement>(
+      '[data-requirement-id="r1"] [data-field="value"]',
+    )!;
+    expect(rebuiltTextInput.disabled).toBe(false);
+  });
+});

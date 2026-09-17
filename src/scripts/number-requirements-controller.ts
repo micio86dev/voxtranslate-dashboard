@@ -354,8 +354,14 @@ export function createRequirementsController(
     // `onFileChange` — which the reducer's own `uploadStart` guard refuses, but only
     // AFTER the fact. Disabling the control up front is the honest UI: it is not
     // interactive right now, not merely ignored if used.
+    //
+    // Textual/address inputs get the SAME treatment for a sharper reason: a `saved`
+    // rebuild refills every field that was just PUT from the server's own echo (see
+    // `justSavedIds`), so anything typed in the window between that request and its
+    // response would otherwise be silently overwritten the instant it resolves.
+    // Disabling the field for that window means there is no gap left to type into.
     for (const input of document.querySelectorAll<HTMLInputElement>(
-      '[data-requirement-id] [data-field="file"]',
+      '[data-requirement-id] [data-field]',
     )) {
       input.disabled = !canAct;
     }
