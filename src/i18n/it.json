@@ -791,7 +791,8 @@
       "document_link_failed": "Impossibile allegare il documento. Riprova.",
       "requirements_unsupported": "Questa installazione non può gestire i requisiti tramite il fornitore. Contatta un amministratore.",
       "provider_rate_limited": "Il fornitore telefonico sta limitando le richieste. Riprova a breve.",
-      "refresh_too_soon": "Attendi un momento prima di aggiornare di nuovo."
+      "refresh_too_soon": "Attendi un momento prima di aggiornare di nuovo.",
+      "too_many_requests": "Troppi caricamenti in poco tempo. Attendi un minuto e riprova."
     },
     "settings": {
       "title": "Impostazioni chiamate telefoniche",

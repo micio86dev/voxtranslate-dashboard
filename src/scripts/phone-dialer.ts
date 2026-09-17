@@ -257,6 +257,7 @@ const KNOWN_REASONS = new Set([
   'requirements_unsupported',
   'provider_rate_limited',
   'refresh_too_soon',
+  'too_many_requests',
 ]);
 
 export function hasReasonCopy(code: string | null | undefined): boolean {

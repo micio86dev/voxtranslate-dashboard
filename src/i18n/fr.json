@@ -791,7 +791,8 @@
       "document_link_failed": "Le document n'a pas pu être associé. Réessayez.",
       "requirements_unsupported": "Cette installation ne peut pas gérer les exigences via l'opérateur. Contactez un administrateur.",
       "provider_rate_limited": "L'opérateur téléphonique limite actuellement les requêtes. Réessayez sous peu.",
-      "refresh_too_soon": "Attendez un instant avant d'actualiser à nouveau."
+      "refresh_too_soon": "Attendez un instant avant d'actualiser à nouveau.",
+      "too_many_requests": "Trop de téléversements en peu de temps. Patientez une minute puis réessayez."
     },
     "settings": {
       "title": "Paramètres des appels téléphoniques",

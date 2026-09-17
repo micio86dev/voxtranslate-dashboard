@@ -791,7 +791,8 @@
       "document_link_failed": "The document could not be attached. Try again.",
       "requirements_unsupported": "This deployment cannot manage requirements through the provider. Ask an administrator.",
       "provider_rate_limited": "The phone provider is rate-limiting requests. Try again shortly.",
-      "refresh_too_soon": "Wait a moment before refreshing again."
+      "refresh_too_soon": "Wait a moment before refreshing again.",
+      "too_many_requests": "Too many uploads in a short time. Wait a minute and try again."
     },
     "settings": {
       "title": "Phone call settings",
