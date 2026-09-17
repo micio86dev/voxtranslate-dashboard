@@ -234,8 +234,18 @@ test('a number needing paperwork shows a CTA that opens the requirements panel',
 test('filling text and address, uploading a document, then submitting moves the order into review', async ({
   page,
 }) => {
+  // Regression coverage for R3-upload-wipes-unsaved-input: the upload's own refetch used
+  // to rebuild every field from the server's (still-unsaved) view, silently discarding
+  // the name/address typed before the upload — so `submit` would PUT them as empty. This
+  // asserts the PUT body it actually sends still carries what was typed, not blanks.
+  const putBodies: Record<string, unknown>[] = [];
   await signIn(page);
   await stubApi(page, { numberStatus: 'pending_regulatory' });
+  page.on('request', (req) => {
+    if (req.method() === 'PUT' && /\/requirements$/.test(new URL(req.url()).pathname)) {
+      putBodies.push(req.postDataJSON());
+    }
+  });
   await openPanel(page);
 
   await page.fill('[data-requirement-id="req-name"] [data-field="value"]', 'Acme Inc');
@@ -253,9 +263,28 @@ test('filling text and address, uploading a document, then submitting moves the 
     mimeType: 'application/pdf',
     buffer: Buffer.from('%PDF-1.4'),
   });
+  // Wait for the upload's own refetch to finish and repaint the field list BEFORE
+  // submitting — otherwise this test could race ahead of the very re-render it exists to
+  // check survives correctly.
+  await expect(
+    page.locator('[data-requirement-id="req-doc"] [data-field-status]'),
+  ).not.toHaveText('');
 
   await page.click('#requirements-submit');
   await expect(page.locator('#requirements-review-banner')).toBeVisible();
+
+  expect(putBodies).toHaveLength(1);
+  const values = putBodies[0].values as { requirement_id: string; value: unknown }[];
+  expect(values.find((v) => v.requirement_id === 'req-name')?.value).toBe('Acme Inc');
+  expect(values.find((v) => v.requirement_id === 'req-address')?.value).toMatchObject({
+    first_name: 'Ada',
+    last_name: 'Lovelace',
+    business_name: 'Acme Inc',
+    street_address: '1 Main St',
+    locality: 'Rome',
+    postal_code: '00100',
+    country_code: 'IT',
+  });
 });
 
 test('a rejected order explains the reason and offers to fix and resubmit', async ({ page }) => {

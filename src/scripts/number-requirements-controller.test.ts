@@ -97,7 +97,7 @@ const t = (key: string) => key;
 
 function makeApi() {
   return {
-    getNumberRequirements: vi.fn(async () => ok(view())),
+    getNumberRequirements: vi.fn(async (_org: string, _numberId: string) => ok(view())),
     putNumberRequirements: vi.fn(async () => ok(view())),
     submitNumberRequirements: vi.fn(async () => ok({ status: 'regulatory_review' })),
     refreshNumberRequirements: vi.fn(async () =>
@@ -446,13 +446,14 @@ describe('submit and review polling', () => {
     await controller.open('num-1', '+390212345678');
 
     await vi.advanceTimersByTimeAsync(41 * 30_000);
-    // 40 scheduled ticks fire; the 40th one itself finds the cap already reached and
-    // refuses to poll, so at most 39 refresh calls actually go out.
-    expect(api.refreshNumberRequirements.mock.calls.length).toBeLessThanOrEqual(39);
+    // MAX_POLL_ATTEMPTS is 40: ticks 1..39 each poll once, and tick 40 itself finds the
+    // cap already reached and refuses to poll — so the cap is reached at EXACTLY 39
+    // calls, not merely "no more than 39" (a weaker assertion could pass even if polling
+    // stopped early, e.g. after one tick).
+    expect(api.refreshNumberRequirements).toHaveBeenCalledTimes(39);
 
-    const stalled = api.refreshNumberRequirements.mock.calls.length;
     await vi.advanceTimersByTimeAsync(10 * 30_000);
-    expect(api.refreshNumberRequirements).toHaveBeenCalledTimes(stalled);
+    expect(api.refreshNumberRequirements).toHaveBeenCalledTimes(39);
   });
 });
 
@@ -509,5 +510,172 @@ describe('onStatusChange', () => {
     await controller.open('num-1', '+390212345678');
 
     expect(onStatusChange).toHaveBeenCalledWith('num-1', 'pending_regulatory', null);
+  });
+});
+
+/** Resolves on demand, so a test can hold an in-flight request open across other actions. */
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((res) => {
+    resolve = res;
+  });
+  return { promise, resolve };
+}
+
+describe('preserving unsaved input across a re-render', () => {
+  it('a typed value survives a successful document upload and is what submit PUTs', async () => {
+    const api = makeApi();
+    const twoRequirements = view({
+      requirements: [
+        { id: 'r1', name: 'Business name', description: '', example: '', kind: 'textual' },
+        { id: 'r2', name: 'Proof of address', description: '', example: '', kind: 'document' },
+      ],
+    });
+    api.getNumberRequirements.mockResolvedValue(ok(twoRequirements));
+    const controller = createRequirementsController({ orgId: 'org-1', t, api });
+    await controller.open('num-1', '+390212345678');
+
+    const nameInput = document.querySelector<HTMLInputElement>(
+      '[data-requirement-id="r1"] [data-field="value"]',
+    )!;
+    nameInput.value = 'Acme Inc';
+
+    // The post-upload refetch echoes back a FRESH response object carrying the SAME
+    // still-unsaved requirement value — a distinct object, exactly like a real network
+    // round trip, not a cached reference (which would trivially dodge the bug this test
+    // exists to catch: the server never learned about the typed name, since it was
+    // never PUT, but the view object it returns is always brand new).
+    api.getNumberRequirements.mockResolvedValue(
+      ok({ ...twoRequirements, requirements: twoRequirements.requirements.map((r) => ({ ...r })) }),
+    );
+    const fileInput = document.querySelector<HTMLInputElement>(
+      '[data-requirement-id="r2"] [data-field="file"]',
+    )!;
+    const file = new File(['%PDF-'], 'proof.pdf', { type: 'application/pdf' });
+    Object.defineProperty(fileInput, 'files', { value: [file] });
+    fileInput.dispatchEvent(new Event('change', { bubbles: true }));
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    // The upload's refetch rebuilds every field from the fresh response — the
+    // typed-but-unsaved name must have survived that rebuild.
+    const survivingInput = document.querySelector<HTMLInputElement>(
+      '[data-requirement-id="r1"] [data-field="value"]',
+    )!;
+    expect(survivingInput.value).toBe('Acme Inc');
+
+    document
+      .getElementById('requirements-save')!
+      .dispatchEvent(new Event('click', { bubbles: true }));
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(api.putNumberRequirements).toHaveBeenCalledWith(
+      'org-1',
+      'num-1',
+      expect.arrayContaining([{ requirement_id: 'r1', value: 'Acme Inc' }]),
+    );
+  });
+
+  it('a typed address survives a manual save-and-reload round trip that echoes it back', async () => {
+    // Sanity check in the other direction: preserving unsaved input must never cause a
+    // SUCCESSFUL save's own echoed-back value to go stale or duplicate — after a save,
+    // the field simply keeps showing what was just saved.
+    const api = makeApi();
+    const withTextual = view({
+      requirements: [
+        { id: 'r1', name: 'Business name', description: '', example: '', kind: 'textual' },
+      ],
+    });
+    api.getNumberRequirements.mockResolvedValue(ok(withTextual));
+    const controller = createRequirementsController({ orgId: 'org-1', t, api });
+    await controller.open('num-1', '+390212345678');
+
+    const input = document.querySelector<HTMLInputElement>(
+      '[data-requirement-id="r1"] [data-field="value"]',
+    )!;
+    input.value = 'Acme Inc';
+    api.putNumberRequirements.mockResolvedValue(
+      ok(view({ requirements: [{ ...withTextual.requirements[0], value: 'Acme Inc' }] })),
+    );
+
+    document
+      .getElementById('requirements-save')!
+      .dispatchEvent(new Event('click', { bubbles: true }));
+    await Promise.resolve();
+    await Promise.resolve();
+
+    const after = document.querySelector<HTMLInputElement>(
+      '[data-requirement-id="r1"] [data-field="value"]',
+    )!;
+    expect(after.value).toBe('Acme Inc');
+  });
+});
+
+describe('stale async responses', () => {
+  it('closing while the initial load is in flight keeps the panel hidden once it resolves', async () => {
+    const api = makeApi();
+    const gate = deferred<ReturnType<typeof ok<RequirementsView>>>();
+    api.getNumberRequirements.mockReturnValue(gate.promise);
+    const controller = createRequirementsController({ orgId: 'org-1', t, api });
+
+    const opening = controller.open('num-1', '+390212345678');
+    controller.close();
+    gate.resolve(ok(view()));
+    await opening;
+    await Promise.resolve();
+
+    expect(document.getElementById('requirements-panel')?.classList.contains('hidden')).toBe(true);
+  });
+
+  it('opening a second number while the first is still loading renders only the second', async () => {
+    const api = makeApi();
+    const gateA = deferred<ReturnType<typeof ok<RequirementsView>>>();
+    const viewA = view({
+      requirements: [
+        { id: 'a1', name: 'Number A field', description: '', example: '', kind: 'textual' },
+      ],
+    });
+    const viewB = view({
+      requirements: [
+        { id: 'b1', name: 'Number B field', description: '', example: '', kind: 'textual' },
+      ],
+    });
+    api.getNumberRequirements.mockImplementation((_org: string, numberId: string) =>
+      numberId === 'num-a' ? gateA.promise : Promise.resolve(ok(viewB)),
+    );
+    const controller = createRequirementsController({ orgId: 'org-1', t, api });
+
+    const openingA = controller.open('num-a', '+3900000000');
+    await controller.open('num-b', '+3911111111');
+    gateA.resolve(ok(viewA));
+    await openingA;
+    await Promise.resolve();
+
+    expect(document.querySelector('[data-requirement-id="b1"]')).not.toBeNull();
+    expect(document.querySelector('[data-requirement-id="a1"]')).toBeNull();
+    expect(document.getElementById('requirements-for')?.textContent).toBe('+3911111111');
+  });
+
+  it('a poll resolving after the panel is closed does nothing and never reopens it', async () => {
+    vi.useFakeTimers();
+    const api = makeApi();
+    api.getNumberRequirements.mockResolvedValue(ok(view({ status: 'regulatory_review' })));
+    const gate = deferred<ReturnType<typeof ok<{ status: string; status_reason: null }>>>();
+    api.refreshNumberRequirements.mockReturnValue(gate.promise);
+    const controller = createRequirementsController({ orgId: 'org-1', t, api });
+    await controller.open('num-1', '+390212345678');
+
+    // Fires the first poll tick, which awaits `refresh` on `gate`.
+    await vi.advanceTimersByTimeAsync(30_000);
+    controller.close();
+    gate.resolve(ok({ status: 'active', status_reason: null }));
+    await vi.runAllTimersAsync();
+
+    expect(document.getElementById('requirements-panel')?.classList.contains('hidden')).toBe(true);
+    expect(document.getElementById('requirements-approved')?.classList.contains('hidden')).toBe(
+      true,
+    );
   });
 });

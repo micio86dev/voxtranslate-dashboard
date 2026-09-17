@@ -106,6 +106,15 @@ export function createRequirementsController(
   let pollTimer: ReturnType<typeof setInterval> | null = null;
   let pollAttempt = 0;
 
+  // Bumped by every `open()` and `close()`. Every async operation (open/save/upload/
+  // submit/poll) captures the generation it started with and checks it again after
+  // each `await`: a mismatch means the panel was closed, or reopened for a DIFFERENT
+  // number, while the request was in flight, and the now-stale result must be dropped
+  // rather than applied — otherwise a slow response for number A can land on number B's
+  // (or nobody's) open panel.
+  let generation = 0;
+  const isStale = (gen: number): boolean => gen !== generation;
+
   function stopPolling(): void {
     if (pollTimer !== null) {
       clearInterval(pollTimer);
@@ -147,7 +156,13 @@ export function createRequirementsController(
    *  status actually resolved — `/refresh` alone never carries the requirements list. */
   async function pollOnce(): Promise<void> {
     if (!numberId || !state.view) return;
-    const res = await api.refreshNumberRequirements(opts.orgId, numberId);
+    const gen = generation;
+    const targetNumberId = numberId;
+    const res = await api.refreshNumberRequirements(opts.orgId, targetNumberId);
+    // The panel may have been closed (or reopened for another number) while this was in
+    // flight — `state.view` can be null again by now, so this is checked before anything
+    // below ever touches it, never merely assumed absent because the request failed.
+    if (isStale(gen) || !state.view) return;
     if (!res.ok || !res.data) return; // transient failure — the next poll tries again
     if (res.data.status === 'regulatory_review') {
       dispatch({
@@ -156,11 +171,56 @@ export function createRequirementsController(
       });
       return;
     }
-    const full = await api.getNumberRequirements(opts.orgId, numberId);
+    const full = await api.getNumberRequirements(opts.orgId, targetNumberId);
+    if (isStale(gen) || !state.view) return;
     if (full.ok && full.data) dispatch({ type: 'statusRefreshed', view: full.data });
   }
 
-  function renderList(view: RequirementsView): void {
+  /** A textual or address requirement's currently typed value, snapshotted from the
+   *  live DOM. Shared by `snapshotTypedValues` (what to keep across a rebuild) and
+   *  `gatherValues` (what to PUT) so the two can never read a field differently. */
+  function readTextual(node: Element): string | null {
+    const input = node.querySelector<HTMLInputElement>('[data-field="value"]');
+    return input ? input.value : null;
+  }
+
+  function readAddress(node: Element): Record<string, string> {
+    const value: Record<string, string> = {};
+    for (const field of ADDRESS_FIELDS) {
+      value[field] = node.querySelector<HTMLInputElement>(`[data-field="${field}"]`)?.value ?? '';
+    }
+    return value;
+  }
+
+  type FieldSnapshot = Map<string, string | Record<string, string>>;
+
+  /**
+   * What the customer has currently typed into textual/address fields, taken right
+   * before the field list is about to be rebuilt from a fresh server response.
+   *
+   * A rebuild (after `loaded`/`saved`/`uploaded`/`statusRefreshed`) replaces every
+   * `<template>`-cloned field node with a brand new one filled from the server's own
+   * view — which knows nothing about a value the customer typed but never saved (e.g.
+   * while uploading a DIFFERENT requirement's document). Without this, that rebuild
+   * silently erases it, and a subsequent save/submit sends the field as empty.
+   */
+  function snapshotTypedValues(): FieldSnapshot {
+    const snapshot: FieldSnapshot = new Map();
+    for (const node of document.querySelectorAll<HTMLElement>('[data-requirement-id]')) {
+      const id = node.dataset.requirementId;
+      if (!id) continue;
+      if (node.dataset.kind === 'textual') {
+        const value = readTextual(node);
+        if (value) snapshot.set(id, value);
+      } else if (node.dataset.kind === 'address') {
+        const value = readAddress(node);
+        if (Object.values(value).some((v) => v !== '')) snapshot.set(id, value);
+      }
+    }
+    return snapshot;
+  }
+
+  function renderList(view: RequirementsView, preserved: FieldSnapshot): void {
     const list = el('requirements-list');
     if (!list) return;
     list.replaceChildren();
@@ -179,12 +239,19 @@ export function createRequirementsController(
 
       if (req.kind === 'textual') {
         const input = node.querySelector<HTMLInputElement>('[data-field="value"]');
-        if (input) input.value = typeof req.value === 'string' ? req.value : '';
+        const kept = preserved.get(req.id);
+        if (input) {
+          input.value =
+            typeof kept === 'string' ? kept : typeof req.value === 'string' ? req.value : '';
+        }
       } else if (req.kind === 'address') {
-        const value = typeof req.value === 'object' ? (req.value as AddressValue) : undefined;
+        const kept = preserved.get(req.id) as Record<string, string> | undefined;
+        const serverValue = typeof req.value === 'object' ? (req.value as AddressValue) : undefined;
         for (const field of ADDRESS_FIELDS) {
           const input = node.querySelector<HTMLInputElement>(`[data-field="${field}"]`);
-          if (input) input.value = (value?.[field] as string | undefined) ?? '';
+          if (input) {
+            input.value = kept?.[field] ?? (serverValue?.[field] as string | undefined) ?? '';
+          }
         }
       } else {
         const input = node.querySelector<HTMLInputElement>('[data-field="file"]');
@@ -227,7 +294,7 @@ export function createRequirementsController(
     const saveBtn = el<HTMLButtonElement>('requirements-save');
     if (saveBtn) saveBtn.disabled = !canAct;
 
-    if (view && shouldRenderList) renderList(view);
+    if (view && shouldRenderList) renderList(view, snapshotTypedValues());
 
     const statusRegion = el('requirements-status');
     if (statusRegion) statusRegion.textContent = statusAnnouncement(opts.t, state.phase);
@@ -245,15 +312,10 @@ export function createRequirementsController(
       const id = node.dataset.requirementId;
       if (!id) continue;
       if (node.dataset.kind === 'textual') {
-        const input = node.querySelector<HTMLInputElement>('[data-field="value"]');
-        if (input) values.push({ requirement_id: id, value: input.value });
+        const value = readTextual(node);
+        if (value !== null) values.push({ requirement_id: id, value });
       } else if (node.dataset.kind === 'address') {
-        const value: Record<string, string> = {};
-        for (const field of ADDRESS_FIELDS) {
-          value[field] =
-            node.querySelector<HTMLInputElement>(`[data-field="${field}"]`)?.value ?? '';
-        }
-        values.push({ requirement_id: id, value: value as unknown as AddressValue });
+        values.push({ requirement_id: id, value: readAddress(node) as unknown as AddressValue });
       }
     }
     return values;
@@ -271,11 +333,17 @@ export function createRequirementsController(
     if (isRecoverableError()) dispatch({ type: 'dismissError' });
   }
 
+  /** Saves whatever is currently typed. Returns whether it landed cleanly, so `submit`
+   *  can refuse to move on while a save failed — and returns `false` (without touching
+   *  state) when the panel was closed or reassigned to another number meanwhile. */
   async function save(): Promise<boolean> {
     if (!numberId) return false;
+    const gen = generation;
+    const targetNumberId = numberId;
     recover();
     dispatch({ type: 'save' });
-    const res = await api.putNumberRequirements(opts.orgId, numberId, gatherValues());
+    const res = await api.putNumberRequirements(opts.orgId, targetNumberId, gatherValues());
+    if (isStale(gen)) return false;
     if (res.ok && res.data) {
       dispatch({ type: 'saved', view: res.data });
       return true;
@@ -287,6 +355,8 @@ export function createRequirementsController(
   async function onFileChange(requirementId: string, input: HTMLInputElement): Promise<void> {
     const file = input.files?.[0];
     if (!file || !numberId) return;
+    const gen = generation;
+    const targetNumberId = numberId;
     recover();
     const problem = validateFile(file);
     if (problem) {
@@ -295,11 +365,18 @@ export function createRequirementsController(
       return;
     }
     dispatch({ type: 'uploadStart', requirementId });
-    const res = await api.uploadRequirementDocument(opts.orgId, numberId, requirementId, file);
+    const res = await api.uploadRequirementDocument(
+      opts.orgId,
+      targetNumberId,
+      requirementId,
+      file,
+    );
+    if (isStale(gen)) return;
     if (res.ok && res.data) {
       // The upload response only carries THIS requirement's document — refetch the full
       // view so the rest of the form (and the group's reuse flag) stays authoritative.
-      const full = await api.getNumberRequirements(opts.orgId, numberId);
+      const full = await api.getNumberRequirements(opts.orgId, targetNumberId);
+      if (isStale(gen)) return;
       if (full.ok && full.data) {
         dispatch({ type: 'uploaded', view: full.data });
         return;
@@ -310,9 +387,13 @@ export function createRequirementsController(
 
   async function submit(): Promise<void> {
     if (!numberId) return;
+    const gen = generation;
+    const targetNumberId = numberId;
     if (!(await save())) return;
+    if (isStale(gen)) return;
     dispatch({ type: 'submit' });
-    const res = await api.submitNumberRequirements(opts.orgId, numberId);
+    const res = await api.submitNumberRequirements(opts.orgId, targetNumberId);
+    if (isStale(gen)) return;
     if (res.ok) {
       dispatch({ type: 'submitted' });
       startPolling();
@@ -330,12 +411,20 @@ export function createRequirementsController(
   el('requirements-close')?.addEventListener('click', () => close());
 
   async function open(id: string, e164: string): Promise<void> {
+    const gen = ++generation;
     numberId = id;
     state = initialState;
     const label = el('requirements-for');
     if (label) label.textContent = e164;
+    // Clear any previously rendered fields immediately, synchronously — before the
+    // fresh fetch even starts. Without this, a requirement id that happens to repeat
+    // across two different numbers (the provider's own requirement ids are generic,
+    // e.g. "business_name") could let `snapshotTypedValues()` carry a value typed for
+    // the PREVIOUS number's field into this one's once it renders.
+    el('requirements-list')?.replaceChildren();
     dispatch({ type: 'load' });
     const res = await api.getNumberRequirements(opts.orgId, id);
+    if (isStale(gen)) return;
     if (res.ok && res.data) {
       dispatch({ type: 'loaded', view: res.data });
       if (state.phase === 'review') startPolling();
@@ -345,6 +434,7 @@ export function createRequirementsController(
   }
 
   function close(): void {
+    generation++;
     stopPolling();
     numberId = null;
     state = initialState;
