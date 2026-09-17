@@ -792,7 +792,7 @@
       "requirements_unsupported": "Diese Installation kann Anforderungen nicht über den Anbieter verwalten. Wenden Sie sich an einen Administrator.",
       "provider_rate_limited": "Der Telefonanbieter begrenzt derzeit die Anfragen. Versuchen Sie es in Kürze erneut.",
       "refresh_too_soon": "Warten Sie einen Moment, bevor Sie erneut aktualisieren.",
-      "too_many_requests": "Zu viele Uploads in kurzer Zeit. Warten Sie eine Minute und versuchen Sie es erneut."
+      "too_many_requests": "Zu viele Anfragen in kurzer Zeit. Warten Sie eine Minute und versuchen Sie es erneut."
     },
     "settings": {
       "title": "Einstellungen für Telefonanrufe",

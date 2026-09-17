@@ -73,6 +73,18 @@ describe('validateFile', () => {
     expect(validateFile({ size: 100, type: 'image/png' })).toBeNull();
     expect(validateFile({ size: 100, type: 'image/jpeg' })).toBeNull();
   });
+
+  // R3-001: a real PDF/PNG/JPEG picked through the file input's own `.pdf,.png,.jpg,
+  // .jpeg` accept filter can still report a MIME type this list didn't expect —
+  // rejecting it client-side would refuse a document the server would gladly accept.
+  it('accepts a browser-reported jpeg variant (image/jpg, image/pjpeg)', () => {
+    expect(validateFile({ size: 100, type: 'image/jpg' })).toBeNull();
+    expect(validateFile({ size: 100, type: 'image/pjpeg' })).toBeNull();
+  });
+
+  it('lets the server decide when the browser reports no type at all', () => {
+    expect(validateFile({ size: 100, type: '' })).toBeNull();
+  });
 });
 
 describe('reduceRequirements', () => {

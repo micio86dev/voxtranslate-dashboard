@@ -48,6 +48,15 @@ export const MAX_DOCUMENT_BYTES = 10 * 1024 * 1024;
 
 const ALLOWED_DOCUMENT_TYPES = new Set(['application/pdf', 'image/png', 'image/jpeg']);
 
+// Browsers do not agree on the MIME type for a JPEG picked through a file input's own
+// `.pdf,.png,.jpg,.jpeg` accept filter — normalise the variants seen in the wild before
+// checking the allowlist, rather than refusing a real JPEG for a naming quirk.
+const JPEG_TYPE_ALIASES = new Set(['image/jpg', 'image/pjpeg']);
+
+function normalisedFileType(type: string): string {
+  return JPEG_TYPE_ALIASES.has(type) ? 'image/jpeg' : type;
+}
+
 /** Why a file was refused, named with the server's own refusal code so it maps straight
  *  through `phone.reason.*` without inventing new copy. */
 export type FileRefusal = 'document_too_large' | 'document_type_unsupported';
@@ -59,7 +68,11 @@ export type FileRefusal = 'document_too_large' | 'document_type_unsupported';
  */
 export function validateFile(file: { size: number; type: string }): FileRefusal | null {
   if (file.size > MAX_DOCUMENT_BYTES) return 'document_too_large';
-  if (!ALLOWED_DOCUMENT_TYPES.has(file.type)) return 'document_type_unsupported';
+  // An empty type means the browser could not classify the file at all (seen for some
+  // OS/browser combinations even for a plain PDF) — refusing it client-side would block
+  // a document the server, which sniffs the real bytes, might well accept. Defer to it.
+  const type = normalisedFileType(file.type);
+  if (type && !ALLOWED_DOCUMENT_TYPES.has(type)) return 'document_type_unsupported';
   return null;
 }
 
