@@ -179,7 +179,13 @@ export function createRequirementsController(
     // The panel may have been closed (or reopened for another number) while this was in
     // flight — `state.view` can be null again by now, so this is checked before anything
     // below ever touches it, never merely assumed absent because the request failed.
-    if (isStale(gen) || !state.view) return;
+    //
+    // A phase that has already left `review` is just as stale as a closed panel, even
+    // with the SAME generation: a manual refresh can resolve the order (moving phase to
+    // `editing`/`active`/`failed`) while an earlier background tick is still in flight,
+    // and that tick's own late result must not drag the panel back once something else
+    // has already moved it on.
+    if (isStale(gen) || !state.view || state.phase !== 'review') return;
     if (!res.ok || !res.data) {
       if (manual) dispatch({ type: 'refreshFailed', message: errorOf(res.data) });
       return; // background: a transient failure — the next poll tries again silently
@@ -193,9 +199,16 @@ export function createRequirementsController(
       return;
     }
     const full = await api.getNumberRequirements(opts.orgId, targetNumberId);
-    if (isStale(gen) || !state.view) return;
-    if (full.ok && full.data) dispatch({ type: 'statusRefreshed', view: full.data });
-    restartPollingAfterManualSuccess(manual);
+    if (isStale(gen) || !state.view || state.phase !== 'review') return;
+    if (full.ok && full.data) {
+      dispatch({ type: 'statusRefreshed', view: full.data });
+      restartPollingAfterManualSuccess(manual);
+    } else if (manual) {
+      // The order DID resolve (the /refresh above succeeded) but the follow-up fetch for
+      // the full view failed — this is not "nothing happened", and a manual click
+      // deserves to know, exactly like a refused /refresh itself does above.
+      dispatch({ type: 'refreshFailed', message: errorOf(full.data) });
+    }
   }
 
   /** A manual click that lands the panel back in `review` restarts the server's own

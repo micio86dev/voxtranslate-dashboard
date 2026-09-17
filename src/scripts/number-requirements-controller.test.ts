@@ -102,7 +102,7 @@ function makeApi() {
     putNumberRequirements: vi.fn(async () => ok(view())),
     submitNumberRequirements: vi.fn(async () => ok({ status: 'regulatory_review' })),
     refreshNumberRequirements: vi.fn(async () =>
-      ok({ status: 'regulatory_review', status_reason: null }),
+      ok({ status: 'regulatory_review', status_reason: null as string | null }),
     ),
     uploadRequirementDocument: vi.fn(async () =>
       ok({ requirement_id: 'r2', document: { av_scan_status: 'pending' as const } }),
@@ -946,5 +946,87 @@ describe('a manual refresh resets the background poll clock', () => {
     // A full interval after the manual click, the background timer ticks again.
     await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS - 2_000);
     expect(api.refreshNumberRequirements).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('manual refresh whose follow-up fetch fails', () => {
+  it('shows the localized error instead of leaving the panel stuck with no feedback', async () => {
+    const api = makeApi();
+    api.getNumberRequirements.mockResolvedValueOnce(ok(view({ status: 'regulatory_review' })));
+    api.refreshNumberRequirements.mockResolvedValue(ok({ status: 'active', status_reason: null }));
+    api.getNumberRequirements.mockResolvedValueOnce(fail('provider_unavailable', 502));
+    const controller = createRequirementsController({ orgId: 'org-1', t, api });
+    await controller.open('num-1', '+390212345678');
+
+    document
+      .getElementById('requirements-refresh')!
+      .dispatchEvent(new Event('click', { bubbles: true }));
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    const error = document.getElementById('requirements-error');
+    expect(error?.classList.contains('hidden')).toBe(false);
+    expect(error?.textContent).toBe('phone.reason.provider_unavailable');
+    // The order never actually resolved to active, so the panel must not claim it did.
+    expect(document.getElementById('requirements-approved')?.classList.contains('hidden')).toBe(
+      true,
+    );
+  });
+});
+
+describe('a stale background result after the panel already left review', () => {
+  it('ignores a late poll result once a manual refresh has already moved the panel on', async () => {
+    // R3-poll-result-applied-after-phase-left-review: an in-flight background tick's
+    // result must not be applied once the panel has already left `review` for another
+    // reason (here, a manual refresh resolving the order as rejected) — otherwise it
+    // can drag the panel back into a phase mid-edit and rebuild the field list under
+    // the customer.
+    vi.useFakeTimers();
+    const api = makeApi();
+    // 1st: open(). 2nd: the MANUAL refresh's own full re-fetch, echoing rejected. 3rd: the
+    // STALE background tick's full re-fetch, as if the order had gone active instead —
+    // exactly what must be discarded.
+    api.getNumberRequirements
+      .mockResolvedValueOnce(ok(view({ status: 'regulatory_review' })))
+      .mockResolvedValueOnce(
+        ok(view({ status: 'regulatory_rejected', status_reason: 'Illegible ID scan' })),
+      )
+      .mockResolvedValueOnce(ok(view({ status: 'active' })));
+    const controller = createRequirementsController({ orgId: 'org-1', t, api });
+    await controller.open('num-1', '+390212345678');
+
+    const backgroundRefresh =
+      deferred<ApiResult<{ status: string; status_reason: string | null }>>();
+    api.refreshNumberRequirements.mockReturnValueOnce(backgroundRefresh.promise);
+    await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS); // background tick starts, held open
+
+    // A manual click races ahead and resolves the order as rejected.
+    api.refreshNumberRequirements.mockResolvedValueOnce(
+      ok({ status: 'regulatory_rejected', status_reason: 'Illegible ID scan' }),
+    );
+    document
+      .getElementById('requirements-refresh')!
+      .dispatchEvent(new Event('click', { bubbles: true }));
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(document.getElementById('requirements-rejected')?.classList.contains('hidden')).toBe(
+      false,
+    );
+
+    // The stale background tick now resolves as if the order had gone active instead.
+    backgroundRefresh.resolve(ok({ status: 'active', status_reason: null }));
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(document.getElementById('requirements-rejected')?.classList.contains('hidden')).toBe(
+      false,
+    );
+    expect(document.getElementById('requirements-approved')?.classList.contains('hidden')).toBe(
+      true,
+    );
   });
 });
