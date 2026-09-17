@@ -223,10 +223,12 @@ export function createRequirementsController(
       if (!id) continue;
       if (node.dataset.kind === 'textual') {
         const value = readTextual(node);
-        if (value) snapshot.set(id, value);
+        // Captured unconditionally, including a blank value: a field the customer
+        // cleared on purpose must stay blank across a rebuild, never resurrect its
+        // last-saved server value (which `renderList` would otherwise fall back to).
+        if (value !== null) snapshot.set(id, value);
       } else if (node.dataset.kind === 'address') {
-        const value = readAddress(node);
-        if (Object.values(value).some((v) => v !== '')) snapshot.set(id, value);
+        snapshot.set(id, readAddress(node));
       }
     }
     return snapshot;

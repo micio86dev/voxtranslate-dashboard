@@ -857,3 +857,39 @@ describe('stale async responses', () => {
     );
   });
 });
+
+describe('clearing a field the customer had already saved', () => {
+  it('keeps a textual field blank across a rebuild instead of resurrecting the saved value', async () => {
+    const api = makeApi();
+    const requirements = [
+      { ...view().requirements[0], value: 'Acme Inc' },
+      { id: 'r2', name: 'Proof', description: '', example: '', kind: 'document' as const },
+    ];
+    // A factory, not a single cached value: `dispatch` only rebuilds the field list
+    // when `state.view`'s reference actually changes, so a fresh clone per call is
+    // what makes this test exercise a real rebuild rather than passing vacuously.
+    api.getNumberRequirements.mockImplementation(async () =>
+      ok(view({ requirements: requirements.map((r) => ({ ...r })) })),
+    );
+    const controller = createRequirementsController({ orgId: 'org-1', t, api });
+    await controller.open('num-1', '+390212345678');
+
+    const input = document.querySelector<HTMLInputElement>('[data-field="value"]')!;
+    expect(input.value).toBe('Acme Inc');
+    input.value = '';
+
+    // Uploading a DIFFERENT requirement's document dispatches 'uploaded' with a fresh
+    // server view, which rebuilds the whole field list — the exact rebuild the cleared
+    // field must survive.
+    const fileInput = document.querySelector<HTMLInputElement>('[data-field="file"]')!;
+    const file = new File(['%PDF-'], 'proof.pdf', { type: 'application/pdf' });
+    Object.defineProperty(fileInput, 'files', { value: [file], configurable: true });
+    fileInput.dispatchEvent(new Event('change', { bubbles: true }));
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    const rebuiltInput = document.querySelector<HTMLInputElement>('[data-field="value"]')!;
+    expect(rebuiltInput.value).toBe('');
+  });
+});
