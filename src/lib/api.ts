@@ -1318,6 +1318,123 @@ export function getVoipCallRecording(
   return request('GET', `/api/business/organizations/${orgId}/voip/calls/${callId}/recording`);
 }
 
+// --- Number order regulatory requirements (spec 0119) ------------------------
+
+/** A structured mailing address, exactly the shape the server's `AddressJson` accepts. */
+export interface AddressValue {
+  first_name: string;
+  last_name: string;
+  business_name: string;
+  street_address: string;
+  extended_address?: string | null;
+  locality: string;
+  administrative_area?: string | null;
+  postal_code: string;
+  country_code: string;
+}
+
+/** How the server tells 'value' apart: a document is fulfilled through the upload
+ *  route, never through a raw value in the PUT body. */
+export type RequirementKind = 'textual' | 'address' | 'document';
+
+export interface RequirementDocumentInfo {
+  av_scan_status: 'pending' | 'passed' | 'failed';
+}
+
+/** One requirement entry, exactly `{id,name,description,example,kind,value?,document?}`. */
+export interface RequirementItem {
+  id: string;
+  name: string;
+  description: string;
+  example: string;
+  kind: RequirementKind;
+  value?: string | AddressValue;
+  document?: RequirementDocumentInfo;
+}
+
+export interface RequirementsGroupView {
+  status: string;
+  /** Whether a previously approved set of documents was applied to this group. */
+  reused: boolean;
+}
+
+/** The full discovery/submission view (`GET`/`PUT .../requirements`). */
+export interface RequirementsView {
+  status: string;
+  status_reason: string | null;
+  group: RequirementsGroupView;
+  requirements: RequirementItem[];
+}
+
+export interface RequirementValueInput {
+  requirement_id: string;
+  value: string | AddressValue;
+}
+
+export const getNumberRequirements = (orgId: string, numberId: string) =>
+  request<RequirementsView>(
+    'GET',
+    `/api/business/organizations/${orgId}/voip/numbers/${numberId}/requirements`,
+  );
+
+export const putNumberRequirements = (
+  orgId: string,
+  numberId: string,
+  values: RequirementValueInput[],
+) =>
+  request<RequirementsView>(
+    'PUT',
+    `/api/business/organizations/${orgId}/voip/numbers/${numberId}/requirements`,
+    { values },
+  );
+
+export const submitNumberRequirements = (orgId: string, numberId: string) =>
+  request<{ status: string }>(
+    'POST',
+    `/api/business/organizations/${orgId}/voip/numbers/${numberId}/requirements/submit`,
+  );
+
+export const refreshNumberRequirements = (orgId: string, numberId: string) =>
+  request<{ status: string; status_reason: string | null }>(
+    'POST',
+    `/api/business/organizations/${orgId}/voip/numbers/${numberId}/requirements/refresh`,
+  );
+
+export interface RequirementDocumentUploaded {
+  requirement_id: string;
+  document: RequirementDocumentInfo;
+}
+
+/**
+ * Upload a document for one requirement (multipart — the JSON `request` helper can't
+ * carry a file). Field order matters: `requirement_id` MUST be appended before `file`,
+ * mirroring the existing `uploadVoiceMessage` pattern and the server's streaming
+ * multipart reader, which reads fields in the order they arrive.
+ */
+export async function uploadRequirementDocument(
+  orgId: string,
+  numberId: string,
+  requirementId: string,
+  file: File,
+): Promise<ApiResult<RequirementDocumentUploaded>> {
+  try {
+    const form = new FormData();
+    form.append('requirement_id', requirementId);
+    form.append('file', file, file.name);
+    const res = await fetch(
+      `${API_BASE}/api/business/organizations/${orgId}/voip/numbers/${numberId}/requirements/documents`,
+      { method: 'POST', headers: { ...authHeaders() }, body: form },
+    );
+    const data =
+      res.status !== 204
+        ? ((await res.json().catch(() => null)) as RequirementDocumentUploaded | null)
+        : null;
+    return { ok: res.ok, status: res.status, data };
+  } catch {
+    return { ok: false, status: 0, data: null };
+  }
+}
+
 export function getVoipSettings(orgId: string): Promise<ApiResult<VoipSettings>> {
   return request('GET', `/api/business/organizations/${orgId}/voip/settings`);
 }
