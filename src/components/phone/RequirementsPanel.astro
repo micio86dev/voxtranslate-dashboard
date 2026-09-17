@@ -1,0 +1,199 @@
+---
+/**
+ * Self-service panel for a number order's regulatory requirements (spec 0119).
+ *
+ * Purely presentational: markup + `<template>`s the controller
+ * (`number-requirements-controller.ts`) clones one per requirement, plus the status
+ * banners for every phase the order can be in. All copy comes from `t()` — this
+ * component owns no logic and makes no request.
+ *
+ * A customer reaches this panel because a number they bought cannot go live without
+ * paperwork a regulator asks for. The panel's whole job is making that solvable without a
+ * support ticket: one place to fill fields, attach documents, submit, and see what
+ * happened — including when it comes back rejected and has to be fixed and resent.
+ */
+import { useTranslations, type Locale } from '../../lib/i18n';
+
+interface Props {
+  lang: Locale;
+}
+
+const { lang } = Astro.props;
+const t = useTranslations(lang);
+---
+
+<div
+  id="requirements-panel"
+  class="fixed inset-0 z-50 hidden flex items-start justify-center overflow-y-auto bg-black/50 p-4 sm:items-center"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="requirements-title"
+>
+  <div class="card my-8 grid w-full max-w-xl gap-4">
+    <div class="flex items-start justify-between gap-3">
+      <div>
+        <h2 id="requirements-title" class="text-lg font-semibold">
+          {t('phone.numbers.requirements.title')}
+        </h2>
+        <p id="requirements-for" class="font-mono text-sm text-muted"></p>
+      </div>
+      <button
+        id="requirements-close"
+        type="button"
+        class="btn-ghost text-sm"
+        aria-label={t('common.close')}
+      >
+        {t('common.close')}
+      </button>
+    </div>
+
+    <!-- A single live region so a screen reader announces exactly one thing per phase
+         change — never several banners competing at once. -->
+    <p id="requirements-status" class="sr-only" aria-live="polite" role="status"></p>
+
+    <p
+      id="requirements-reused"
+      class="hidden rounded-lg bg-ok/10 p-3 text-sm text-ok"
+      role="status"
+    >
+      {t('phone.numbers.requirements.reused')}
+    </p>
+
+    <div id="requirements-rejected" class="hidden rounded-lg bg-danger/10 p-3 text-sm" role="alert">
+      <p class="font-semibold text-danger">{t('phone.numbers.requirements.rejectedTitle')}</p>
+      <p id="requirements-reject-reason" class="mt-1 text-danger"></p>
+      <p class="mt-1 text-muted">{t('phone.numbers.requirements.rejectedHint')}</p>
+    </div>
+
+    <div
+      id="requirements-review-banner"
+      class="hidden flex items-center justify-between gap-3 rounded-lg bg-brand/10 p-3 text-sm"
+      role="status"
+    >
+      <span>{t('phone.numbers.requirements.reviewHint')}</span>
+      <button id="requirements-refresh" type="button" class="btn-ghost text-xs">
+        {t('phone.numbers.requirements.refresh')}
+      </button>
+    </div>
+
+    <p
+      id="requirements-approved"
+      class="hidden rounded-lg bg-ok/10 p-3 text-sm text-ok"
+      role="status"
+    >
+      {t('phone.numbers.requirements.approved')}
+    </p>
+
+    <p
+      id="requirements-failed-banner"
+      class="hidden rounded-lg bg-danger/10 p-3 text-sm text-danger"
+      role="alert"
+    >
+      {t('phone.numbers.requirements.failed')}
+    </p>
+
+    <p id="requirements-error" class="hidden text-sm text-danger" role="alert"></p>
+
+    <form id="requirements-form" class="grid gap-4" novalidate>
+      <div id="requirements-list" class="grid gap-4"></div>
+
+      <div class="flex flex-wrap items-center gap-3">
+        <button id="requirements-save" type="button" class="btn-ghost text-sm">
+          {t('common.save')}
+        </button>
+        <button id="requirements-submit" type="submit" class="btn-primary text-sm">
+          {t('phone.numbers.requirements.submit')}
+        </button>
+        <p id="requirements-saved" class="hidden text-sm text-ok" role="status">
+          {t('common.saved')}
+        </p>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- One field block per requirement kind, cloned by the controller. Never rendered as-is. -->
+<template id="tmpl-requirement-textual">
+  <div class="grid gap-1" data-requirement>
+    <label class="label" data-field-label></label>
+    <input class="field" type="text" data-field="value" autocomplete="off" />
+    <p class="text-xs text-muted" data-field-hint></p>
+  </div>
+</template>
+
+<template id="tmpl-requirement-address">
+  <fieldset class="grid gap-3 rounded-lg border border-line p-3" data-requirement>
+    <legend class="label" data-field-label></legend>
+    <p class="-mt-2 text-xs text-muted" data-field-hint></p>
+    <div class="grid gap-3 sm:grid-cols-2">
+      <input
+        class="field"
+        data-field="first_name"
+        autocomplete="given-name"
+        placeholder={t('phone.numbers.requirements.address.firstName')}
+      />
+      <input
+        class="field"
+        data-field="last_name"
+        autocomplete="family-name"
+        placeholder={t('phone.numbers.requirements.address.lastName')}
+      />
+    </div>
+    <input
+      class="field"
+      data-field="business_name"
+      autocomplete="organization"
+      placeholder={t('phone.numbers.requirements.address.businessName')}
+    />
+    <input
+      class="field"
+      data-field="street_address"
+      autocomplete="address-line1"
+      placeholder={t('phone.numbers.requirements.address.street')}
+    />
+    <input
+      class="field"
+      data-field="extended_address"
+      autocomplete="address-line2"
+      placeholder={t('phone.numbers.requirements.address.extended')}
+    />
+    <div class="grid gap-3 sm:grid-cols-2">
+      <input
+        class="field"
+        data-field="locality"
+        autocomplete="address-level2"
+        placeholder={t('phone.numbers.requirements.address.city')}
+      />
+      <input
+        class="field"
+        data-field="administrative_area"
+        autocomplete="address-level1"
+        placeholder={t('phone.numbers.requirements.address.region')}
+      />
+    </div>
+    <div class="grid gap-3 sm:grid-cols-2">
+      <input
+        class="field"
+        data-field="postal_code"
+        autocomplete="postal-code"
+        placeholder={t('phone.numbers.requirements.address.postalCode')}
+      />
+      <input
+        class="field"
+        data-field="country_code"
+        maxlength="2"
+        autocomplete="country"
+        placeholder={t('phone.numbers.requirements.address.countryCode')}
+      />
+    </div>
+  </fieldset>
+</template>
+
+<template id="tmpl-requirement-document">
+  <div class="grid gap-1" data-requirement>
+    <label class="label" data-field-label></label>
+    <p class="text-xs text-muted" data-field-hint></p>
+    <input class="field" type="file" data-field="file" accept=".pdf,.png,.jpg,.jpeg" />
+    <p class="text-xs" data-field-status></p>
+  </div>
+</template>

@@ -194,6 +194,10 @@ describe('refusal copy', () => {
   it('carries copy for a phone call recording that is not available (hotfix 0.16.1)', () => {
     expect(hasReasonCopy('recording_unavailable')).toBe(true);
   });
+
+  it('carries copy for the document-upload rate limit (spec 0119)', () => {
+    expect(hasReasonCopy('too_many_requests')).toBe(true);
+  });
 });
 
 describe('announcement (R30)', () => {
