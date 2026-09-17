@@ -15,7 +15,9 @@
     "none": "Keine",
     "copy": "Link kopieren",
     "copied": "Kopiert",
-    "openApp": "Anruf-App öffnen"
+    "openApp": "Anruf-App öffnen",
+    "close": "Schließen",
+    "saved": "Gespeichert"
   },
   "meetings": {
     "title": "Meetings",
@@ -772,7 +774,25 @@
       "forward_to_required": "Eine Weiterleitung braucht eine Zielnummer.",
       "already_answered": "Jemand anderes hat den Anruf angenommen.",
       "invalid_timezone": "Diese Zeitzone kennen wir nicht. Versuchen Sie Europe/Berlin.",
-      "recording_unavailable": "Für diesen Anruf ist keine Aufnahme verfügbar."
+      "recording_unavailable": "Für diesen Anruf ist keine Aufnahme verfügbar.",
+      "regulatory_not_required": "Für diese Nummer sind keine behördlichen Unterlagen erforderlich.",
+      "regulatory_unlinked": "Diese Nummer ist noch nicht mit einer behördlichen Einreichung verknüpft. Versuchen Sie, zu aktualisieren.",
+      "requirements_busy": "Der Anbieter verarbeitet noch die vorherige Änderung. Versuchen Sie es in Kürze erneut.",
+      "requirements_not_editable": "Diese Anforderungen können nicht mehr bearbeitet werden.",
+      "requirements_incomplete": "Füllen Sie alle Anforderungen aus, bevor Sie einreichen.",
+      "submission_already_pending": "Für diese Nummer wird bereits eine Einreichung geprüft.",
+      "requirement_unknown": "Diese Anforderung wird nicht erkannt. Laden Sie die Seite neu und versuchen Sie es erneut.",
+      "requirement_kind_mismatch": "Dieser Wert entspricht nicht dem, was diese Anforderung erwartet.",
+      "value_too_long": "Dieser Wert ist zu lang.",
+      "malformed_upload": "Diese Datei konnte nicht gelesen werden. Versuchen Sie eine andere Datei.",
+      "provider_rejected_value": "Der Telefonanbieter hat diesen Wert abgelehnt.",
+      "document_too_large": "Diese Datei überschreitet das 10-MB-Limit.",
+      "document_type_unsupported": "Es werden nur PDF-, PNG- oder JPEG-Dateien akzeptiert.",
+      "document_link_failed": "Das Dokument konnte nicht angehängt werden. Versuchen Sie es erneut.",
+      "requirements_unsupported": "Diese Installation kann Anforderungen nicht über den Anbieter verwalten. Wenden Sie sich an einen Administrator.",
+      "provider_rate_limited": "Der Telefonanbieter begrenzt derzeit die Anfragen. Versuchen Sie es in Kürze erneut.",
+      "refresh_too_soon": "Warten Sie einen Moment, bevor Sie erneut aktualisieren.",
+      "too_many_requests": "Zu viele Anfragen in kurzer Zeit. Warten Sie eine Minute und versuchen Sie es erneut."
     },
     "settings": {
       "title": "Einstellungen für Telefonanrufe",
@@ -881,6 +901,47 @@
       "release": "Freigeben",
       "releaseConfirm": "Diese Nummer freigeben? Binnen einer Stunde kann sie jemand anders halten, und Sie bekommen sie nicht zurück.",
       "renewal": "Verlängert sich",
+      "requirements": {
+        "title": "Anforderungen für die Nummer",
+        "reused": "Wir haben bereits genehmigte Dokumente Ihrer Organisation wiederverwendet.",
+        "rejectedTitle": "Diese Bestellung wurde abgelehnt",
+        "rejectedHint": "Korrigieren Sie die untenstehenden Felder und senden Sie sie erneut.",
+        "reviewHint": "Ihre Einreichung wird vom Telefonanbieter geprüft.",
+        "refresh": "Status aktualisieren",
+        "approved": "Anforderungen genehmigt. Diese Nummer ist jetzt aktiv.",
+        "failed": "Diese Bestellung konnte nicht abgeschlossen werden. Wenden Sie sich an den Support.",
+        "submit": "Zur Prüfung einreichen",
+        "cta": {
+          "fill": "Anforderungen vervollständigen",
+          "fix": "Anforderungen korrigieren",
+          "review": "Status der Anforderungen ansehen"
+        },
+        "scan": {
+          "pending": "Wird gescannt…",
+          "passed": "Verifiziert",
+          "failed": "Abgelehnt — bitte erneut hochladen"
+        },
+        "status": {
+          "loading": "Anforderungen werden geladen…",
+          "saving": "Wird gespeichert…",
+          "uploading": "Dokument wird hochgeladen…",
+          "submitting": "Wird gesendet…",
+          "review": "Einreichung wird geprüft",
+          "active": "Anforderungen genehmigt",
+          "failed": "Anforderungen nicht erfüllt"
+        },
+        "address": {
+          "firstName": "Vorname",
+          "lastName": "Nachname",
+          "businessName": "Firmenname",
+          "street": "Straße und Hausnummer",
+          "extended": "Wohnungsnummer, Stockwerk usw. (optional)",
+          "city": "Stadt",
+          "region": "Bundesland / Region (optional)",
+          "postalCode": "Postleitzahl",
+          "countryCode": "Ländercode (z. B. DE)"
+        }
+      },
       "search": "Nummer suchen",
       "setup": "einmalig",
       "tab": "Nummern",

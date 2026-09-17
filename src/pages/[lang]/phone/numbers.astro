@@ -12,6 +12,7 @@
  */
 import BaseLayout from '../../../layouts/BaseLayout.astro';
 import SectionNav from '../../../components/phone/SectionNav.astro';
+import RequirementsPanel from '../../../components/phone/RequirementsPanel.astro';
 import { localePaths, isLocale, DEFAULT_LOCALE, useTranslations } from '../../../lib/i18n';
 
 export function getStaticPaths() {
@@ -166,11 +167,15 @@ const t = useTranslations(lang);
       </p>
     </section>
   </div>
+
+  <RequirementsPanel lang={lang} />
 </BaseLayout>
 
 <script>
   import { onPage } from '../../../scripts/nav';
   import { boot } from '../../../scripts/app-boot';
+  import { createRequirementsController } from '../../../scripts/number-requirements-controller';
+  import { panelMode } from '../../../scripts/number-requirements';
   import {
     buyVoipNumber,
     currentOrgId,
@@ -209,6 +214,14 @@ const t = useTranslations(lang);
       return;
     }
     $('numbers-page')?.classList.remove('hidden');
+
+    // Whenever the panel resolves the order (review -> active/rejected/failed), the row
+    // that opened it must reflect the new status without asking the customer to reload.
+    const requirementsController = createRequirementsController({
+      orgId: org,
+      t,
+      onStatusChange: () => void loadOwned(),
+    });
 
     const isAdmin = ctx.activeOrg.role === 'admin' || ctx.activeOrg.role === 'owner';
     const error = $('numbers-error');
@@ -494,6 +507,23 @@ const t = useTranslations(lang);
 
         const actions = document.createElement('span');
         actions.className = 'flex gap-2';
+
+        // A number stuck on the provider's paperwork gets its own, most-urgent action:
+        // completing it is the only thing standing between this row and outbound caller
+        // id actually working (spec 0119).
+        const mode = panelMode(n.status);
+        if (isAdmin && mode !== 'none') {
+          const requirementsBtn = document.createElement('button');
+          requirementsBtn.type = 'button';
+          requirementsBtn.className = mode === 'fix' ? 'btn-danger text-xs' : 'btn-primary text-xs';
+          requirementsBtn.textContent = t(`phone.numbers.requirements.cta.${mode}`);
+          requirementsBtn.addEventListener(
+            'click',
+            () => void requirementsController.open(n.id, n.e164),
+          );
+          actions.appendChild(requirementsBtn);
+        }
+
         if (isAdmin && n.verification_status !== 'verified') {
           const verify = document.createElement('button');
           verify.type = 'button';

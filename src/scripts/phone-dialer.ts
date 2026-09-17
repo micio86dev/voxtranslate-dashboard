@@ -239,6 +239,25 @@ const KNOWN_REASONS = new Set([
   'invalid_timezone',
   // Hotfix 0.16.1: the VoIP-specific call recording, distinct from a room recording.
   'recording_unavailable',
+  // Spec 0119, number-order regulatory requirements (dashboard self-service panel).
+  'regulatory_not_required',
+  'regulatory_unlinked',
+  'requirements_busy',
+  'requirements_not_editable',
+  'requirements_incomplete',
+  'submission_already_pending',
+  'requirement_unknown',
+  'requirement_kind_mismatch',
+  'value_too_long',
+  'malformed_upload',
+  'provider_rejected_value',
+  'document_too_large',
+  'document_type_unsupported',
+  'document_link_failed',
+  'requirements_unsupported',
+  'provider_rate_limited',
+  'refresh_too_soon',
+  'too_many_requests',
 ]);
 
 export function hasReasonCopy(code: string | null | undefined): boolean {

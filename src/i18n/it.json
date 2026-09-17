@@ -15,7 +15,9 @@
     "none": "Nessuno",
     "copy": "Copia link",
     "copied": "Copiato",
-    "openApp": "Apri l'app chiamate"
+    "openApp": "Apri l'app chiamate",
+    "close": "Chiudi",
+    "saved": "Salvato"
   },
   "meetings": {
     "title": "Riunioni",
@@ -772,7 +774,25 @@
       "forward_to_required": "L'inoltro ha bisogno di un numero a cui inoltrare.",
       "already_answered": "Ha risposto qualcun altro.",
       "invalid_timezone": "Non è un fuso orario che conosciamo. Prova con Europe/Rome.",
-      "recording_unavailable": "Nessuna registrazione disponibile per questa chiamata."
+      "recording_unavailable": "Nessuna registrazione disponibile per questa chiamata.",
+      "regulatory_not_required": "Questo numero non richiede documenti normativi.",
+      "regulatory_unlinked": "Questo numero non è ancora collegato a una richiesta normativa. Prova ad aggiornare.",
+      "requirements_busy": "Il fornitore sta ancora elaborando la modifica precedente. Riprova a breve.",
+      "requirements_not_editable": "Questi requisiti non possono più essere modificati.",
+      "requirements_incomplete": "Compila tutti i requisiti prima di inviare.",
+      "submission_already_pending": "Una richiesta per questo numero è già in revisione.",
+      "requirement_unknown": "Requisito non riconosciuto. Ricarica la pagina e riprova.",
+      "requirement_kind_mismatch": "Questo valore non corrisponde a quanto richiesto.",
+      "value_too_long": "Questo valore è troppo lungo.",
+      "malformed_upload": "Impossibile leggere il file caricato. Prova un file diverso.",
+      "provider_rejected_value": "Il fornitore telefonico ha rifiutato questo valore.",
+      "document_too_large": "Il file supera il limite di 10 MB.",
+      "document_type_unsupported": "Sono accettati solo file PDF, PNG o JPEG.",
+      "document_link_failed": "Impossibile allegare il documento. Riprova.",
+      "requirements_unsupported": "Questa installazione non può gestire i requisiti tramite il fornitore. Contatta un amministratore.",
+      "provider_rate_limited": "Il fornitore telefonico sta limitando le richieste. Riprova a breve.",
+      "refresh_too_soon": "Attendi un momento prima di aggiornare di nuovo.",
+      "too_many_requests": "Troppe richieste in poco tempo. Attendi un minuto e riprova."
     },
     "settings": {
       "title": "Impostazioni chiamate telefoniche",
@@ -881,6 +901,47 @@
       "release": "Rilascia",
       "releaseConfirm": "Rilasciare questo numero? Entro un'ora potrebbe averlo qualcun altro, e non lo riavrai.",
       "renewal": "Si rinnova",
+      "requirements": {
+        "title": "Requisiti del numero",
+        "reused": "Abbiamo riutilizzato documenti già approvati per la tua organizzazione.",
+        "rejectedTitle": "Questo ordine è stato rifiutato",
+        "rejectedHint": "Correggi i campi qui sotto e invia di nuovo.",
+        "reviewHint": "La tua richiesta è in fase di revisione da parte del fornitore telefonico.",
+        "refresh": "Aggiorna stato",
+        "approved": "Requisiti approvati. Questo numero è ora attivo.",
+        "failed": "Impossibile completare questo ordine. Contatta l'assistenza.",
+        "submit": "Invia per la revisione",
+        "cta": {
+          "fill": "Completa i requisiti",
+          "fix": "Correggi i requisiti",
+          "review": "Visualizza lo stato dei requisiti"
+        },
+        "scan": {
+          "pending": "Scansione in corso…",
+          "passed": "Verificato",
+          "failed": "Rifiutato — carica di nuovo"
+        },
+        "status": {
+          "loading": "Caricamento requisiti…",
+          "saving": "Salvataggio…",
+          "uploading": "Caricamento documento…",
+          "submitting": "Invio in corso…",
+          "review": "Richiesta in revisione",
+          "active": "Requisiti approvati",
+          "failed": "Requisiti non superati"
+        },
+        "address": {
+          "firstName": "Nome",
+          "lastName": "Cognome",
+          "businessName": "Ragione sociale",
+          "street": "Indirizzo",
+          "extended": "Interno, scala, ecc. (facoltativo)",
+          "city": "Città",
+          "region": "Provincia / regione (facoltativo)",
+          "postalCode": "CAP",
+          "countryCode": "Codice paese (es. IT)"
+        }
+      },
       "search": "Trova un numero",
       "setup": "una tantum",
       "tab": "Numeri",

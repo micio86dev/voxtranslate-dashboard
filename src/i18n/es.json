@@ -15,7 +15,9 @@
     "none": "Ninguno",
     "copy": "Copiar enlace",
     "copied": "Copiado",
-    "openApp": "Abrir la app de llamadas"
+    "openApp": "Abrir la app de llamadas",
+    "close": "Cerrar",
+    "saved": "Guardado"
   },
   "meetings": {
     "title": "Reuniones",
@@ -772,7 +774,25 @@
       "forward_to_required": "El desvío necesita un número al que desviar.",
       "already_answered": "Otra persona atendió la llamada.",
       "invalid_timezone": "No reconocemos esa zona horaria. Prueba con Europe/Madrid.",
-      "recording_unavailable": "No hay ninguna grabación disponible para esta llamada."
+      "recording_unavailable": "No hay ninguna grabación disponible para esta llamada.",
+      "regulatory_not_required": "Este número no requiere documentación regulatoria.",
+      "regulatory_unlinked": "Este número aún no está vinculado a una solicitud regulatoria. Intenta actualizar.",
+      "requirements_busy": "El proveedor todavía está procesando el cambio anterior. Vuelve a intentarlo en breve.",
+      "requirements_not_editable": "Estos requisitos ya no se pueden editar.",
+      "requirements_incomplete": "Completa todos los requisitos antes de enviar.",
+      "submission_already_pending": "Ya hay una solicitud en revisión para este número.",
+      "requirement_unknown": "Ese requisito no se reconoce. Recarga la página e inténtalo de nuevo.",
+      "requirement_kind_mismatch": "Ese valor no coincide con lo que espera este requisito.",
+      "value_too_long": "Ese valor es demasiado largo.",
+      "malformed_upload": "No se pudo leer ese archivo. Prueba con otro.",
+      "provider_rejected_value": "El proveedor telefónico rechazó ese valor.",
+      "document_too_large": "Ese archivo supera el límite de 10 MB.",
+      "document_type_unsupported": "Solo se aceptan archivos PDF, PNG o JPEG.",
+      "document_link_failed": "No se pudo adjuntar el documento. Inténtalo de nuevo.",
+      "requirements_unsupported": "Esta instalación no puede gestionar requisitos a través del proveedor. Consulta a un administrador.",
+      "provider_rate_limited": "El proveedor telefónico está limitando las solicitudes. Vuelve a intentarlo en breve.",
+      "refresh_too_soon": "Espera un momento antes de actualizar de nuevo.",
+      "too_many_requests": "Demasiadas solicitudes en poco tiempo. Espera un minuto e inténtalo de nuevo."
     },
     "settings": {
       "title": "Ajustes de llamadas telefónicas",
@@ -881,6 +901,47 @@
       "release": "Liberar",
       "releaseConfirm": "¿Liberar este número? En una hora puede tenerlo otra persona, y no lo recuperarás.",
       "renewal": "Se renueva",
+      "requirements": {
+        "title": "Requisitos del número",
+        "reused": "Reutilizamos documentos ya aprobados para tu organización.",
+        "rejectedTitle": "Este pedido fue rechazado",
+        "rejectedHint": "Corrige los campos a continuación y vuelve a enviarlo.",
+        "reviewHint": "Tu solicitud está en revisión por parte del proveedor telefónico.",
+        "refresh": "Actualizar estado",
+        "approved": "Requisitos aprobados. Este número ya está activo.",
+        "failed": "No se pudo completar este pedido. Contacta con soporte.",
+        "submit": "Enviar para revisión",
+        "cta": {
+          "fill": "Completar requisitos",
+          "fix": "Corregir requisitos",
+          "review": "Ver estado de los requisitos"
+        },
+        "scan": {
+          "pending": "Escaneando…",
+          "passed": "Verificado",
+          "failed": "Rechazado — vuelve a subirlo"
+        },
+        "status": {
+          "loading": "Cargando requisitos…",
+          "saving": "Guardando…",
+          "uploading": "Subiendo documento…",
+          "submitting": "Enviando…",
+          "review": "Solicitud en revisión",
+          "active": "Requisitos aprobados",
+          "failed": "Requisitos no superados"
+        },
+        "address": {
+          "firstName": "Nombre",
+          "lastName": "Apellidos",
+          "businessName": "Razón social",
+          "street": "Dirección",
+          "extended": "Piso, puerta, etc. (opcional)",
+          "city": "Ciudad",
+          "region": "Provincia / región (opcional)",
+          "postalCode": "Código postal",
+          "countryCode": "Código de país (p. ej. ES)"
+        }
+      },
       "search": "Buscar un número",
       "setup": "pago único",
       "tab": "Números",

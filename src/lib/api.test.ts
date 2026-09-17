@@ -990,3 +990,145 @@ describe('office hours wrappers (spec 0118)', () => {
     expect(lastCall(fn).init.method).toBe('DELETE');
   });
 });
+
+// --- Regulatory requirements (spec 0119, dashboard) --------------------------
+
+describe('voip number requirements wrappers (spec 0119)', () => {
+  const ORG = 'org-1';
+  const NUMBER = 'num-1';
+  const PREFIX = `${BASE}/api/business/organizations/${ORG}/voip/numbers/${NUMBER}/requirements`;
+
+  it('GETs the discovery/submission view', async () => {
+    const fn = mockFetch({
+      json: {
+        status: 'pending_regulatory',
+        status_reason: null,
+        group: { status: 'pending', reused: false },
+        requirements: [],
+      },
+    });
+    const res = await api.getNumberRequirements(ORG, NUMBER);
+    expect(lastCall(fn).url).toBe(PREFIX);
+    expect(lastCall(fn).init.method).toBe('GET');
+    expect(res.data?.status).toBe('pending_regulatory');
+  });
+
+  it('PUTs the submitted values, textual and address alike, and returns the fresh view', async () => {
+    const fn = mockFetch({
+      json: {
+        status: 'pending_regulatory',
+        status_reason: null,
+        group: { status: 'pending', reused: false },
+        requirements: [],
+      },
+    });
+    await api.putNumberRequirements(ORG, NUMBER, [
+      { requirement_id: 'r1', value: 'Acme Inc' },
+      {
+        requirement_id: 'r2',
+        value: {
+          first_name: 'A',
+          last_name: 'B',
+          business_name: 'Acme',
+          street_address: '1 Main St',
+          locality: 'Rome',
+          postal_code: '00100',
+          country_code: 'IT',
+        },
+      },
+    ]);
+    expect(lastCall(fn).init.method).toBe('PUT');
+    expect(lastCall(fn).body).toEqual({
+      values: [
+        { requirement_id: 'r1', value: 'Acme Inc' },
+        {
+          requirement_id: 'r2',
+          value: {
+            first_name: 'A',
+            last_name: 'B',
+            business_name: 'Acme',
+            street_address: '1 Main St',
+            locality: 'Rome',
+            postal_code: '00100',
+            country_code: 'IT',
+          },
+        },
+      ],
+    });
+  });
+
+  it('POSTs /submit with no body and reports 202 regulatory_review', async () => {
+    const fn = mockFetch({ ok: true, status: 202, json: { status: 'regulatory_review' } });
+    const res = await api.submitNumberRequirements(ORG, NUMBER);
+    expect(lastCall(fn).url).toBe(`${PREFIX}/submit`);
+    expect(lastCall(fn).init.method).toBe('POST');
+    expect(res.status).toBe(202);
+    expect(res.data).toEqual({ status: 'regulatory_review' });
+  });
+
+  it('surfaces submission_already_pending as a 409', async () => {
+    const fn = mockFetch({ ok: false, status: 409, json: { error: 'submission_already_pending' } });
+    const res = await api.submitNumberRequirements(ORG, NUMBER);
+    expect(lastCall(fn).url).toBe(`${PREFIX}/submit`);
+    expect(res.ok).toBe(false);
+    expect(res.data).toEqual({ error: 'submission_already_pending' });
+  });
+
+  it('POSTs /refresh and returns the current status', async () => {
+    const fn = mockFetch({ json: { status: 'active', status_reason: null } });
+    const res = await api.refreshNumberRequirements(ORG, NUMBER);
+    expect(lastCall(fn).url).toBe(`${PREFIX}/refresh`);
+    expect(lastCall(fn).init.method).toBe('POST');
+    expect(res.data).toEqual({ status: 'active', status_reason: null });
+  });
+
+  it('surfaces refresh_too_soon as a 429, the 1/30s throttle', async () => {
+    const fn = mockFetch({ ok: false, status: 429, json: { error: 'refresh_too_soon' } });
+    const res = await api.refreshNumberRequirements(ORG, NUMBER);
+    expect(lastCall(fn).url).toBe(`${PREFIX}/refresh`);
+    expect(res.status).toBe(429);
+  });
+});
+
+describe('uploadRequirementDocument', () => {
+  const ORG = 'org-1';
+  const NUMBER = 'num-1';
+  const file = new File(['%PDF-'], 'proof.pdf', { type: 'application/pdf' });
+
+  it('POSTs multipart with requirement_id BEFORE file, per the server field-order contract', async () => {
+    const fn = mockFetch({
+      ok: true,
+      status: 201,
+      json: { requirement_id: 'r1', document: { av_scan_status: 'pending' } },
+    });
+    const res = await api.uploadRequirementDocument(ORG, NUMBER, 'r1', file);
+    const [url, init] = fn.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe(
+      `${BASE}/api/business/organizations/${ORG}/voip/numbers/${NUMBER}/requirements/documents`,
+    );
+    expect(init.method).toBe('POST');
+    expect(init.body).toBeInstanceOf(FormData);
+    const form = init.body as FormData;
+    expect([...form.keys()]).toEqual(['requirement_id', 'file']);
+    expect(form.get('requirement_id')).toBe('r1');
+    expect(form.get('file')).toBeInstanceOf(File);
+    expect((init.headers as Record<string, string>)['Content-Type']).toBeUndefined();
+    expect(res).toEqual({
+      ok: true,
+      status: 201,
+      data: { requirement_id: 'r1', document: { av_scan_status: 'pending' } },
+    });
+  });
+
+  it('surfaces a server refusal (e.g. document_type_unsupported, 415) without throwing', async () => {
+    mockFetch({ ok: false, status: 415, json: { error: 'document_type_unsupported' } });
+    const res = await api.uploadRequirementDocument(ORG, NUMBER, 'r1', file);
+    expect(res).toEqual({ ok: false, status: 415, data: { error: 'document_type_unsupported' } });
+  });
+
+  it('returns a status-0 failure when fetch throws (network/transport failure)', async () => {
+    mockFetch({ rejects: true });
+    const res = await api.uploadRequirementDocument(ORG, NUMBER, 'r1', file);
+    expect(res).toEqual({ ok: false, status: 0, data: null });
+  });
+});
