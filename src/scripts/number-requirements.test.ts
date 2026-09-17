@@ -208,12 +208,37 @@ describe('reduceRequirements', () => {
     expect(s.phase).toBe('saving');
   });
 
-  it('submit moves editing to submitting, then submitted moves to review', () => {
+  it('submit moves editing to submitting, then submitted moves to review and updates the view status', () => {
     const editing: ReqState = { ...initialState, phase: 'editing', view: view() };
     const submitting = reduceRequirements(editing, { type: 'submit' });
     expect(submitting.phase).toBe('submitting');
     const reviewed = reduceRequirements(submitting, { type: 'submitted' });
     expect(reviewed.phase).toBe('review');
+    // The view's own status must move to regulatory_review immediately, not just the
+    // phase — otherwise a stale `regulatory_rejected` (or any prior) status lingers on
+    // the view and a banner keyed off `view.status` shows alongside the review banner.
+    expect(reviewed.view?.status).toBe('regulatory_review');
+  });
+
+  it('resubmitting a rejected order clears the stale rejection from the view', () => {
+    // R3-stale-rejected-banner-during-review: without this, `view.status` stays
+    // `regulatory_rejected` through the whole review phase, so the rejected banner and
+    // the review banner render together.
+    const submitting: ReqState = {
+      ...initialState,
+      phase: 'submitting',
+      view: view({ status: 'regulatory_rejected', status_reason: 'Illegible ID scan' }),
+    };
+    const reviewed = reduceRequirements(submitting, { type: 'submitted' });
+    expect(reviewed.view?.status).toBe('regulatory_review');
+    expect(reviewed.view?.status_reason).toBeNull();
+  });
+
+  it('submitted with no view present is a harmless phase-only transition', () => {
+    const submitting: ReqState = { ...initialState, phase: 'submitting', view: null };
+    const reviewed = reduceRequirements(submitting, { type: 'submitted' });
+    expect(reviewed.phase).toBe('review');
+    expect(reviewed.view).toBeNull();
   });
 
   it('a failed submit returns to editing carrying the refusal', () => {
@@ -271,6 +296,59 @@ describe('reduceRequirements', () => {
     // @ts-expect-error — deliberately an action type this reducer does not define
     const s = reduceRequirements(editing, { type: 'nonsense' });
     expect(s).toEqual(editing);
+  });
+
+  it('a partial upload success patches only that requirement, back to editing', () => {
+    // R3-upload-failure-retry-and-misreport: when the document upload itself succeeded
+    // but the follow-up full refetch failed, the controller has only the ONE uploaded
+    // requirement's fresh document — not a full view. This must patch that requirement
+    // in place rather than discarding the rest of the form or reporting a refusal.
+    const uploading: ReqState = {
+      ...initialState,
+      phase: 'uploading',
+      uploadingRequirementId: 'r2',
+      view: view({
+        requirements: [
+          {
+            id: 'r1',
+            name: 'Business name',
+            description: '',
+            example: '',
+            kind: 'textual',
+            value: 'Acme',
+          },
+          { id: 'r2', name: 'Proof of address', description: '', example: '', kind: 'document' },
+        ],
+      }),
+    };
+    const s = reduceRequirements(uploading, {
+      type: 'uploadedPartial',
+      requirementId: 'r2',
+      document: { av_scan_status: 'pending' },
+    });
+    expect(s.phase).toBe('editing');
+    expect(s.uploadingRequirementId).toBeNull();
+    expect(s.view?.requirements.find((r) => r.id === 'r2')?.document).toEqual({
+      av_scan_status: 'pending',
+    });
+    // The other requirement's own value must survive untouched.
+    expect(s.view?.requirements.find((r) => r.id === 'r1')?.value).toBe('Acme');
+  });
+
+  it('a partial upload success with no view present is a harmless phase-only transition', () => {
+    const uploading: ReqState = {
+      ...initialState,
+      phase: 'uploading',
+      uploadingRequirementId: 'r2',
+      view: null,
+    };
+    const s = reduceRequirements(uploading, {
+      type: 'uploadedPartial',
+      requirementId: 'r2',
+      document: { av_scan_status: 'pending' },
+    });
+    expect(s.phase).toBe('editing');
+    expect(s.view).toBeNull();
   });
 });
 

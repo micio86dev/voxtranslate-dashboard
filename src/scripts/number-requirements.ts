@@ -15,7 +15,7 @@
  * to `regulatory_review`; refreshing (or polling) that view can resolve to `active`, back
  * to a fixable `regulatory_rejected` (still `editing`), or `failed`.
  */
-import type { RequirementsView } from '../lib/api';
+import type { RequirementDocumentInfo, RequirementsView } from '../lib/api';
 
 // --- Number row CTA ----------------------------------------------------------
 
@@ -109,6 +109,8 @@ export type ReqAction =
   | { type: 'submitted' }
   | { type: 'submitFailed'; message: string }
   | { type: 'statusRefreshed'; view: RequirementsView }
+  | { type: 'refreshFailed'; message: string }
+  | { type: 'uploadedPartial'; requirementId: string; document: RequirementDocumentInfo }
   | { type: 'dismissError' };
 
 /** The phase a just-(re)loaded view settles into, driven entirely by its own status. */
@@ -181,14 +183,58 @@ export function reduceRequirements(state: ReqState, action: ReqAction): ReqState
     case 'submit':
       return state.phase === 'editing' ? { ...state, phase: 'submitting' } : state;
 
-    case 'submitted':
-      return { ...state, phase: 'review' };
+    case 'submitted': {
+      // The view's own status must move to `regulatory_review` immediately, not just
+      // the phase — otherwise a stale `regulatory_rejected` (from resubmitting a
+      // rejected order) lingers on the view, so the rejected banner and the review
+      // banner render together, and nothing tells the numbers list the status changed
+      // (that only happens when `view.status` itself changes).
+      if (!state.view) return { ...state, phase: 'review' };
+      return {
+        ...state,
+        phase: 'review',
+        view: { ...state.view, status: 'regulatory_review', status_reason: null },
+      };
+    }
 
     case 'submitFailed':
       return toError(state, action.message, 'editing');
 
     case 'statusRefreshed':
-      return { ...withView(state, action.view), phase: phaseForView(action.view) };
+      // A fresh status also retires any earlier manual-refresh refusal (`refreshFailed`)
+      // still on screen — the very refresh this resolves.
+      return {
+        ...withView(state, action.view),
+        phase: phaseForView(action.view),
+        errorMessage: null,
+      };
+
+    case 'refreshFailed':
+      // A manual refresh's own refusal (e.g. `refresh_too_soon`), surfaced WITHOUT
+      // leaving the review phase — the submission is still under review, only this
+      // particular check-in failed. A background poll's failure never reaches here (see
+      // the controller's `pollOnce`), so this never fires silently.
+      return { ...state, errorMessage: action.message };
+
+    case 'uploadedPartial': {
+      // The document itself uploaded successfully — only the follow-up full refetch
+      // failed. Patch just this one requirement's document in place rather than
+      // reporting a refusal for an upload that actually succeeded, and rather than
+      // discarding the rest of the form (which a full `uploaded`-style replace would
+      // require a fresh view for).
+      if (!state.view) {
+        return { ...state, phase: 'editing', uploadingRequirementId: null };
+      }
+      const requirements = state.view.requirements.map((r) =>
+        r.id === action.requirementId ? { ...r, document: action.document } : r,
+      );
+      return {
+        ...state,
+        phase: 'editing',
+        uploadingRequirementId: null,
+        view: { ...state.view, requirements },
+      };
+    }
 
     case 'dismissError':
       return { ...state, phase: state.recoverTo, errorMessage: null, recoverTo: 'idle' };

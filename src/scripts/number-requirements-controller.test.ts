@@ -370,6 +370,114 @@ describe('document upload', () => {
     expect(api.uploadRequirementDocument).toHaveBeenCalledWith('org-1', 'num-1', 'r2', good);
     expect(api.getNumberRequirements).toHaveBeenCalledTimes(2);
   });
+
+  it('does not start an upload while a save is pending, and disables the file input meanwhile', async () => {
+    // R3-upload-bypasses-phase-guard: the REDUCER already refuses `uploadStart` from
+    // any phase but `editing`, but the controller used to call the upload API anyway —
+    // it never checked whether the dispatch actually landed in `uploading`.
+    const api = makeApi();
+    api.getNumberRequirements.mockResolvedValue(
+      ok(
+        view({
+          requirements: [
+            { id: 'r1', name: 'Business name', description: '', example: '', kind: 'textual' },
+            { id: 'r2', name: 'Proof of address', description: '', example: '', kind: 'document' },
+          ],
+        }),
+      ),
+    );
+    const gate = deferred<ReturnType<typeof ok<RequirementsView>>>();
+    api.putNumberRequirements.mockReturnValue(gate.promise);
+    const controller = createRequirementsController({ orgId: 'org-1', t, api });
+    await controller.open('num-1', '+390212345678');
+
+    document
+      .getElementById('requirements-save')!
+      .dispatchEvent(new Event('click', { bubbles: true }));
+    // `save()` runs synchronously up to its first `await` (the PUT), so the phase is
+    // already `saving` by the time this line runs — no extra tick needed.
+
+    const fileInput = document.querySelector<HTMLInputElement>(
+      '[data-requirement-id="r2"] [data-field="file"]',
+    )!;
+    expect(fileInput.disabled).toBe(true);
+
+    const file = new File(['%PDF-'], 'proof.pdf', { type: 'application/pdf' });
+    Object.defineProperty(fileInput, 'files', { value: [file] });
+    fileInput.dispatchEvent(new Event('change', { bubbles: true }));
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(api.uploadRequirementDocument).not.toHaveBeenCalled();
+
+    gate.resolve(ok(view()));
+    await Promise.resolve();
+  });
+
+  it('clears the file input after a server-side upload failure, so the same file can be re-picked', async () => {
+    // R3-upload-failure-retry-and-misreport (part 1): the client-side validation
+    // failure already cleared the input; a SERVER refusal did not, which — because
+    // `uploadFailed` does not re-render the field list — left the same stale selection
+    // sitting in the DOM with no way to re-trigger a `change` event for it.
+    const api = makeApi();
+    withDocumentRequirement(api);
+    api.uploadRequirementDocument.mockResolvedValue(fail('provider_unavailable', 502));
+    const controller = createRequirementsController({ orgId: 'org-1', t, api });
+    await controller.open('num-1', '+390212345678');
+
+    const input = document.querySelector<HTMLInputElement>('[data-field="file"]')!;
+    const file = new File(['%PDF-'], 'proof.pdf', { type: 'application/pdf' });
+    Object.defineProperty(input, 'files', { value: [file] });
+    const setValue = vi.fn();
+    // jsdom's own file-input `.value` semantics do not let this test observe a "cleared
+    // path" directly, so this spies on the assignment itself: the claim under test is
+    // "the code assigns `input.value = ''`", not any particular resulting string.
+    Object.defineProperty(input, 'value', { configurable: true, get: () => '', set: setValue });
+
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(setValue).toHaveBeenCalledWith('');
+  });
+
+  it('keeps the document marked uploaded (not refused) when only the follow-up refresh fails', async () => {
+    // R3-upload-failure-retry-and-misreport (part 2): the document itself DID upload —
+    // only the full-view refetch afterwards failed. Reporting this through the same
+    // path as a refused upload is simply false, and used to happen because the code
+    // fell through to `uploadFailed` using the (successful) upload response as if it
+    // were an error body.
+    const api = makeApi();
+    const docRequirement = {
+      id: 'r2',
+      name: 'Proof of address',
+      description: '',
+      example: '',
+      kind: 'document' as const,
+    };
+    api.getNumberRequirements
+      .mockResolvedValueOnce(ok(view({ requirements: [docRequirement] })))
+      .mockResolvedValueOnce(fail('provider_unavailable', 502));
+    api.uploadRequirementDocument.mockResolvedValue(
+      ok({ requirement_id: 'r2', document: { av_scan_status: 'pending' as const } }, 201),
+    );
+    const controller = createRequirementsController({ orgId: 'org-1', t, api });
+    await controller.open('num-1', '+390212345678');
+
+    const input = document.querySelector<HTMLInputElement>('[data-field="file"]')!;
+    const file = new File(['%PDF-'], 'proof.pdf', { type: 'application/pdf' });
+    Object.defineProperty(input, 'files', { value: [file] });
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    const error = document.getElementById('requirements-error');
+    expect(error?.classList.contains('hidden')).toBe(true);
+    const statusEl = document.querySelector('[data-requirement-id="r2"] [data-field-status]');
+    expect(statusEl?.textContent).toBe('phone.numbers.requirements.scan.pending');
+    expect(document.getElementById('requirements-form')?.classList.contains('hidden')).toBe(false);
+  });
 });
 
 describe('submit and review polling', () => {
@@ -393,6 +501,38 @@ describe('submit and review polling', () => {
     // One poll tick: still under review, no resolution yet.
     await vi.advanceTimersByTimeAsync(30_000);
     expect(api.refreshNumberRequirements).toHaveBeenCalledTimes(1);
+  });
+
+  it('resubmitting a rejected order hides the stale rejected banner and fires onStatusChange', async () => {
+    // R3-stale-rejected-banner-during-review: resubmitting used to leave `view.status`
+    // at `regulatory_rejected`, so the rejected alert kept showing alongside the review
+    // banner, and nothing told the numbers list the status had moved on.
+    const api = makeApi();
+    api.getNumberRequirements.mockResolvedValue(
+      ok(view({ status: 'regulatory_rejected', status_reason: 'Illegible ID scan' })),
+    );
+    const onStatusChange = vi.fn();
+    const controller = createRequirementsController({ orgId: 'org-1', t, api, onStatusChange });
+    await controller.open('num-1', '+390212345678');
+
+    expect(document.getElementById('requirements-rejected')?.classList.contains('hidden')).toBe(
+      false,
+    );
+
+    document
+      .getElementById('requirements-form')!
+      .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(document.getElementById('requirements-rejected')?.classList.contains('hidden')).toBe(
+      true,
+    );
+    expect(
+      document.getElementById('requirements-review-banner')?.classList.contains('hidden'),
+    ).toBe(false);
+    expect(onStatusChange).toHaveBeenCalledWith('num-1', 'regulatory_review', null);
   });
 
   it('a submit refusal (e.g. requirements_incomplete) is shown and never enters review', async () => {
@@ -471,6 +611,44 @@ describe('manual refresh', () => {
     await Promise.resolve();
 
     expect(api.refreshNumberRequirements).toHaveBeenCalledWith('org-1', 'num-1');
+  });
+
+  it('shows a manual refresh refusal without leaving review', async () => {
+    // R3-manual-refresh-silent-failure: a customer who clicks Refresh and hits the
+    // server's 1/30s throttle deserves to know why nothing changed, rather than the
+    // click silently doing nothing.
+    const api = makeApi();
+    api.getNumberRequirements.mockResolvedValue(ok(view({ status: 'regulatory_review' })));
+    api.refreshNumberRequirements.mockResolvedValue(fail('refresh_too_soon', 429));
+    const controller = createRequirementsController({ orgId: 'org-1', t, api });
+    await controller.open('num-1', '+390212345678');
+
+    document
+      .getElementById('requirements-refresh')!
+      .dispatchEvent(new Event('click', { bubbles: true }));
+    await Promise.resolve();
+    await Promise.resolve();
+
+    const error = document.getElementById('requirements-error');
+    expect(error?.classList.contains('hidden')).toBe(false);
+    expect(error?.textContent).toBe('phone.reason.refresh_too_soon');
+    expect(
+      document.getElementById('requirements-review-banner')?.classList.contains('hidden'),
+    ).toBe(false);
+  });
+
+  it('keeps a background poll failure silent, unlike a manual refresh', async () => {
+    vi.useFakeTimers();
+    const api = makeApi();
+    api.getNumberRequirements.mockResolvedValue(ok(view({ status: 'regulatory_review' })));
+    api.refreshNumberRequirements.mockResolvedValue(fail('provider_unavailable', 502));
+    const controller = createRequirementsController({ orgId: 'org-1', t, api });
+    await controller.open('num-1', '+390212345678');
+
+    await vi.advanceTimersByTimeAsync(30_000); // one automatic poll tick, which fails
+
+    const error = document.getElementById('requirements-error');
+    expect(error?.classList.contains('hidden')).toBe(true);
   });
 });
 

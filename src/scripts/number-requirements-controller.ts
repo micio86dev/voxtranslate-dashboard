@@ -152,9 +152,18 @@ export function createRequirementsController(
     if (state.phase !== 'review') stopPolling();
   }
 
-  /** One review poll: the throttled `/refresh` first, and only a full re-fetch when the
-   *  status actually resolved — `/refresh` alone never carries the requirements list. */
-  async function pollOnce(): Promise<void> {
+  /**
+   * One review check-in: the throttled `/refresh` first, and only a full re-fetch when
+   * the status actually resolved — `/refresh` alone never carries the requirements
+   * list.
+   *
+   * `manual` distinguishes a customer's own Refresh click from the background timer.
+   * Silence is correct for the timer — it retries on its own next tick regardless — but
+   * a customer who clicked a button and hit the server's 1/30s throttle (or any other
+   * refusal) deserves to know why nothing happened, without being knocked out of the
+   * review phase over it.
+   */
+  async function pollOnce(manual = false): Promise<void> {
     if (!numberId || !state.view) return;
     const gen = generation;
     const targetNumberId = numberId;
@@ -163,7 +172,10 @@ export function createRequirementsController(
     // flight — `state.view` can be null again by now, so this is checked before anything
     // below ever touches it, never merely assumed absent because the request failed.
     if (isStale(gen) || !state.view) return;
-    if (!res.ok || !res.data) return; // transient failure — the next poll tries again
+    if (!res.ok || !res.data) {
+      if (manual) dispatch({ type: 'refreshFailed', message: errorOf(res.data) });
+      return; // background: a transient failure — the next poll tries again silently
+    }
     if (res.data.status === 'regulatory_review') {
       dispatch({
         type: 'statusRefreshed',
@@ -296,6 +308,17 @@ export function createRequirementsController(
 
     if (view && shouldRenderList) renderList(view, snapshotTypedValues());
 
+    // A file input has no `disabled` handling of its own, and a `change` event fired
+    // while a save/upload/submit is already in flight would otherwise reach
+    // `onFileChange` — which the reducer's own `uploadStart` guard refuses, but only
+    // AFTER the fact. Disabling the control up front is the honest UI: it is not
+    // interactive right now, not merely ignored if used.
+    for (const input of document.querySelectorAll<HTMLInputElement>(
+      '[data-requirement-id] [data-field="file"]',
+    )) {
+      input.disabled = !canAct;
+    }
+
     const statusRegion = el('requirements-status');
     if (statusRegion) statusRegion.textContent = statusAnnouncement(opts.t, state.phase);
 
@@ -365,6 +388,10 @@ export function createRequirementsController(
       return;
     }
     dispatch({ type: 'uploadStart', requirementId });
+    // The reducer's own `uploadStart` guard refuses to leave `editing` for any OTHER
+    // in-flight action (a save/submit already running) — if that happened, `state.phase`
+    // is still whatever it was, never `uploading`, and no request must go out for it.
+    if (state.phase !== 'uploading') return;
     const res = await api.uploadRequirementDocument(
       opts.orgId,
       targetNumberId,
@@ -381,8 +408,19 @@ export function createRequirementsController(
         dispatch({ type: 'uploaded', view: full.data });
         return;
       }
+      // The document itself uploaded successfully — only this follow-up refresh
+      // failed. Reporting that as a refused upload would be false: the file IS
+      // attached and scanning. Patch just this requirement's document status locally
+      // instead, and say nothing about the refusal that never actually happened to the
+      // upload itself.
+      dispatch({ type: 'uploadedPartial', requirementId, document: res.data.document });
+      return;
     }
     dispatch({ type: 'uploadFailed', message: errorOf(res.data) });
+    // `uploadFailed` never replaces `state.view`, so the field list is not rebuilt —
+    // meaning this exact input node survives and must be cleared by hand, or a customer
+    // re-picking the SAME file never fires another `change` event to retry with.
+    input.value = '';
   }
 
   async function submit(): Promise<void> {
@@ -407,7 +445,7 @@ export function createRequirementsController(
     e.preventDefault();
     void submit();
   });
-  el('requirements-refresh')?.addEventListener('click', () => void pollOnce());
+  el('requirements-refresh')?.addEventListener('click', () => void pollOnce(true));
   el('requirements-close')?.addEventListener('click', () => close());
 
   async function open(id: string, e164: string): Promise<void> {
