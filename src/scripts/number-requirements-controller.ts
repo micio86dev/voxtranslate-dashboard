@@ -189,11 +189,23 @@ export function createRequirementsController(
         type: 'statusRefreshed',
         view: { ...state.view, status: res.data.status, status_reason: res.data.status_reason },
       });
+      restartPollingAfterManualSuccess(manual);
       return;
     }
     const full = await api.getNumberRequirements(opts.orgId, targetNumberId);
     if (isStale(gen) || !state.view) return;
     if (full.ok && full.data) dispatch({ type: 'statusRefreshed', view: full.data });
+    restartPollingAfterManualSuccess(manual);
+  }
+
+  /** A manual click that lands the panel back in `review` restarts the server's own
+   *  30s throttle window — so the background timer must restart its OWN clock from
+   *  here too, or the very next automatic tick lands inside that fresh window and is
+   *  refused for nothing (see `POLL_INTERVAL_MS`'s own margin, which only covers
+   *  ordinary jitter, not a manual click resetting the window early). A background
+   *  tick's own success needs no such reset — it is already exactly on schedule. */
+  function restartPollingAfterManualSuccess(manual: boolean): void {
+    if (manual && state.phase === 'review') startPolling();
   }
 
   /** A textual or address requirement's currently typed value, snapshotted from the

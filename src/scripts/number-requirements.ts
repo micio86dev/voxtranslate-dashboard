@@ -247,7 +247,13 @@ export function reduceRequirements(state: ReqState, action: ReqAction): ReqState
 // --- Poll policy while a submission is under review ---------------------------
 
 /** How often the controller re-checks status while the panel is open and in review. */
-export const POLL_INTERVAL_MS = 30_000;
+// 5s above the server's own 1-per-30s `/refresh` throttle: exactly matching it means
+// network jitter alone makes a background tick land just under 30s since the last
+// request and get refused as `refresh_too_soon` — wasting one of the 40 poll attempts
+// for nothing. A manual refresh also restarts the server's window (see the controller's
+// `startPolling()` call after a manual success), so this margin has to hold for THAT
+// case too, not just steady background ticking.
+export const POLL_INTERVAL_MS = 35_000;
 
 /** After this many polls with no terminal status, the controller stops rather than
  *  running forever — a review that never resolves is a support case, not a busy-loop. */

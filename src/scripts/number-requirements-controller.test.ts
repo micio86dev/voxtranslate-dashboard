@@ -10,6 +10,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createRequirementsController } from './number-requirements-controller';
+import { POLL_INTERVAL_MS } from './number-requirements';
 import type { ApiResult, RequirementsView } from '../lib/api';
 
 function fixture(): void {
@@ -499,7 +500,7 @@ describe('submit and review polling', () => {
     ).toBe(false);
 
     // One poll tick: still under review, no resolution yet.
-    await vi.advanceTimersByTimeAsync(30_000);
+    await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS);
     expect(api.refreshNumberRequirements).toHaveBeenCalledTimes(1);
   });
 
@@ -568,13 +569,13 @@ describe('submit and review polling', () => {
     api.refreshNumberRequirements.mockResolvedValue(ok({ status: 'active', status_reason: null }));
     api.getNumberRequirements.mockResolvedValue(ok(view({ status: 'active' })));
 
-    await vi.advanceTimersByTimeAsync(30_000);
+    await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS);
     expect(document.getElementById('requirements-approved')?.classList.contains('hidden')).toBe(
       false,
     );
 
     const callsAfterResolution = api.refreshNumberRequirements.mock.calls.length;
-    await vi.advanceTimersByTimeAsync(120_000);
+    await vi.advanceTimersByTimeAsync(4 * POLL_INTERVAL_MS);
     expect(api.refreshNumberRequirements).toHaveBeenCalledTimes(callsAfterResolution);
   });
 
@@ -585,14 +586,14 @@ describe('submit and review polling', () => {
     api.getNumberRequirements.mockResolvedValue(ok(view({ status: 'regulatory_review' })));
     await controller.open('num-1', '+390212345678');
 
-    await vi.advanceTimersByTimeAsync(41 * 30_000);
+    await vi.advanceTimersByTimeAsync(41 * POLL_INTERVAL_MS);
     // MAX_POLL_ATTEMPTS is 40: ticks 1..39 each poll once, and tick 40 itself finds the
     // cap already reached and refuses to poll — so the cap is reached at EXACTLY 39
     // calls, not merely "no more than 39" (a weaker assertion could pass even if polling
     // stopped early, e.g. after one tick).
     expect(api.refreshNumberRequirements).toHaveBeenCalledTimes(39);
 
-    await vi.advanceTimersByTimeAsync(10 * 30_000);
+    await vi.advanceTimersByTimeAsync(10 * POLL_INTERVAL_MS);
     expect(api.refreshNumberRequirements).toHaveBeenCalledTimes(39);
   });
 });
@@ -645,7 +646,7 @@ describe('manual refresh', () => {
     const controller = createRequirementsController({ orgId: 'org-1', t, api });
     await controller.open('num-1', '+390212345678');
 
-    await vi.advanceTimersByTimeAsync(30_000); // one automatic poll tick, which fails
+    await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS); // one automatic poll tick, which fails
 
     const error = document.getElementById('requirements-error');
     expect(error?.classList.contains('hidden')).toBe(true);
@@ -663,7 +664,7 @@ describe('close', () => {
     controller.close();
     expect(document.getElementById('requirements-panel')?.classList.contains('hidden')).toBe(true);
 
-    await vi.advanceTimersByTimeAsync(120_000);
+    await vi.advanceTimersByTimeAsync(4 * POLL_INTERVAL_MS);
     expect(api.refreshNumberRequirements).not.toHaveBeenCalled();
   });
 
@@ -846,7 +847,7 @@ describe('stale async responses', () => {
     await controller.open('num-1', '+390212345678');
 
     // Fires the first poll tick, which awaits `refresh` on `gate`.
-    await vi.advanceTimersByTimeAsync(30_000);
+    await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS);
     controller.close();
     gate.resolve(ok({ status: 'active', status_reason: null }));
     await vi.runAllTimersAsync();
@@ -914,5 +915,36 @@ describe('a successful save echoes the server-normalised value', () => {
 
     const rebuiltInput = document.querySelector<HTMLInputElement>('[data-field="value"]')!;
     expect(rebuiltInput.value).toBe('ACME INC');
+  });
+});
+
+describe('a manual refresh resets the background poll clock', () => {
+  it('does not let the old schedule fire right after a manual refresh restarts the server throttle', async () => {
+    // R3-poll-interval-equals-server-throttle: the server's `/refresh` throttle window
+    // restarts on EVERY request, manual clicks included. If the background timer keeps
+    // its old schedule, the very next automatic tick lands inside that fresh window and
+    // is refused as `refresh_too_soon` — wasting one of the 40 poll attempts.
+    vi.useFakeTimers();
+    const api = makeApi();
+    api.getNumberRequirements.mockResolvedValue(ok(view({ status: 'regulatory_review' })));
+    const controller = createRequirementsController({ orgId: 'org-1', t, api });
+    await controller.open('num-1', '+390212345678');
+
+    // Just before the original tick would fire, the customer clicks Refresh themselves.
+    await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS - 1_000);
+    document
+      .getElementById('requirements-refresh')!
+      .dispatchEvent(new Event('click', { bubbles: true }));
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(api.refreshNumberRequirements).toHaveBeenCalledTimes(1); // the manual click itself
+
+    // The OLD schedule would have fired 1s from here — it must not.
+    await vi.advanceTimersByTimeAsync(2_000);
+    expect(api.refreshNumberRequirements).toHaveBeenCalledTimes(1);
+
+    // A full interval after the manual click, the background timer ticks again.
+    await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS - 2_000);
+    expect(api.refreshNumberRequirements).toHaveBeenCalledTimes(2);
   });
 });
