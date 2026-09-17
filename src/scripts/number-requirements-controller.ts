@@ -144,7 +144,15 @@ export function createRequirementsController(
     // submit, dismissError…) leaves it untouched. Rebuilding the field list on those
     // would wipe whatever the customer is mid-typing in a requirement the action did not
     // touch, so the list is only ever re-rendered when the view itself changed.
-    render(state.view !== previousView);
+    //
+    // A `saved` rebuild is the one exception to "prefer what's on screen": the fields
+    // that were JUST PUT are now authoritatively echoed by the server (which may have
+    // normalised them — trimmed, upper-cased a country code), so those specific ids must
+    // NOT be pulled back from the DOM snapshot. Every other field (typed but not part of
+    // this save) still is.
+    const authoritativeIds = action.type === 'saved' ? justSavedIds : EMPTY_IDS;
+    if (action.type === 'saved') justSavedIds = EMPTY_IDS;
+    render(state.view !== previousView, authoritativeIds);
     const nextStatus = state.view?.status ?? null;
     if (numberId && nextStatus && nextStatus !== previousStatus) {
       opts.onStatusChange?.(numberId, nextStatus, state.view?.status_reason ?? null);
@@ -216,11 +224,11 @@ export function createRequirementsController(
    * while uploading a DIFFERENT requirement's document). Without this, that rebuild
    * silently erases it, and a subsequent save/submit sends the field as empty.
    */
-  function snapshotTypedValues(): FieldSnapshot {
+  function snapshotTypedValues(exclude: ReadonlySet<string> = EMPTY_IDS): FieldSnapshot {
     const snapshot: FieldSnapshot = new Map();
     for (const node of document.querySelectorAll<HTMLElement>('[data-requirement-id]')) {
       const id = node.dataset.requirementId;
-      if (!id) continue;
+      if (!id || exclude.has(id)) continue;
       if (node.dataset.kind === 'textual') {
         const value = readTextual(node);
         // Captured unconditionally, including a blank value: a field the customer
@@ -281,7 +289,13 @@ export function createRequirementsController(
     }
   }
 
-  function render(shouldRenderList: boolean): void {
+  let justSavedIds: ReadonlySet<string> = new Set();
+  const EMPTY_IDS: ReadonlySet<string> = new Set();
+
+  function render(
+    shouldRenderList: boolean,
+    authoritativeIds: ReadonlySet<string> = EMPTY_IDS,
+  ): void {
     const view = state.view;
     show('requirements-panel', state.phase !== 'idle');
     show('requirements-reused', !!view?.group.reused);
@@ -308,7 +322,7 @@ export function createRequirementsController(
     const saveBtn = el<HTMLButtonElement>('requirements-save');
     if (saveBtn) saveBtn.disabled = !canAct;
 
-    if (view && shouldRenderList) renderList(view, snapshotTypedValues());
+    if (view && shouldRenderList) renderList(view, snapshotTypedValues(authoritativeIds));
 
     // A file input has no `disabled` handling of its own, and a `change` event fired
     // while a save/upload/submit is already in flight would otherwise reach
@@ -366,8 +380,10 @@ export function createRequirementsController(
     const gen = generation;
     const targetNumberId = numberId;
     recover();
+    const values = gatherValues();
+    justSavedIds = new Set(values.map((v) => v.requirement_id));
     dispatch({ type: 'save' });
-    const res = await api.putNumberRequirements(opts.orgId, targetNumberId, gatherValues());
+    const res = await api.putNumberRequirements(opts.orgId, targetNumberId, values);
     if (isStale(gen)) return false;
     if (res.ok && res.data) {
       dispatch({ type: 'saved', view: res.data });

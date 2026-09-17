@@ -893,3 +893,26 @@ describe('clearing a field the customer had already saved', () => {
     expect(rebuiltInput.value).toBe('');
   });
 });
+
+describe('a successful save echoes the server-normalised value', () => {
+  it('shows the server-normalised value for a just-saved field, not the raw typed one', async () => {
+    const api = makeApi();
+    api.getNumberRequirements.mockImplementation(async () => ok(view()));
+    api.putNumberRequirements.mockResolvedValue(
+      ok(view({ requirements: [{ ...view().requirements[0], value: 'ACME INC' }] })),
+    );
+    const controller = createRequirementsController({ orgId: 'org-1', t, api });
+    await controller.open('num-1', '+390212345678');
+
+    const input = document.querySelector<HTMLInputElement>('[data-field="value"]')!;
+    input.value = 'acme inc';
+    document
+      .getElementById('requirements-save')!
+      .dispatchEvent(new Event('click', { bubbles: true }));
+    await Promise.resolve();
+    await Promise.resolve();
+
+    const rebuiltInput = document.querySelector<HTMLInputElement>('[data-field="value"]')!;
+    expect(rebuiltInput.value).toBe('ACME INC');
+  });
+});
