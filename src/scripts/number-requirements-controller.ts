@@ -213,16 +213,19 @@ export function createRequirementsController(
     show('requirements-approved', state.phase === 'active');
     show('requirements-failed-banner', state.phase === 'failed');
 
+    // A refused save/upload/submit is an error the customer fixes IN the form: keep it on
+    // screen and actionable, and let the next action clear the error (see `recover`).
+    const canAct = state.phase === 'editing' || isRecoverableError();
     const isEditable =
-      state.phase === 'editing' ||
+      canAct ||
       state.phase === 'saving' ||
       state.phase === 'uploading' ||
       state.phase === 'submitting';
     show('requirements-form', isEditable);
     const submitBtn = el<HTMLButtonElement>('requirements-submit');
-    if (submitBtn) submitBtn.disabled = state.phase !== 'editing';
+    if (submitBtn) submitBtn.disabled = !canAct;
     const saveBtn = el<HTMLButtonElement>('requirements-save');
-    if (saveBtn) saveBtn.disabled = state.phase !== 'editing';
+    if (saveBtn) saveBtn.disabled = !canAct;
 
     if (view && shouldRenderList) renderList(view);
 
@@ -258,8 +261,19 @@ export function createRequirementsController(
 
   /** Saves whatever is currently typed. Returns whether it landed cleanly, so `submit`
    *  can refuse to move on while a save failed. */
+  function isRecoverableError(): boolean {
+    return state.phase === 'error' && state.recoverTo === 'editing';
+  }
+
+  /** Leave a recoverable error before the customer's next attempt; the reducer only
+   *  accepts save/upload/submit from `editing`. */
+  function recover(): void {
+    if (isRecoverableError()) dispatch({ type: 'dismissError' });
+  }
+
   async function save(): Promise<boolean> {
     if (!numberId) return false;
+    recover();
     dispatch({ type: 'save' });
     const res = await api.putNumberRequirements(opts.orgId, numberId, gatherValues());
     if (res.ok && res.data) {
@@ -273,6 +287,7 @@ export function createRequirementsController(
   async function onFileChange(requirementId: string, input: HTMLInputElement): Promise<void> {
     const file = input.files?.[0];
     if (!file || !numberId) return;
+    recover();
     const problem = validateFile(file);
     if (problem) {
       dispatch({ type: 'uploadFailed', message: problem });

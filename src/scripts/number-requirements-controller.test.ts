@@ -264,6 +264,33 @@ describe('save', () => {
     const error = document.getElementById('requirements-error');
     expect(error?.textContent).toBe('phone.reason.value_too_long');
   });
+
+  it('keeps the form usable after a save refusal, so the customer can fix and retry', async () => {
+    const api = makeApi();
+    api.putNumberRequirements
+      .mockResolvedValueOnce(fail('value_too_long', 400))
+      .mockResolvedValueOnce(ok(view()));
+    const controller = createRequirementsController({ orgId: 'org-1', t, api });
+    await controller.open('num-1', '+390212345678');
+
+    const saveBtn = document.getElementById('requirements-save') as HTMLButtonElement;
+    saveBtn.dispatchEvent(new Event('click', { bubbles: true }));
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(document.getElementById('requirements-form')?.classList.contains('hidden')).toBe(false);
+    expect(saveBtn.disabled).toBe(false);
+    expect((document.getElementById('requirements-submit') as HTMLButtonElement).disabled).toBe(
+      false,
+    );
+
+    saveBtn.dispatchEvent(new Event('click', { bubbles: true }));
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(api.putNumberRequirements).toHaveBeenCalledTimes(2);
+    expect(document.getElementById('requirements-error')?.classList.contains('hidden')).toBe(true);
+  });
 });
 
 describe('document upload', () => {
@@ -315,6 +342,33 @@ describe('document upload', () => {
 
     expect(api.uploadRequirementDocument).toHaveBeenCalledWith('org-1', 'num-1', 'r2', file);
     expect(api.getNumberRequirements).toHaveBeenCalledTimes(2); // initial open + post-upload refresh
+  });
+
+  it('lets the customer pick a valid file after a refused one, without reopening', async () => {
+    const api = makeApi();
+    withDocumentRequirement(api);
+    const controller = createRequirementsController({ orgId: 'org-1', t, api });
+    await controller.open('num-1', '+390212345678');
+
+    const pick = (f: File) => {
+      const input = document.querySelector<HTMLInputElement>('[data-field="file"]')!;
+      Object.defineProperty(input, 'files', { value: [f], configurable: true });
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    };
+    pick(new File(['GIF89a'], 'proof.gif', { type: 'image/gif' }));
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(document.getElementById('requirements-form')?.classList.contains('hidden')).toBe(false);
+
+    const good = new File(['%PDF-'], 'proof.pdf', { type: 'application/pdf' });
+    pick(good);
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(api.uploadRequirementDocument).toHaveBeenCalledWith('org-1', 'num-1', 'r2', good);
+    expect(api.getNumberRequirements).toHaveBeenCalledTimes(2);
   });
 });
 
