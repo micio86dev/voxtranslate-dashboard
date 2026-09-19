@@ -2,7 +2,9 @@
  * Pure logic for the number-order regulatory requirements panel (spec 0119, dashboard).
  *
  * Everything here is framework-free and side-effect-free: what CTA a number row shows
- * (`panelMode`), whether a file may be attached to a document requirement
+ * (`panelMode`), which regulatory notice a row owes the admin (`regulatoryNotice`), the
+ * localized-copy keys for a row's lifecycle/ownership words (`lifecycleLabelKey`,
+ * `ownershipLabelKey`), whether a file may be attached to a document requirement
  * (`validateFile`), the state machine the requirements panel walks through
  * (`reduceRequirements`), and the polling policy while a submission is under review
  * (`shouldContinuePolling`). No DOM, no `fetch` — the container
@@ -17,7 +19,7 @@
  */
 import type { RequirementDocumentInfo, RequirementsView } from '../lib/api';
 
-// --- Number row CTA ----------------------------------------------------------
+// --- Number row presentation ---------------------------------------------------
 
 /** Which action the numbers-page row offers for a number's regulatory status. */
 export type PanelMode = 'none' | 'fill' | 'fix' | 'review';
@@ -38,6 +40,77 @@ export function panelMode(status: string | null | undefined): PanelMode {
     default:
       return 'none';
   }
+}
+
+/** Which regulatory notice a number row owes the admin, from the number's own status. */
+export type RegulatoryNotice = 'none' | 'pending' | 'review' | 'rejected' | 'failed';
+
+/**
+ * Derive the row's regulatory notice from the number's LIFECYCLE STATUS — never from the
+ * presence of `regulatory_requirement`, which is written once at purchase and
+ * deliberately never cleared (`server/src/voip/regulatory.rs:306-308`), so keying off it
+ * warns forever on a number that has been live for months.
+ *
+ * Deliberately NOT derived from `panelMode`: that answers "which button", and it maps
+ * `failed` to `'none'` because there is nothing useful to click — but a failed order is
+ * the state most in need of a message.
+ *
+ * An unrecognised status yields `'none'`, matching `panelMode`'s rule: a status this
+ * build does not know is a visible gap, not a guessed warning.
+ */
+export function regulatoryNotice(status: string | null | undefined): RegulatoryNotice {
+  switch (status) {
+    case 'pending_regulatory':
+      return 'pending';
+    case 'regulatory_review':
+      return 'review';
+    case 'regulatory_rejected':
+      return 'rejected';
+    case 'failed':
+      return 'failed';
+    default:
+      return 'none';
+  }
+}
+
+/** Every lifecycle status the server may send (migration 064's CHECK constraint). */
+export const KNOWN_NUMBER_STATUSES = [
+  'ordering',
+  'pending_regulatory',
+  'regulatory_review',
+  'regulatory_rejected',
+  'active',
+  'suspended',
+  'releasing',
+  'released',
+  'failed',
+] as const;
+
+/** Every ownership-verification value the server may send. */
+export const KNOWN_VERIFICATION_STATUSES = ['pending', 'verified', 'rejected'] as const;
+
+/**
+ * The copy key for a lifecycle status, or `null` when the server sent one this build has
+ * no copy for — the caller then shows the raw word.
+ *
+ * Interpolating the status into a key unguarded would be worse than the raw word it
+ * replaces: `useTranslations` returns the KEY on a miss (`lib/i18n.ts:54`), so a status
+ * added server-side would render `phone.numbers.state.something_new` on screen. Same
+ * guarded shape as `refusalKey` in `phone-dialer.ts`.
+ */
+export function lifecycleLabelKey(status: string | null | undefined): string | null {
+  if (!status) return null;
+  return (KNOWN_NUMBER_STATUSES as readonly string[]).includes(status)
+    ? `phone.numbers.state.${status}`
+    : null;
+}
+
+/** The copy key for ownership verification, or `null` when unknown to this build. */
+export function ownershipLabelKey(verificationStatus: string | null | undefined): string | null {
+  if (!verificationStatus) return null;
+  return (KNOWN_VERIFICATION_STATUSES as readonly string[]).includes(verificationStatus)
+    ? `phone.numbers.ownership.${verificationStatus}`
+    : null;
 }
 
 // --- Client-side file validation (defense in depth) --------------------------

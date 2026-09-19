@@ -9,6 +9,9 @@
 import { describe, it, expect } from 'vitest';
 import {
   panelMode,
+  regulatoryNotice,
+  lifecycleLabelKey,
+  ownershipLabelKey,
   validateFile,
   reduceRequirements,
   initialState,
@@ -46,6 +49,67 @@ describe('panelMode', () => {
     expect(panelMode('active')).toBe('none');
     expect(panelMode(undefined)).toBe('none');
     expect(panelMode(null)).toBe('none');
+  });
+});
+
+describe('regulatoryNotice', () => {
+  it('returns none for an active number', () => {
+    expect(regulatoryNotice('active')).toBe('none');
+  });
+
+  it('returns pending for pending_regulatory', () => {
+    expect(regulatoryNotice('pending_regulatory')).toBe('pending');
+  });
+
+  it('returns review for regulatory_review', () => {
+    expect(regulatoryNotice('regulatory_review')).toBe('review');
+  });
+
+  it('returns rejected for regulatory_rejected', () => {
+    expect(regulatoryNotice('regulatory_rejected')).toBe('rejected');
+  });
+
+  it('returns failed for a terminally failed order', () => {
+    // panelMode('failed') deliberately returns 'none' (nothing to click); regulatoryNotice
+    // must NOT be derived from panelMode, because 'failed' is the state most in need of a
+    // message.
+    expect(regulatoryNotice('failed')).toBe('failed');
+  });
+
+  it('returns none for every other lifecycle status, including unknown values', () => {
+    for (const status of [
+      'ordering',
+      'suspended',
+      'releasing',
+      'released',
+      'some_future_status',
+      undefined,
+      null,
+    ]) {
+      expect(regulatoryNotice(status)).toBe('none');
+    }
+  });
+});
+
+describe('lifecycleLabelKey', () => {
+  it('returns the copy key for a known status', () => {
+    expect(lifecycleLabelKey('active')).toBe('phone.numbers.state.active');
+  });
+
+  it('returns null for an unknown or absent status', () => {
+    expect(lifecycleLabelKey('some_future_status')).toBeNull();
+    expect(lifecycleLabelKey(null)).toBeNull();
+    expect(lifecycleLabelKey(undefined)).toBeNull();
+  });
+});
+
+describe('ownershipLabelKey', () => {
+  it('returns the copy key for a known verification status', () => {
+    expect(ownershipLabelKey('verified')).toBe('phone.numbers.ownership.verified');
+  });
+
+  it('returns null for an unknown verification status', () => {
+    expect(ownershipLabelKey('nonsense')).toBeNull();
   });
 });
 

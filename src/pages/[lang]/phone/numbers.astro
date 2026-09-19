@@ -175,7 +175,12 @@ const t = useTranslations(lang);
   import { onPage } from '../../../scripts/nav';
   import { boot } from '../../../scripts/app-boot';
   import { createRequirementsController } from '../../../scripts/number-requirements-controller';
-  import { panelMode } from '../../../scripts/number-requirements';
+  import {
+    panelMode,
+    regulatoryNotice,
+    lifecycleLabelKey,
+    ownershipLabelKey,
+  } from '../../../scripts/number-requirements';
   import {
     buyVoipNumber,
     currentOrgId,
@@ -488,21 +493,45 @@ const t = useTranslations(lang);
         e164.textContent = n.e164;
         const meta = document.createElement('span');
         meta.className = 'block text-xs text-muted';
-        // The state is a word. `pending_regulatory` is shown as itself rather than
-        // flattened into "active", because a regulator being the blocker is the thing the
-        // admin has to act on.
-        const bits = [n.label, n.status ?? '', n.verification_status].filter(Boolean);
+        // The state is a word the admin can read. `pending_regulatory` keeps its own label
+        // rather than being flattened into "active", because a regulator being the blocker
+        // is the thing the admin has to act on — but it is shown as copy, not as the enum.
+        // Lifecycle and ownership are two independent facts: "verified" here is provider
+        // OWNERSHIP proof, not regulatory clearance, and the copy says so. A status with no
+        // copy in this build falls back to the raw word, never to a key name.
+        const stateKey = lifecycleLabelKey(n.status);
+        const ownershipKey = ownershipLabelKey(n.verification_status);
+        const bits = [
+          n.label,
+          stateKey ? t(stateKey) : (n.status ?? ''),
+          ownershipKey ? t(ownershipKey) : n.verification_status,
+        ].filter(Boolean);
         if (n.customer_monthly_usd) {
           bits.push(`${money(n.customer_monthly_usd)} ${t('phone.numbers.monthly')}`);
         }
         meta.textContent = bits.join(' · ');
         left.append(e164, meta);
 
-        if (n.regulatory_requirement) {
+        // Keyed off the LIFECYCLE STATUS, not off `regulatory_requirement`: that column is
+        // set once at purchase and never cleared by design (regulatory.rs:306-308), so the
+        // old truthiness check warned forever on a number that has been carrying calls for
+        // months.
+        const notice = regulatoryNotice(n.status);
+        if (notice !== 'none') {
           const flag = document.createElement('span');
-          flag.className = 'block text-xs text-warn';
-          flag.textContent = `${t('phone.numbers.regulatory')}: ${n.regulatory_requirement}`;
+          const terminal = notice === 'rejected' || notice === 'failed';
+          flag.className = terminal ? 'block text-xs text-danger' : 'block text-xs text-warn';
+          flag.textContent = t(`phone.numbers.notice.${notice}`);
           left.appendChild(flag);
+          // The provider's own words for WHY it was rejected — unenumerable, so shown
+          // verbatim beneath localized framing, exactly as the requirements panel already
+          // does (number-requirements-controller.ts:330).
+          if (notice === 'rejected' && n.status_reason) {
+            const why = document.createElement('span');
+            why.className = 'block text-xs text-muted';
+            why.textContent = n.status_reason;
+            left.appendChild(why);
+          }
         }
 
         const actions = document.createElement('span');
