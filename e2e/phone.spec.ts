@@ -301,6 +301,20 @@ async function stubApi(page: Page, opts: StubOptions = {}) {
             outbound_enabled: true,
             verification_status: 'pending',
           },
+          {
+            id: 'n-3',
+            e164: '+390255566677',
+            country: 'IT',
+            label: 'Rome Desk',
+            is_default: false,
+            inbound_enabled: true,
+            outbound_enabled: true,
+            verification_status: 'verified',
+            status: 'active',
+            // The whole point of the row: the marker is still set (it is never cleared by
+            // design) while the number has been live for months.
+            regulatory_requirement: 'A local address in this country is required.',
+          },
         ],
       });
     }
@@ -1742,4 +1756,25 @@ test('leaving a number always open clears its hours rather than storing an empty
 
   await expect(page.locator('#routing-saved')).toBeVisible();
   expect(cleared).toBe(1);
+});
+
+// ---- regulatory notice keyed off status, not the write-once marker (spec 0121) --------
+
+test('a live number does not keep warning about paperwork it already cleared', async ({
+  page,
+}) => {
+  // The reported defect: `regulatory_requirement` is never cleared (by design), so a
+  // banner keyed off its presence warned forever on a number carrying calls.
+  await signIn(page);
+  await stubApi(page);
+  await page.goto('/en/phone/numbers/');
+
+  const row = page.locator('#owned li').filter({ hasText: '+390255566677' });
+  await expect(row).toBeVisible();
+  await expect(row).not.toContainText('Paperwork');
+  // Nor the provider's raw English sentence.
+  await expect(row).not.toContainText('A local address in this country is required.');
+  // And the state words are copy, not enum values.
+  await expect(row).toContainText('Active');
+  await expect(row).not.toContainText('verified');
 });
