@@ -896,7 +896,18 @@
       "kindTollFree": "Kostenlos",
       "monthly": "pro Monat",
       "noOffers": "Keine Nummer gefunden. Andere Vorwahl versuchen.",
+      "notice": {
+        "pending": "Es werden Unterlagen benötigt, bevor diese Nummer Anrufe abwickeln kann",
+        "review": "Ihre Unterlagen werden vom Telefonanbieter geprüft",
+        "rejected": "Der Telefonanbieter hat diese Unterlagen abgelehnt",
+        "failed": "Die Bestellung dieser Nummer konnte nicht abgeschlossen werden. Wenden Sie sich an den Support."
+      },
       "owned": "Ihre Nummern",
+      "ownership": {
+        "pending": "Eigentum noch nicht bestätigt",
+        "verified": "Eigentum bestätigt",
+        "rejected": "Eigentum konnte nicht bestätigt werden"
+      },
       "regulatory": "Unterlagen erforderlich",
       "release": "Freigeben",
       "releaseConfirm": "Diese Nummer freigeben? Binnen einer Stunde kann sie jemand anders halten, und Sie bekommen sie nicht zurück.",
@@ -944,6 +955,17 @@
       },
       "search": "Nummer suchen",
       "setup": "einmalig",
+      "state": {
+        "ordering": "Wird eingerichtet",
+        "pending_regulatory": "Unterlagen ausstehend",
+        "regulatory_review": "Unterlagen werden geprüft",
+        "regulatory_rejected": "Unterlagen abgelehnt",
+        "active": "Aktiv",
+        "suspended": "Gesperrt",
+        "releasing": "Wird freigegeben",
+        "released": "Freigegeben",
+        "failed": "Fehlgeschlagen"
+      },
       "tab": "Nummern",
       "title": "Nummern",
       "verify": "Verifizieren",

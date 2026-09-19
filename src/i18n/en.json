@@ -896,7 +896,18 @@
       "kindTollFree": "Toll-free",
       "monthly": "per month",
       "noOffers": "No numbers matched. Try another area code.",
+      "notice": {
+        "pending": "Paperwork is needed before this number can carry calls",
+        "review": "Your paperwork is with the phone provider for review",
+        "rejected": "The phone provider rejected this paperwork",
+        "failed": "This number's order could not be completed. Contact support."
+      },
       "owned": "Your numbers",
+      "ownership": {
+        "pending": "Ownership not confirmed yet",
+        "verified": "Ownership confirmed",
+        "rejected": "Ownership could not be confirmed"
+      },
       "regulatory": "Paperwork required",
       "release": "Release",
       "releaseConfirm": "Release this number? Somebody else may hold it within the hour, and you will not get it back.",
@@ -944,6 +955,17 @@
       },
       "search": "Find a number",
       "setup": "one-off",
+      "state": {
+        "ordering": "Being set up",
+        "pending_regulatory": "Awaiting paperwork",
+        "regulatory_review": "Paperwork under review",
+        "regulatory_rejected": "Paperwork rejected",
+        "active": "Active",
+        "suspended": "Suspended",
+        "releasing": "Being released",
+        "released": "Released",
+        "failed": "Failed"
+      },
       "tab": "Numbers",
       "title": "Numbers",
       "verify": "Verify",
