@@ -1457,7 +1457,7 @@ export interface VoipNumber {
   outbound_enabled: boolean;
   /** 'pending' | 'verified' | 'rejected'. Only a verified number may be presented. */
   verification_status: string;
-  /** 'ordering' | 'pending_regulatory' | 'active' | 'suspended' | 'releasing' | 'released' | 'failed'. */
+  /** 'ordering' | 'pending_regulatory' | 'regulatory_review' | 'regulatory_rejected' | 'active' | 'suspended' | 'releasing' | 'released' | 'failed'. */
   status?: string;
   status_reason?: string | null;
   /** What the customer pays each month, as a decimal string. */

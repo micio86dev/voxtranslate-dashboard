@@ -896,7 +896,18 @@
       "kindTollFree": "Gratuito",
       "monthly": "al mes",
       "noOffers": "Ningún número coincide. Prueba otro prefijo.",
+      "notice": {
+        "pending": "Se necesitan documentos antes de que este número pueda gestionar llamadas",
+        "review": "Tus documentos están en revisión por parte del proveedor telefónico",
+        "rejected": "El proveedor telefónico rechazó estos documentos",
+        "failed": "No se pudo completar el pedido de este número. Contacta con soporte."
+      },
       "owned": "Tus números",
+      "ownership": {
+        "pending": "Propiedad aún no confirmada",
+        "verified": "Propiedad confirmada",
+        "rejected": "No se pudo confirmar la propiedad"
+      },
       "regulatory": "Hacen falta documentos",
       "release": "Liberar",
       "releaseConfirm": "¿Liberar este número? En una hora puede tenerlo otra persona, y no lo recuperarás.",
@@ -944,6 +955,17 @@
       },
       "search": "Buscar un número",
       "setup": "pago único",
+      "state": {
+        "ordering": "En configuración",
+        "pending_regulatory": "Pendiente de documentos",
+        "regulatory_review": "Documentos en revisión",
+        "regulatory_rejected": "Documentos rechazados",
+        "active": "Activo",
+        "suspended": "Suspendido",
+        "releasing": "Liberándose",
+        "released": "Liberado",
+        "failed": "Fallido"
+      },
       "tab": "Números",
       "title": "Números",
       "verify": "Verificar",

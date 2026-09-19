@@ -896,7 +896,18 @@
       "kindTollFree": "Numéro vert",
       "monthly": "par mois",
       "noOffers": "Aucun numéro trouvé. Essayez un autre indicatif.",
+      "notice": {
+        "pending": "Des documents sont nécessaires avant que ce numéro puisse passer des appels",
+        "review": "Vos documents sont en cours d'examen par l'opérateur téléphonique",
+        "rejected": "L'opérateur téléphonique a refusé ces documents",
+        "failed": "La commande de ce numéro n'a pas pu être finalisée. Contactez le support."
+      },
       "owned": "Vos numéros",
+      "ownership": {
+        "pending": "Propriété non encore confirmée",
+        "verified": "Propriété confirmée",
+        "rejected": "Propriété non confirmée"
+      },
       "regulatory": "Documents requis",
       "release": "Libérer",
       "releaseConfirm": "Libérer ce numéro ? Quelqu'un d'autre peut le détenir dans l'heure, et vous ne le récupérerez pas.",
@@ -944,6 +955,17 @@
       },
       "search": "Trouver un numéro",
       "setup": "frais uniques",
+      "state": {
+        "ordering": "En cours de configuration",
+        "pending_regulatory": "Documents en attente",
+        "regulatory_review": "Documents en cours d'examen",
+        "regulatory_rejected": "Documents refusés",
+        "active": "Actif",
+        "suspended": "Suspendu",
+        "releasing": "En cours de libération",
+        "released": "Libéré",
+        "failed": "Échoué"
+      },
       "tab": "Numéros",
       "title": "Numéros",
       "verify": "Vérifier",

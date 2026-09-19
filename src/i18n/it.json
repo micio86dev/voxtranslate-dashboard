@@ -896,7 +896,18 @@
       "kindTollFree": "Numero verde",
       "monthly": "al mese",
       "noOffers": "Nessun numero trovato. Prova un altro prefisso.",
+      "notice": {
+        "pending": "Sono necessari documenti prima che questo numero possa gestire chiamate",
+        "review": "I tuoi documenti sono al vaglio del fornitore telefonico",
+        "rejected": "Il fornitore telefonico ha rifiutato questi documenti",
+        "failed": "Non è stato possibile completare l'ordine di questo numero. Contatta l'assistenza."
+      },
       "owned": "I tuoi numeri",
+      "ownership": {
+        "pending": "Proprietà non ancora confermata",
+        "verified": "Proprietà confermata",
+        "rejected": "Proprietà non confermata"
+      },
       "regulatory": "Servono documenti",
       "release": "Rilascia",
       "releaseConfirm": "Rilasciare questo numero? Entro un'ora potrebbe averlo qualcun altro, e non lo riavrai.",
@@ -944,6 +955,17 @@
       },
       "search": "Trova un numero",
       "setup": "una tantum",
+      "state": {
+        "ordering": "In configurazione",
+        "pending_regulatory": "In attesa di documenti",
+        "regulatory_review": "Documenti in revisione",
+        "regulatory_rejected": "Documenti rifiutati",
+        "active": "Attivo",
+        "suspended": "Sospeso",
+        "releasing": "In rilascio",
+        "released": "Rilasciato",
+        "failed": "Non riuscito"
+      },
       "tab": "Numeri",
       "title": "Numeri",
       "verify": "Verifica",
