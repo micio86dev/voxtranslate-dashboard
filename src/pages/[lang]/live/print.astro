@@ -1,0 +1,126 @@
+---
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import {
+  localePaths,
+  isLocale,
+  DEFAULT_LOCALE,
+  useTranslations,
+  localizePath,
+} from '../../../lib/i18n';
+
+export function getStaticPaths() {
+  return localePaths();
+}
+
+const lang = isLocale(Astro.params.lang) ? Astro.params.lang : DEFAULT_LOCALE;
+const t = useTranslations(lang);
+const link = (p: string) => localizePath(lang, p);
+---
+
+<BaseLayout lang={lang} title={t('live.print.title')} chrome>
+  <span id="page-live-print" hidden></span>
+  <div class="no-print flex flex-wrap items-center justify-between gap-3">
+    <a href={link('live/desks')} class="text-sm text-muted hover:text-ink"
+      >← {t('live.desks.title')}</a
+    >
+    <button id="print-btn" type="button" class="btn-primary hidden">{t('live.print.button')}</button
+    >
+  </div>
+  <p id="msg" class="no-print mt-4 text-muted" role="status">{t('common.loading')}</p>
+
+  <!-- The sheet: what comes out of the printer. The QR is an <img> (data URL): its URL is never text. -->
+  <section id="sheet" class="mx-auto mt-6 hidden max-w-xl text-center">
+    <h1 id="sheet-name" class="text-3xl font-bold"></h1>
+    <p id="sheet-location" class="mt-1 text-lg text-muted"></p>
+    <img id="sheet-qr" alt={t('live.print.qrAlt')} class="mx-auto mt-6 h-auto w-full max-w-md" />
+    <p class="mt-6 text-lg">{t('live.desks.pdfInstruction')}</p>
+  </section>
+</BaseLayout>
+
+<style is:global>
+  @page {
+    size: A4;
+    margin: 15mm;
+  }
+  @media print {
+    header,
+    #sub-banner,
+    #ha-container,
+    .no-print {
+      display: none !important;
+    }
+    html,
+    body {
+      background: #fff !important;
+      color: #000 !important;
+    }
+    main {
+      max-width: none !important;
+      padding: 0 !important;
+    }
+    #sheet {
+      break-inside: avoid;
+    }
+    #sheet * {
+      color: #000 !important;
+    }
+  }
+</style>
+
+<script>
+  import { onPage } from '../../../scripts/nav';
+  import { boot } from '../../../scripts/app-boot';
+  import { logout } from '../../../lib/auth';
+  import { getLiveDeskQr, liveErrorKey } from '../../../lib/api';
+  import { useTranslations, type Locale } from '../../../lib/i18n';
+  import { isAdminRole } from '../../../scripts/live/format';
+  import { makeDeskPng } from '../../../scripts/live/qr-assets';
+
+  onPage('page-live-print', async () => {
+    const ctx = await boot();
+    if (!ctx) return;
+    const t = useTranslations(ctx.lang as Locale);
+    const orgId = ctx.activeOrg.id;
+    const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+    const msg = $('msg');
+
+    const params = new URLSearchParams(location.search);
+    const deskId = params.get('desk');
+    if (!isAdminRole(ctx.activeOrg.role)) {
+      msg.textContent = t('live.error.forbidden');
+      return;
+    }
+    if (!deskId) {
+      msg.textContent = t('live.error.desk_not_found');
+      return;
+    }
+
+    const qrRes = await getLiveDeskQr(orgId, deskId);
+    if (qrRes.status === 401) return logout(`/${ctx.lang}/`);
+    if (!qrRes.ok || !qrRes.data) {
+      msg.textContent = t(liveErrorKey(qrRes));
+      return;
+    }
+    try {
+      // The URL goes straight into the generated image; it is not kept or shown.
+      $<HTMLImageElement>('sheet-qr').src = await makeDeskPng(qrRes.data.url);
+    } catch {
+      msg.textContent = t('live.desks.assetFailed');
+      return;
+    }
+    $('sheet-name').textContent = qrRes.data.name;
+    $('sheet-location').textContent = qrRes.data.location_label ?? '';
+    msg.classList.add('hidden');
+    $('sheet').classList.remove('hidden');
+    const btn = $<HTMLButtonElement>('print-btn');
+    btn.classList.remove('hidden');
+    btn.addEventListener('click', () => window.print());
+    if (params.get('auto') === '1') {
+      // Let the image paint before the print dialog snapshots the page.
+      $<HTMLImageElement>('sheet-qr')
+        .decode()
+        .catch(() => undefined)
+        .then(() => window.print());
+    }
+  });
+</script>

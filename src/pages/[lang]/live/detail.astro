@@ -1,0 +1,190 @@
+---
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import SectionNav from '../../../components/live/SectionNav.astro';
+import {
+  localePaths,
+  isLocale,
+  DEFAULT_LOCALE,
+  useTranslations,
+  localizePath,
+} from '../../../lib/i18n';
+
+export function getStaticPaths() {
+  return localePaths();
+}
+
+const lang = isLocale(Astro.params.lang) ? Astro.params.lang : DEFAULT_LOCALE;
+const t = useTranslations(lang);
+const link = (p: string) => localizePath(lang, p);
+---
+
+<BaseLayout lang={lang} title={t('live.detail.title')} chrome>
+  <span id="page-live-detail" hidden></span>
+  <a href={link('live')} class="text-sm text-muted hover:text-ink">← {t('live.sessions.title')}</a>
+  <h1 class="mt-2 text-2xl font-bold">{t('live.detail.title')}</h1>
+  <SectionNav lang={lang} current="sessions" />
+
+  <p id="msg" class="mt-4 text-muted" role="status">{t('common.loading')}</p>
+
+  <div id="content" class="hidden">
+    <section class="card mt-4" aria-labelledby="facts-h">
+      <h2 id="facts-h" class="sr-only">{t('live.detail.facts')}</h2>
+      <div id="facts"></div>
+      <div id="participants" class="mt-4"></div>
+      <div class="mt-4 flex flex-wrap items-center gap-2">
+        <a id="search-link" class="btn-ghost text-sm" href="#">{t('live.detail.searchLink')}</a>
+        <button id="delete" type="button" class="btn-danger hidden text-sm">
+          {t('live.detail.delete')}
+        </button>
+      </div>
+      <p id="delete-hint" class="mt-2 hidden text-xs text-muted">{t('live.detail.deleteHint')}</p>
+      <p id="action-msg" class="mt-2 hidden text-sm text-danger" role="alert"></p>
+    </section>
+
+    <section class="card mt-4" aria-labelledby="transcript-h">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <h2 id="transcript-h" class="text-lg font-semibold">{t('live.detail.transcript')}</h2>
+        <div>
+          <label class="label" for="lang-sel">{t('live.detail.translateTo')}</label>
+          <select id="lang-sel" class="field max-w-48 text-sm">
+            <option value="">{t('live.detail.originalOnly')}</option>
+          </select>
+        </div>
+      </div>
+      <ol id="utterances" class="mt-4 space-y-3"></ol>
+      <p id="no-transcript" class="mt-4 hidden text-sm text-muted">
+        {t('live.detail.noTranscript')}
+      </p>
+    </section>
+
+    <section id="timeline-card" class="card mt-4 hidden" aria-labelledby="timeline-h">
+      <h2 id="timeline-h" class="text-sm font-semibold">{t('live.detail.timeline')}</h2>
+      <p class="mb-2 text-xs text-muted">{t('live.detail.timelineHint')}</p>
+      <div id="timeline"></div>
+    </section>
+  </div>
+</BaseLayout>
+
+<script>
+  import { onPage } from '../../../scripts/nav';
+  import { boot } from '../../../scripts/app-boot';
+  import { logout } from '../../../lib/auth';
+  import { deleteLiveSession, getLiveSession, liveErrorKey } from '../../../lib/api';
+  import { useTranslations, type Locale } from '../../../lib/i18n';
+  import { isAdminRole, langName, speakerSides } from '../../../scripts/live/format';
+  import {
+    participantsList,
+    sessionFacts,
+    timelineList,
+    utteranceItem,
+  } from '../../../scripts/live/render';
+  import { applyLiveNav } from '../../../scripts/live/section';
+
+  onPage('page-live-detail', async () => {
+    const ctx = await boot();
+    if (!ctx) return;
+    const t = useTranslations(ctx.lang as Locale);
+    const rctx = { t, lang: ctx.lang };
+    const orgId = ctx.activeOrg.id;
+    const admin = isAdminRole(ctx.activeOrg.role);
+    applyLiveNav(ctx.activeOrg.role);
+
+    const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+    const msg = $('msg');
+    const params = new URLSearchParams(location.search);
+    const sessionId = params.get('session');
+    if (!sessionId) {
+      msg.textContent = t('live.error.session_not_found');
+      return;
+    }
+
+    // The translation language rides in `?lang=` so the view can be shared; the server
+    // answers `translation` for it, and `translations` carries every language it has.
+    const urlLang = params.get('lang') ?? '';
+    const res = await getLiveSession(orgId, sessionId, urlLang || undefined);
+    if (res.status === 401) return logout(`/${ctx.lang}/`);
+    if (!res.ok || !res.data) {
+      msg.textContent = t(liveErrorKey(res));
+      return;
+    }
+    const { session, participants, utterances, events } = res.data;
+    msg.classList.add('hidden');
+    $('content').classList.remove('hidden');
+
+    $('facts').replaceChildren(sessionFacts(session, rctx));
+    const side = speakerSides(
+      participants,
+      utterances.map((u) => ({ speaker_id: u.speaker_id, speaker_name: u.speaker_name })),
+    );
+    $('participants').replaceChildren(participantsList(participants, side, rctx));
+
+    // Which translations exist: the languages the participants speak plus any key the
+    // utterances carry.
+    const available = new Set<string>();
+    for (const p of participants) available.add(p.lang.toLowerCase());
+    for (const u of utterances) for (const k of Object.keys(u.translations ?? {})) available.add(k);
+    const select = $<HTMLSelectElement>('lang-sel');
+    for (const code of [...available].sort((a, b) =>
+      langName(a, ctx.lang).localeCompare(langName(b, ctx.lang), ctx.lang),
+    )) {
+      select.append(new Option(langName(code, ctx.lang), code));
+    }
+    select.value = available.has(urlLang) ? urlLang : '';
+
+    function renderTranscript() {
+      const lang = select.value;
+      $('utterances').replaceChildren(
+        ...utterances.map((u) =>
+          utteranceItem(
+            {
+              ...u,
+              translation: u.translation ?? (lang ? (u.translations?.[lang] ?? null) : null),
+            },
+            side(u.speaker_id, u.speaker_name),
+            lang,
+            rctx,
+          ),
+        ),
+      );
+      $('no-transcript').classList.toggle('hidden', utterances.length > 0);
+      const url = new URL(location.href);
+      if (lang) url.searchParams.set('lang', lang);
+      else url.searchParams.delete('lang');
+      history.replaceState(history.state, '', url);
+    }
+    select.addEventListener('change', renderTranscript);
+    renderTranscript();
+
+    if (admin && events) {
+      $('timeline-card').classList.remove('hidden');
+      $('timeline').replaceChildren(timelineList(events, rctx));
+    }
+
+    // Search / ask about this conversation: the search page, narrowed to it.
+    $<HTMLAnchorElement>('search-link').href =
+      `/${ctx.lang}/search/?kind=live_connect&session_id=${encodeURIComponent(sessionId)}`;
+
+    // Delete is for owners and admins. It erases what was said; the billing record stays.
+    if (admin) {
+      const del = $<HTMLButtonElement>('delete');
+      del.classList.remove('hidden');
+      $('delete-hint').classList.remove('hidden');
+      const actionMsg = $('action-msg');
+      del.addEventListener('click', async () => {
+        if (!confirm(t('live.detail.deleteConfirm'))) return;
+        del.disabled = true;
+        actionMsg.classList.add('hidden');
+        const r = await deleteLiveSession(orgId, sessionId);
+        if (r.status === 401) return logout(`/${ctx.lang}/`);
+        if (r.ok) {
+          location.href = `/${ctx.lang}/live/`;
+          return;
+        }
+        // 409: the conversation is still open; the message says to end it first.
+        actionMsg.textContent = t(liveErrorKey(r));
+        actionMsg.classList.remove('hidden');
+        del.disabled = false;
+      });
+    }
+  });
+</script>

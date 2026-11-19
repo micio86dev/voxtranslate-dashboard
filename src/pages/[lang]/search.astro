@@ -31,8 +31,40 @@ const t = useTranslations(lang);
         <option value="">{t('search.allProjects')}</option>
       </select>
     </div>
+    <div>
+      <label class="text-sm text-muted" for="kind">{t('search.kindLabel')}</label>
+      <select id="kind" class="field mt-1 max-w-48">
+        <option value="">{t('search.kindAll')}</option>
+        <option value="call">{t('search.kindCall')}</option>
+        <option value="voice_message">{t('search.kindVoice')}</option>
+        <option value="phone">{t('search.kindPhone')}</option>
+        <option value="live_connect">{t('search.kindLive')}</option>
+      </select>
+    </div>
+    <div>
+      <label class="text-sm text-muted" for="lang">{t('search.langLabel')}</label>
+      <select id="lang" class="field mt-1 max-w-48">
+        <option value="">{t('search.anyLanguage')}</option>
+      </select>
+    </div>
+    <div>
+      <label class="text-sm text-muted" for="from">{t('search.fromLabel')}</label>
+      <input id="from" type="date" class="field mt-1" />
+    </div>
+    <div>
+      <label class="text-sm text-muted" for="to">{t('search.toLabel')}</label>
+      <input id="to" type="date" class="field mt-1" />
+    </div>
     <button type="submit" class="btn-primary">{t('search.run')}</button>
   </form>
+
+  <!-- Shown when arriving from a conversation: the search is narrowed to that one. -->
+  <p id="session-chip" class="mt-3 hidden items-center gap-2 text-sm">
+    <span class="badge">{t('search.sessionOnly')}</span>
+    <button id="session-clear" type="button" class="text-brand underline">
+      {t('search.sessionClear')}
+    </button>
+  </p>
 
   <p id="msg" class="mt-6 text-muted"></p>
   <div id="results" class="mt-4 space-y-3"></div>
@@ -41,8 +73,16 @@ const t = useTranslations(lang);
 <script>
   import { onPage } from '../../scripts/nav';
   import { boot } from '../../scripts/app-boot';
-  import { listProjects, searchTranscripts, type SearchResult } from '../../lib/api';
+  import {
+    getLanguageCatalogue,
+    listProjects,
+    searchTranscripts,
+    type SearchKind,
+    type SearchResult,
+  } from '../../lib/api';
   import { useTranslations, type Locale } from '../../lib/i18n';
+  import { languageOptions } from '../../scripts/live/filters';
+  import { dayStartIso, nextDayStartIso } from '../../scripts/live/range';
 
   function esc(s: string): string {
     return s.replace(
@@ -62,14 +102,22 @@ const t = useTranslations(lang);
     const projectSel = document.getElementById('project') as HTMLSelectElement;
     const msg = document.getElementById('msg')!;
     const results = document.getElementById('results')!;
+    const kindSel = document.getElementById('kind') as HTMLSelectElement;
+    const langSel = document.getElementById('lang') as HTMLSelectElement;
+    const fromInput = document.getElementById('from') as HTMLInputElement;
+    const toInput = document.getElementById('to') as HTMLInputElement;
+    const sessionChip = document.getElementById('session-chip')!;
 
     const fmt = (iso: string) => new Date(iso).toLocaleString(ctx.lang);
     const detail = (sessionId: string) =>
       `/${ctx.lang}/history/detail/?session=${encodeURIComponent(sessionId)}`;
+    // A Live Connect hit opens its own conversation page, not the call transcript.
+    const liveDetail = (sessionId: string) =>
+      `/${ctx.lang}/live/detail/?session=${encodeURIComponent(sessionId)}`;
 
     // Populate the project filter. The server still scopes results to the caller's
     // role regardless of selection — this is just a narrowing convenience.
-    const projRes = await listProjects(orgId);
+    const [projRes, langRes] = await Promise.all([listProjects(orgId), getLanguageCatalogue()]);
     for (const p of projRes.data ?? []) {
       const opt = document.createElement('option');
       opt.value = p.id;
@@ -77,13 +125,37 @@ const t = useTranslations(lang);
       projectSel.appendChild(opt);
     }
 
+    // Language filter: the shared catalogue (or a short built-in list when it is unavailable).
+    for (const l of languageOptions(langRes.data?.languages, ctx.lang)) {
+      langSel.appendChild(new Option(l.label, l.code));
+    }
+
     // Pre-scope from the URL (?project=&q=) — used by the per-project search box on
-    // the project detail page, which deep-links here.
+    // the project detail page, which deep-links here. A conversation's page adds
+    // ?kind=live_connect&session_id=; ?lang= ?from= ?to= (YYYY-MM-DD) narrow further.
     const url = new URLSearchParams(location.search);
     const preProject = url.get('project');
     const preQ = url.get('q');
     if (preProject) projectSel.value = preProject;
     if (preQ) qInput.value = preQ;
+    const preKind = url.get('kind');
+    if (preKind) kindSel.value = preKind;
+    const preLang = url.get('lang');
+    if (preLang) langSel.value = preLang;
+    const preFrom = url.get('from');
+    const preTo = url.get('to');
+    if (preFrom) fromInput.value = preFrom;
+    if (preTo) toInput.value = preTo;
+    let sessionId = url.get('session_id') ?? '';
+    const syncChip = () => {
+      sessionChip.classList.toggle('hidden', !sessionId);
+      sessionChip.classList.toggle('flex', !!sessionId);
+    };
+    syncChip();
+    document.getElementById('session-clear')!.addEventListener('click', () => {
+      sessionId = '';
+      syncChip();
+    });
 
     async function run() {
       const q = qInput.value.trim();
@@ -94,6 +166,11 @@ const t = useTranslations(lang);
         q,
         project_id: projectSel.value || undefined,
         limit: 25,
+        kind: (kindSel.value || undefined) as SearchKind | undefined,
+        lang: langSel.value || undefined,
+        from: fromInput.value ? dayStartIso(fromInput.value) : undefined,
+        to: toInput.value ? nextDayStartIso(toInput.value) : undefined,
+        session_id: sessionId || undefined,
       });
       if (res.status === 503) {
         msg.textContent = t('search.unavailable');
@@ -118,8 +195,11 @@ const t = useTranslations(lang);
           const speaker = r.speaker_name
             ? `<span class="font-medium">${esc(r.speaker_name)}: </span>`
             : '';
-          return `<a href="${detail(r.session_id)}" class="card block hover:border-brand">
-            <div class="text-xs text-muted">${meta}</div>
+          const live = r.live_session_id;
+          const href = live ? liveDetail(live) : detail(r.session_id);
+          const badge = live ? `<span class="badge mr-1">${esc(t('search.kindLive'))}</span>` : '';
+          return `<a href="${href}" class="card block hover:border-brand">
+            <div class="text-xs text-muted">${badge}${meta}</div>
             <div class="mt-1 text-sm">${speaker}${esc(r.snippet)}</div>
           </a>`;
         })
