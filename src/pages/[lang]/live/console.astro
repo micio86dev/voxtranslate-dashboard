@@ -1,0 +1,156 @@
+---
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import SectionNav from '../../../components/live/SectionNav.astro';
+import { localePaths, isLocale, DEFAULT_LOCALE, useTranslations } from '../../../lib/i18n';
+
+export function getStaticPaths() {
+  return localePaths();
+}
+
+const lang = isLocale(Astro.params.lang) ? Astro.params.lang : DEFAULT_LOCALE;
+const t = useTranslations(lang);
+---
+
+<BaseLayout lang={lang} title={t('live.console.title')} chrome>
+  <span id="page-live-console" hidden></span>
+  <h1 class="text-2xl font-bold">{t('live.title')}</h1>
+  <p class="mt-1 max-w-2xl text-muted">{t('live.console.subtitle')}</p>
+  <SectionNav lang={lang} current="console" />
+
+  <p id="msg" class="mt-4 hidden text-sm text-danger" role="alert"></p>
+  <!-- Said aloud to screen readers when somebody starts waiting. No sound is ever played. -->
+  <p id="announce" class="sr-only" role="status" aria-live="polite"></p>
+
+  <p id="loading" class="mt-6 text-muted">{t('common.loading')}</p>
+  <div id="desks" class="mt-4 space-y-4"></div>
+  <p id="empty" class="card mt-4 hidden text-center text-muted">{t('live.console.noDesks')}</p>
+  <p id="answer-hint" class="mt-4 hidden text-xs text-muted">{t('live.console.answerHint')}</p>
+</BaseLayout>
+
+<script>
+  import { onPage } from '../../../scripts/nav';
+  import { boot } from '../../../scripts/app-boot';
+  import { logout } from '../../../lib/auth';
+  import { liveAnswerUrl } from '../../../lib/app-url';
+  import {
+    getLiveDeskWaiting,
+    listMyLiveDesks,
+    liveErrorKey,
+    type MyLiveDesk,
+    type WaitingGuest,
+  } from '../../../lib/api';
+  import { useTranslations, type Locale } from '../../../lib/i18n';
+  import { createPoller, type PollOutcome } from '../../../scripts/live/poller';
+  import { titleWithBadge } from '../../../scripts/live/format';
+  import { diffWaiting } from '../../../scripts/live/waiting';
+  import { waitingItem } from '../../../scripts/live/render';
+  import { h } from '../../../scripts/live/dom';
+  import { applyLiveNav } from '../../../scripts/live/section';
+
+  /** A customer at the door is not a dashboard: ask every two seconds. */
+  const POLL_MS = 2000;
+  /** How long a newly arrived customer stays highlighted. */
+  const HIGHLIGHT_MS = 10_000;
+
+  onPage('page-live-console', async () => {
+    const ctx = await boot();
+    if (!ctx) return;
+    const lang = ctx.lang;
+    const activeOrgId = ctx.activeOrg.id;
+    const t = useTranslations(lang as Locale);
+    const rctx = { t, lang };
+    applyLiveNav(ctx.activeOrg.role);
+
+    const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+    const baseTitle = document.title;
+    const seen = new Map<string, Set<string>>(); // desk id -> session ids already shown
+    const highlightUntil = new Map<string, number>();
+    let firstLoad = true;
+
+    async function tick(): Promise<PollOutcome> {
+      const mine = await listMyLiveDesks();
+      $('loading').classList.add('hidden');
+      if (mine.status === 401) return 'unauthorized';
+      if (!mine.ok || !mine.data) {
+        $('msg').textContent = t(liveErrorKey(mine));
+        $('msg').classList.remove('hidden');
+        return 'error';
+      }
+      $('msg').classList.add('hidden');
+      const desks: MyLiveDesk[] = mine.data.desks.filter((d) => d.org_id === activeOrgId);
+
+      // The count in `my-desks` says where to look; only desks with somebody waiting are fetched.
+      const lists = await Promise.all(
+        desks.map(
+          async (d): Promise<{ desk: MyLiveDesk; guests: WaitingGuest[]; status: number }> => {
+            if (d.waiting === 0) return { desk: d, guests: [], status: 200 };
+            const r = await getLiveDeskWaiting(d.id);
+            return { desk: d, guests: r.data?.waiting ?? [], status: r.status };
+          },
+        ),
+      );
+      if (lists.some((l) => l.status === 401)) return 'unauthorized';
+
+      const announcements: string[] = [];
+      let total = 0;
+      const sections = lists.map(({ desk, guests }) => {
+        const diff = diffWaiting(seen.get(desk.id) ?? new Set(), guests, firstLoad);
+        seen.set(desk.id, diff.ids);
+        for (const g of diff.fresh) {
+          highlightUntil.set(g.session_id, Date.now() + HIGHLIGHT_MS);
+          announcements.push(t('live.console.announce', { name: g.guest_name, desk: desk.name }));
+        }
+        total += guests.length;
+        const items = guests.map((g) => {
+          const li = waitingItem(g, liveAnswerUrl(g.session_id), rctx);
+          if ((highlightUntil.get(g.session_id) ?? 0) > Date.now()) {
+            // The pulse only runs for people who have not asked for reduced motion.
+            li.classList.add('ring-2', 'ring-brand', 'motion-safe:animate-pulse');
+          }
+          return li;
+        });
+        return h(
+          'section',
+          { class: 'card', 'data-desk-id': desk.id, 'aria-labelledby': `h-${desk.id}` },
+          h(
+            'div',
+            { class: 'flex flex-wrap items-baseline justify-between gap-2' },
+            h(
+              'div',
+              {},
+              h('h2', { id: `h-${desk.id}`, class: 'text-lg font-semibold' }, desk.name),
+              desk.location_label
+                ? h('p', { class: 'text-sm text-muted' }, desk.location_label)
+                : null,
+            ),
+            h('span', { class: 'badge' }, t('live.console.waitingCount', { count: guests.length })),
+          ),
+          guests.length
+            ? h('ul', { class: 'mt-3 space-y-2' }, ...items)
+            : h('p', { class: 'mt-3 text-sm text-muted' }, t('live.console.noneWaiting')),
+        );
+      });
+      firstLoad = false;
+
+      $('desks').replaceChildren(...sections);
+      $('empty').classList.toggle('hidden', desks.length > 0);
+      $('answer-hint').classList.toggle('hidden', total === 0);
+      // The tab title carries the count, so a customer is noticed from another tab.
+      document.title = titleWithBadge(baseTitle, total);
+      if (announcements.length) $('announce').textContent = announcements.join('. ');
+      return 'ok';
+    }
+
+    const poller = createPoller({
+      task: tick,
+      intervalMs: POLL_MS,
+      maxBackoffMs: 30_000,
+      onUnauthorized: () => logout(`/${lang}/`),
+    });
+    poller.start();
+    return () => {
+      poller.stop();
+      document.title = baseTitle;
+    };
+  });
+</script>

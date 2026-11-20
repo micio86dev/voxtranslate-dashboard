@@ -1,0 +1,223 @@
+---
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import SectionNav from '../../../components/live/SectionNav.astro';
+import {
+  localePaths,
+  isLocale,
+  DEFAULT_LOCALE,
+  useTranslations,
+  localizePath,
+} from '../../../lib/i18n';
+
+export function getStaticPaths() {
+  return localePaths();
+}
+
+const lang = isLocale(Astro.params.lang) ? Astro.params.lang : DEFAULT_LOCALE;
+const t = useTranslations(lang);
+const link = (p: string) => localizePath(lang, p);
+---
+
+<BaseLayout lang={lang} title={t('live.usage.title')} chrome>
+  <span id="page-live-usage" hidden></span>
+  <h1 class="text-2xl font-bold">{t('live.title')}</h1>
+  <p class="mt-1 max-w-2xl text-muted">{t('live.usage.subtitle')}</p>
+  <SectionNav lang={lang} current="usage" />
+
+  <p id="not-allowed" class="card mt-6 hidden text-center text-muted">
+    {t('live.usage.notAllowed')}
+  </p>
+
+  <div id="content" class="hidden">
+    <!-- The wallet: what every conversation is paid from. -->
+    <section
+      class="card mt-6 flex flex-wrap items-center justify-between gap-4"
+      aria-labelledby="bal-h"
+    >
+      <div>
+        <h2 id="bal-h" class="text-sm text-muted">{t('live.usage.balance')}</h2>
+        <div id="balance" class="mt-1 text-3xl font-bold" aria-live="polite">…</div>
+      </div>
+      <a href={link('credits')} class="btn-ghost text-sm">{t('live.usage.addCredits')}</a>
+    </section>
+
+    <!-- Range and grouping -->
+    <div class="mt-6 flex flex-wrap items-end gap-3">
+      <div role="group" aria-label={t('live.usage.rangeLabel')} class="flex gap-1">
+        <button type="button" class="btn-ghost text-sm" data-days="7" aria-pressed="false">
+          {t('live.usage.last7')}
+        </button>
+        <button type="button" class="btn-ghost text-sm" data-days="30" aria-pressed="true">
+          {t('live.usage.last30')}
+        </button>
+        <button type="button" class="btn-ghost text-sm" data-days="90" aria-pressed="false">
+          {t('live.usage.last90')}
+        </button>
+      </div>
+      <div>
+        <label class="label" for="u-from">{t('live.usage.from')}</label>
+        <input id="u-from" type="date" class="field text-sm" />
+      </div>
+      <div>
+        <label class="label" for="u-to">{t('live.usage.to')}</label>
+        <input id="u-to" type="date" class="field text-sm" />
+      </div>
+      <button id="u-apply" type="button" class="btn-ghost text-sm">{t('live.usage.apply')}</button>
+      <div>
+        <label class="label" for="u-group">{t('live.usage.groupBy')}</label>
+        <select id="u-group" class="field text-sm">
+          <option value="desk">{t('live.usage.byDesk')}</option>
+          <option value="project">{t('live.usage.byProject')}</option>
+          <option value="day">{t('live.usage.byDay')}</option>
+        </select>
+      </div>
+    </div>
+
+    <p id="msg" class="mt-4 hidden text-sm text-danger" role="alert"></p>
+
+    <section class="card mt-4" aria-labelledby="tot-h">
+      <h2 id="tot-h" class="sr-only">{t('live.usage.totals')}</h2>
+      <dl class="grid gap-4 sm:grid-cols-2">
+        <div>
+          <dt class="text-xs text-muted">{t('live.usage.totalSessions')}</dt>
+          <dd id="t-sessions" class="text-xl font-semibold">—</dd>
+        </div>
+        <div>
+          <dt class="text-xs text-muted">{t('live.usage.totalCredits')}</dt>
+          <dd id="t-credits" class="text-xl font-semibold">—</dd>
+        </div>
+      </dl>
+    </section>
+
+    <div class="card mt-4 overflow-x-auto p-0">
+      <div id="table"></div>
+      <p id="empty" class="hidden px-4 py-6 text-center text-muted">{t('live.usage.empty')}</p>
+    </div>
+
+    <!-- Open right now: what the conversations still going have cost so far. -->
+    <section class="card mt-4" aria-labelledby="open-h">
+      <h2 id="open-h" class="text-sm font-semibold">{t('live.usage.openNow')}</h2>
+      <div id="open"></div>
+      <p id="open-empty" class="mt-2 text-sm text-muted">{t('live.usage.openEmpty')}</p>
+    </section>
+  </div>
+</BaseLayout>
+
+<script>
+  import { onPage } from '../../../scripts/nav';
+  import { boot } from '../../../scripts/app-boot';
+  import { logout } from '../../../lib/auth';
+  import { getLiveUsage, liveErrorKey, type LiveUsageGroup } from '../../../lib/api';
+  import { useTranslations, type Locale } from '../../../lib/i18n';
+  import { createPoller, type PollOutcome } from '../../../scripts/live/poller';
+  import { isAdminRole } from '../../../scripts/live/format';
+  import { customRange, presetRange, type IsoRange } from '../../../scripts/live/range';
+  import { openSessionsList, usageTable } from '../../../scripts/live/render';
+  import { applyLiveNav } from '../../../scripts/live/section';
+
+  /** The balance and the open conversations move while you look. */
+  const REFRESH_MS = 10_000;
+
+  onPage('page-live-usage', async () => {
+    const ctx = await boot();
+    if (!ctx) return;
+    const t = useTranslations(ctx.lang as Locale);
+    const rctx = { t, lang: ctx.lang };
+    const orgId = ctx.activeOrg.id;
+    const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+    applyLiveNav(ctx.activeOrg.role);
+
+    // Money is for owners and admins. The server refuses everyone else; this just says so kindly.
+    if (!isAdminRole(ctx.activeOrg.role)) {
+      $('not-allowed').classList.remove('hidden');
+      return;
+    }
+    $('content').classList.remove('hidden');
+
+    const msg = $('msg');
+    const group = $<HTMLSelectElement>('u-group');
+    const fFrom = $<HTMLInputElement>('u-from');
+    const fTo = $<HTMLInputElement>('u-to');
+    const presets = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-days]'));
+
+    // Either a rolling preset (re-evaluated at every refresh, so new usage keeps arriving) or
+    // a fixed custom range.
+    let preset: number | null = 30;
+    let custom: IsoRange | null = null;
+
+    const detailHref = (id: string) =>
+      `/${ctx.lang}/live/detail/?session=${encodeURIComponent(id)}`;
+
+    function setPressed() {
+      for (const b of presets) {
+        b.setAttribute(
+          'aria-pressed',
+          String(preset !== null && Number(b.dataset.days) === preset),
+        );
+      }
+    }
+
+    function fail(key: string) {
+      msg.textContent = t(key);
+      msg.classList.remove('hidden');
+    }
+
+    async function load(): Promise<PollOutcome> {
+      const range = preset !== null ? presetRange(preset) : (custom as IsoRange);
+      const res = await getLiveUsage(orgId, { group: group.value as LiveUsageGroup, ...range });
+      if (res.status === 401) return 'unauthorized';
+      if (!res.ok || !res.data) {
+        fail(liveErrorKey(res));
+        // A refused range will not get better by asking again.
+        return res.status === 400 ? 'stop' : 'error';
+      }
+      msg.classList.add('hidden');
+      const u = res.data;
+      $('balance').textContent = t('live.usage.credits', { credits: u.balance });
+      $('t-sessions').textContent = String(u.totals.sessions);
+      $('t-credits').textContent = String(u.totals.credits);
+      $('table').replaceChildren(...(u.rows.length ? [usageTable(u.rows, u.group, rctx)] : []));
+      $('empty').classList.toggle('hidden', u.rows.length > 0);
+      $('open').replaceChildren(
+        ...(u.active.length ? [openSessionsList(u.active, detailHref, rctx)] : []),
+      );
+      $('open-empty').classList.toggle('hidden', u.active.length > 0);
+      return 'ok';
+    }
+
+    const poller = createPoller({
+      task: load,
+      intervalMs: REFRESH_MS,
+      maxBackoffMs: 60_000,
+      onUnauthorized: () => logout(`/${ctx.lang}/`),
+    });
+    const reload = () => {
+      poller.stop();
+      poller.start();
+    };
+
+    for (const b of presets) {
+      b.addEventListener('click', () => {
+        preset = Number(b.dataset.days);
+        custom = null;
+        fFrom.value = '';
+        fTo.value = '';
+        setPressed();
+        reload();
+      });
+    }
+    $('u-apply').addEventListener('click', () => {
+      const r = customRange(fFrom.value, fTo.value);
+      if (!r.ok) return fail(`live.usage.range.${r.error}`);
+      preset = null;
+      custom = r.range;
+      setPressed();
+      reload();
+    });
+    group.addEventListener('change', reload);
+
+    setPressed();
+    poller.start();
+    return () => poller.stop();
+  });
+</script>

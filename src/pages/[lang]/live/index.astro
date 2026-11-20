@@ -1,0 +1,226 @@
+---
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import SectionNav from '../../../components/live/SectionNav.astro';
+import { localePaths, isLocale, DEFAULT_LOCALE, useTranslations } from '../../../lib/i18n';
+
+export function getStaticPaths() {
+  return localePaths();
+}
+
+const lang = isLocale(Astro.params.lang) ? Astro.params.lang : DEFAULT_LOCALE;
+const t = useTranslations(lang);
+---
+
+<BaseLayout lang={lang} title={t('live.sessions.title')} chrome>
+  <span id="page-live-sessions" hidden></span>
+  <h1 class="text-2xl font-bold">{t('live.title')}</h1>
+  <p class="mt-1 max-w-2xl text-muted">{t('live.subtitle')}</p>
+  <SectionNav lang={lang} current="sessions" />
+
+  <p id="member-note" class="mt-4 hidden text-sm text-muted">{t('live.sessions.memberNote')}</p>
+
+  <!-- Filters: status, project, desk, date range -->
+  <div class="mt-4 flex flex-wrap items-end gap-3">
+    <div>
+      <label class="label" for="f-status">{t('live.sessions.status')}</label>
+      <select id="f-status" class="field text-sm">
+        <option value="">{t('live.sessions.allStatuses')}</option>
+        <option value="waiting">{t('live.status.waiting')}</option>
+        <option value="active">{t('live.status.active')}</option>
+        <option value="ended">{t('live.status.ended')}</option>
+        <option value="expired">{t('live.status.expired')}</option>
+      </select>
+    </div>
+    <div>
+      <label class="label" for="f-project">{t('live.sessions.project')}</label>
+      <select id="f-project" class="field text-sm">
+        <option value="">{t('live.sessions.allProjects')}</option>
+      </select>
+    </div>
+    <div>
+      <label class="label" for="f-desk">{t('live.sessions.desk')}</label>
+      <select id="f-desk" class="field text-sm">
+        <option value="">{t('live.sessions.allDesks')}</option>
+      </select>
+    </div>
+    <div>
+      <label class="label" for="f-from">{t('live.sessions.from')}</label>
+      <input id="f-from" type="date" class="field text-sm" />
+    </div>
+    <div>
+      <label class="label" for="f-to">{t('live.sessions.to')}</label>
+      <input id="f-to" type="date" class="field text-sm" />
+    </div>
+    <button id="f-clear" type="button" class="btn-ghost text-sm">
+      {t('live.sessions.clearFilters')}
+    </button>
+  </div>
+
+  <p id="msg" class="mt-4 hidden text-sm text-danger" role="alert"></p>
+  <p id="live-note" class="mt-4 hidden text-xs text-muted" role="status">
+    {t('live.sessions.liveNote')}
+  </p>
+
+  <div id="table-card" class="card mt-2 overflow-x-auto p-0">
+    <table class="w-full text-sm">
+      <thead class="border-b border-line text-left text-muted">
+        <tr>
+          <th class="px-4 py-3">{t('live.sessions.col.status')}</th>
+          <th class="px-4 py-3">{t('live.sessions.col.desk')}</th>
+          <th class="px-4 py-3">{t('live.sessions.col.project')}</th>
+          <th class="px-4 py-3">{t('live.sessions.col.guest')}</th>
+          <th class="px-4 py-3">{t('live.sessions.col.staff')}</th>
+          <th class="px-4 py-3">{t('live.sessions.col.started')}</th>
+          <th class="px-4 py-3">{t('live.sessions.col.duration')}</th>
+          <th class="px-4 py-3">{t('live.sessions.col.credits')}</th>
+          <th class="px-4 py-3">{t('live.sessions.col.transcript')}</th>
+          <th class="px-4 py-3"><span class="sr-only">{t('live.sessions.open')}</span></th>
+        </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <p id="loading" class="px-4 py-6 text-center text-muted">{t('common.loading')}</p>
+    <p id="empty" class="hidden px-4 py-6 text-center text-muted">{t('live.sessions.empty')}</p>
+  </div>
+
+  <div class="mt-4 flex items-center justify-between gap-3">
+    <button id="prev" type="button" class="btn-ghost text-sm" disabled>
+      {t('live.sessions.prev')}
+    </button>
+    <span id="range" class="text-sm text-muted"></span>
+    <button id="next" type="button" class="btn-ghost text-sm" disabled>
+      {t('live.sessions.next')}
+    </button>
+  </div>
+</BaseLayout>
+
+<script>
+  import { onPage } from '../../../scripts/nav';
+  import { boot } from '../../../scripts/app-boot';
+  import { logout } from '../../../lib/auth';
+  import {
+    listLiveDesks,
+    listLiveSessions,
+    listProjects,
+    liveErrorKey,
+    type LiveSessionRow,
+  } from '../../../lib/api';
+  import { useTranslations, type Locale } from '../../../lib/i18n';
+  import { createPoller, type PollOutcome } from '../../../scripts/live/poller';
+  import { anyOpen, PAGE_SIZE, pageWindow, sessionsQuery } from '../../../scripts/live/filters';
+  import { isAdminRole } from '../../../scripts/live/format';
+  import { sessionRow } from '../../../scripts/live/render';
+  import { applyLiveNav } from '../../../scripts/live/section';
+
+  /** Open conversations change under the viewer's eyes, so the list follows them. */
+  const REFRESH_MS = 10_000;
+
+  onPage('page-live-sessions', async () => {
+    const ctx = await boot();
+    if (!ctx) return;
+    const t = useTranslations(ctx.lang as Locale);
+    const rctx = { t, lang: ctx.lang };
+    const orgId = ctx.activeOrg.id;
+    applyLiveNav(ctx.activeOrg.role);
+    if (!isAdminRole(ctx.activeOrg.role)) {
+      document.getElementById('member-note')?.classList.remove('hidden');
+    }
+
+    const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+    const rows = $('rows');
+    const msg = $('msg');
+    const loading = $('loading');
+    const empty = $('empty');
+    const liveNote = $('live-note');
+    const prev = $<HTMLButtonElement>('prev');
+    const next = $<HTMLButtonElement>('next');
+    const fStatus = $<HTMLSelectElement>('f-status');
+    const fProject = $<HTMLSelectElement>('f-project');
+    const fDesk = $<HTMLSelectElement>('f-desk');
+    const fFrom = $<HTMLInputElement>('f-from');
+    const fTo = $<HTMLInputElement>('f-to');
+
+    const detailHref = (id: string) =>
+      `/${ctx.lang}/live/detail/?session=${encodeURIComponent(id)}`;
+
+    let page = 1;
+
+    // Filter choices are a convenience: if they fail to load the list still works unfiltered.
+    const [projRes, deskRes] = await Promise.all([listProjects(orgId), listLiveDesks(orgId)]);
+    for (const p of (projRes.data ?? []).filter((p) => !p.archived_at)) {
+      fProject.append(new Option(p.name, p.id));
+    }
+    for (const d of deskRes.data?.desks ?? []) fDesk.append(new Option(d.name, d.id));
+
+    const filters = () => ({
+      status: fStatus.value,
+      projectId: fProject.value,
+      deskId: fDesk.value,
+      from: fFrom.value,
+      to: fTo.value,
+    });
+
+    function showError(res: { status: number; data?: unknown }) {
+      msg.textContent = t(liveErrorKey(res));
+      msg.classList.remove('hidden');
+    }
+
+    async function load(): Promise<PollOutcome> {
+      const res = await listLiveSessions(orgId, sessionsQuery(filters(), page, PAGE_SIZE));
+      loading.classList.add('hidden');
+      if (res.status === 401) return 'unauthorized';
+      if (!res.ok || !res.data) {
+        showError(res);
+        return 'error';
+      }
+      msg.classList.add('hidden');
+      const list: LiveSessionRow[] = res.data.sessions;
+      rows.replaceChildren(...list.map((r) => sessionRow(r, rctx, detailHref(r.id))));
+      empty.classList.toggle('hidden', list.length > 0);
+      const w = pageWindow({ total: res.data.total, offset: res.data.offset, count: list.length });
+      $('range').textContent = w.total
+        ? t('live.sessions.range', { from: w.from, to: w.to, total: w.total })
+        : '';
+      prev.disabled = !w.hasPrev;
+      next.disabled = !w.hasNext;
+      const open = anyOpen(list);
+      liveNote.classList.toggle('hidden', !open);
+      // Nothing open: nothing will change by itself, so stop asking.
+      return open ? 'ok' : 'stop';
+    }
+
+    const poller = createPoller({
+      task: load,
+      intervalMs: REFRESH_MS,
+      maxBackoffMs: 60_000,
+      onUnauthorized: () => logout(`/${ctx.lang}/`),
+    });
+    const reload = () => {
+      poller.stop();
+      poller.start();
+    };
+    const reset = () => {
+      page = 1;
+      reload();
+    };
+
+    for (const el of [fStatus, fProject, fDesk, fFrom, fTo]) el.addEventListener('change', reset);
+    $('f-clear').addEventListener('click', () => {
+      for (const el of [fStatus, fProject, fDesk, fFrom, fTo]) el.value = '';
+      reset();
+    });
+    prev.addEventListener('click', () => {
+      if (page > 1) {
+        page--;
+        reload();
+      }
+    });
+    next.addEventListener('click', () => {
+      page++;
+      reload();
+    });
+
+    poller.start();
+    return () => poller.stop();
+  });
+</script>

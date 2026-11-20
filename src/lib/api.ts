@@ -544,13 +544,29 @@ export interface SearchResult {
   start_ms: number | null;
   /** Cosine similarity (0–1); higher is closer. */
   score: number;
+  /** Live Connect hits only (absent for every other kind): the conversation to open. */
+  live_session_id?: string;
+  /** Live Connect hits only: the `call_sessions.kind` of the hit, `live_connect`. */
+  session_kind?: string | null;
 }
+
+/** Kinds of session a search can be narrowed to (the server rejects anything else with 400). */
+export type SearchKind = 'call' | 'voice_message' | 'phone' | 'live_connect';
 
 export interface SearchQuery {
   q: string;
   /** Narrow to one project; omit to search every project the caller may see. */
   project_id?: string;
   limit?: number;
+  /** Narrow to one kind of session; omit for every kind (the behaviour before Live Connect). */
+  kind?: SearchKind;
+  /** Language of the conversation. */
+  lang?: string;
+  /** RFC 3339 instants bounding when the session started. */
+  from?: string;
+  to?: string;
+  /** One session: a call-session id or a Live Connect session id. */
+  session_id?: string;
 }
 
 /**
@@ -563,6 +579,11 @@ export const searchTranscripts = (orgId: string, q: SearchQuery) => {
   params.set('q', q.q);
   if (q.project_id) params.set('project_id', q.project_id);
   if (q.limit) params.set('limit', String(q.limit));
+  if (q.kind) params.set('kind', q.kind);
+  if (q.lang) params.set('lang', q.lang);
+  if (q.from) params.set('from', q.from);
+  if (q.to) params.set('to', q.to);
+  if (q.session_id) params.set('session_id', q.session_id);
   return request<{ results: SearchResult[] }>(
     'GET',
     `/api/business/organizations/${orgId}/search?${params.toString()}`,
@@ -1766,6 +1787,302 @@ export function lookupVoipContact(
     'GET',
     `/api/business/organizations/${orgId}/voip/contacts/lookup?e164=${encodeURIComponent(e164)}`,
   );
+}
+
+// --- Live Connect (spec 0121) --------------------------------------------------
+
+export type LiveSessionStatus = 'waiting' | 'active' | 'ended' | 'expired';
+
+export interface LiveSessionRow {
+  id: string;
+  status: LiveSessionStatus;
+  created_at: string;
+  started_at: string | null;
+  ended_at: string | null;
+  end_reason: string | null;
+  duration_secs: number | null;
+  host_lang: string;
+  desk: { id: string; name: string | null; location_label: string | null } | null;
+  project: { id: string; name: string | null } | null;
+  guest: { name: string | null; lang: string | null };
+  staff_name: string | null;
+  credits: number;
+  has_transcript: boolean;
+}
+
+export interface LiveSessionsPage {
+  sessions: LiveSessionRow[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface LiveSessionsQuery {
+  status?: LiveSessionStatus;
+  project_id?: string;
+  desk_id?: string;
+  /** RFC 3339 instants bounding when the conversation was created. */
+  from?: string;
+  to?: string;
+  /** The server clamps this to 1–100. */
+  limit?: number;
+  offset?: number;
+}
+
+export interface LiveParticipant {
+  peer_id: string;
+  role: 'host' | 'guest' | 'staff' | string;
+  display_name: string;
+  lang: string;
+}
+
+export interface LiveUtterance {
+  at: string;
+  offset_ms: number | null;
+  speaker_id: string;
+  speaker_name: string;
+  original_lang: string;
+  /** What was said, as spoken. Never replaced by the translation. */
+  original: string;
+  /** The translation into the requested `lang`, when one was captured. */
+  translation: string | null;
+  translations: Record<string, string>;
+}
+
+export interface LiveTimelineEvent {
+  at: string;
+  kind: string;
+  detail: unknown;
+}
+
+export interface LiveSessionDetail {
+  session: LiveSessionRow;
+  participants: LiveParticipant[];
+  utterances: LiveUtterance[];
+  /** Present for owners and admins only. */
+  events?: LiveTimelineEvent[];
+}
+
+export type LiveUsageGroup = 'desk' | 'project' | 'day';
+
+export interface LiveUsageQuery {
+  group?: LiveUsageGroup;
+  from?: string;
+  to?: string;
+}
+
+export interface LiveUsageRow {
+  key: string;
+  label: string;
+  sessions: number;
+  credits: number;
+}
+
+export interface LiveOpenSession {
+  session_id: string;
+  status: 'waiting' | 'active' | string;
+  desk: string | null;
+  started_at: string | null;
+  credits: number;
+}
+
+export interface LiveUsage {
+  group: LiveUsageGroup;
+  from: string;
+  to: string;
+  rows: LiveUsageRow[];
+  totals: { sessions: number; credits: number };
+  balance: number;
+  active: LiveOpenSession[];
+}
+
+export interface LiveDesk {
+  id: string;
+  org_id: string;
+  project_id: string | null;
+  name: string;
+  location_label: string | null;
+  default_lang: string;
+  languages: string[];
+  public_id: string;
+  status: 'active' | 'revoked' | string;
+  created_at: string;
+}
+
+export interface LiveDeskInput {
+  name: string;
+  location_label?: string;
+  default_lang: string;
+  languages?: string[];
+  /** Mandatory: a business conversation belongs to a project. */
+  project_id: string;
+}
+
+export type LiveDeskPatch = Partial<LiveDeskInput>;
+
+/** What an admin prints. The URL is the credential: it goes into a generated asset, nowhere else. */
+export interface LiveDeskQr {
+  url: string;
+  public_id: string;
+  status: string;
+  name: string;
+  location_label: string | null;
+}
+
+export interface MyLiveDesk {
+  id: string;
+  org_id: string;
+  org_name: string;
+  name: string;
+  location_label: string | null;
+  default_lang: string;
+  waiting: number;
+}
+
+export interface WaitingGuest {
+  session_id: string;
+  guest_name: string;
+  guest_lang: string;
+  waited_secs: number;
+}
+
+const liveBase = (orgId: string) => `/api/business/organizations/${orgId}/live`;
+
+export const listLiveSessions = (orgId: string, q: LiveSessionsQuery = {}) => {
+  const params = new URLSearchParams();
+  if (q.status) params.set('status', q.status);
+  if (q.project_id) params.set('project_id', q.project_id);
+  if (q.desk_id) params.set('desk_id', q.desk_id);
+  if (q.from) params.set('from', q.from);
+  if (q.to) params.set('to', q.to);
+  if (q.limit) params.set('limit', String(q.limit));
+  if (q.offset) params.set('offset', String(q.offset));
+  const qs = params.toString();
+  return request<LiveSessionsPage>('GET', `${liveBase(orgId)}/sessions${qs ? `?${qs}` : ''}`);
+};
+
+/** `lang` asks for each utterance's translation into that language, beside the original. */
+export const getLiveSession = (orgId: string, sessionId: string, lang?: string) =>
+  request<LiveSessionDetail>(
+    'GET',
+    `${liveBase(orgId)}/sessions/${encodeURIComponent(sessionId)}${
+      lang ? `?lang=${encodeURIComponent(lang)}` : ''
+    }`,
+  );
+
+/** Org admin: erases the conversation's content; billing records stay. 409 while it is open. */
+export const deleteLiveSession = (orgId: string, sessionId: string) =>
+  request<{ erased: boolean }>(
+    'DELETE',
+    `${liveBase(orgId)}/sessions/${encodeURIComponent(sessionId)}`,
+  );
+
+export const getLiveUsage = (orgId: string, q: LiveUsageQuery = {}) => {
+  const params = new URLSearchParams();
+  if (q.group) params.set('group', q.group);
+  if (q.from) params.set('from', q.from);
+  if (q.to) params.set('to', q.to);
+  const qs = params.toString();
+  return request<LiveUsage>('GET', `${liveBase(orgId)}/usage${qs ? `?${qs}` : ''}`);
+};
+
+export const listLiveDesks = (orgId: string) =>
+  request<{ desks: LiveDesk[] }>('GET', `${liveBase(orgId)}/desks`);
+
+/**
+ * Create and regenerate answer with the desk's printable URL in `qr_url`. It is dropped
+ * here, at the boundary: the URL is the credential, so nothing downstream can store, render
+ * or log it by accident. A download asks for it again through `getLiveDeskQr`.
+ */
+function withoutQr<T extends object>(res: ApiResult<T & { qr_url?: unknown }>): ApiResult<T> {
+  if (res.data) delete res.data.qr_url;
+  return res as ApiResult<T>;
+}
+
+export const createLiveDesk = async (orgId: string, body: LiveDeskInput) =>
+  withoutQr(
+    await request<LiveDesk & { qr_url?: unknown }>('POST', `${liveBase(orgId)}/desks`, body),
+  );
+
+export const updateLiveDesk = (orgId: string, deskId: string, body: LiveDeskPatch) =>
+  request<LiveDesk>('PATCH', `${liveBase(orgId)}/desks/${encodeURIComponent(deskId)}`, body);
+
+export const getLiveDeskQr = (orgId: string, deskId: string) =>
+  request<LiveDeskQr>('GET', `${liveBase(orgId)}/desks/${encodeURIComponent(deskId)}/qr`);
+
+/** Closes every customer still waiting at the desk; the printed QR stops working. */
+export const revokeLiveDesk = (orgId: string, deskId: string) =>
+  request<{ status: string; waiting_closed: number }>(
+    'POST',
+    `${liveBase(orgId)}/desks/${encodeURIComponent(deskId)}/revoke`,
+  );
+
+/** A fresh QR: every earlier print stops working, waiting customers are closed, and a revoked desk is live again. */
+export const regenerateLiveDesk = async (orgId: string, deskId: string) =>
+  withoutQr(
+    await request<LiveDesk & { qr_url?: unknown; waiting_closed: number }>(
+      'POST',
+      `${liveBase(orgId)}/desks/${encodeURIComponent(deskId)}/regenerate`,
+    ),
+  );
+
+/** The desks of every org the caller belongs to, with how many customers are waiting at each. */
+export const listMyLiveDesks = () => request<{ desks: MyLiveDesk[] }>('GET', '/api/live/my-desks');
+
+export const getLiveDeskWaiting = (deskId: string) =>
+  request<{ waiting: WaitingGuest[] }>(
+    'GET',
+    `/api/live/desks/${encodeURIComponent(deskId)}/waiting`,
+  );
+
+/** Stable error codes the Live Connect endpoints answer with (`{code,message}` bodies). */
+const LIVE_ERROR_CODES = new Set([
+  'project_not_found',
+  'name_required',
+  'bad_lang',
+  'bad_status',
+  'bad_range',
+  'bad_group',
+  'session_not_found',
+  'desk_not_found',
+  'insufficient_credits',
+  'subscription_required',
+  'session_active',
+  'already_answered',
+  'session_ended',
+  'session_expired',
+  'rate_limited',
+  'live_disabled',
+  'live_busy',
+  'try_again',
+]);
+
+/**
+ * Translation key (under `live.error.`) for a failed Live Connect call.
+ *
+ * The server answers with `{code,message}` bodies — except the role gate, whose 403/404 are
+ * plain text — so the code decides first and the HTTP status is the fallback. Never returns
+ * the server's English message: the UI says it in the viewer's language.
+ */
+export function liveErrorKey(res: { status: number; data?: unknown }): string {
+  const code = (res.data as { code?: unknown } | null | undefined)?.code;
+  if (typeof code === 'string' && LIVE_ERROR_CODES.has(code)) return `live.error.${code}`;
+  switch (res.status) {
+    case 0:
+      return 'live.error.network';
+    case 401:
+      return 'live.error.unauthorized';
+    case 402:
+      return 'live.error.insufficient_credits';
+    case 403:
+      return 'live.error.forbidden';
+    case 404:
+      return 'live.error.notFound';
+    case 429:
+      return 'live.error.rate_limited';
+    default:
+      return 'live.error.generic';
+  }
 }
 
 // --- Shared catalogues (public, not org-scoped) ------------------------------
