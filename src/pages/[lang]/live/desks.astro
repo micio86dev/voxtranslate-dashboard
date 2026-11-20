@@ -1,0 +1,344 @@
+---
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import SectionNav from '../../../components/live/SectionNav.astro';
+import { localePaths, isLocale, DEFAULT_LOCALE, useTranslations } from '../../../lib/i18n';
+
+export function getStaticPaths() {
+  return localePaths();
+}
+
+const lang = isLocale(Astro.params.lang) ? Astro.params.lang : DEFAULT_LOCALE;
+const t = useTranslations(lang);
+---
+
+<BaseLayout lang={lang} title={t('live.desks.title')} chrome>
+  <span id="page-live-desks" hidden></span>
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <h1 class="text-2xl font-bold">{t('live.title')}</h1>
+    <button id="new-desk" type="button" class="btn-primary hidden">{t('live.desks.new')}</button>
+  </div>
+  <p class="mt-1 max-w-2xl text-muted">{t('live.desks.subtitle')}</p>
+  <SectionNav lang={lang} current="desks" />
+
+  <p id="readonly-note" class="mt-4 hidden text-sm text-muted">{t('live.desks.readOnly')}</p>
+  <p id="msg" class="mt-4 hidden text-sm" role="status"></p>
+
+  <!-- Create / edit. Only admins ever see it; the server checks the role again. -->
+  <form id="desk-form" class="card mt-4 hidden" novalidate aria-labelledby="form-h">
+    <h2 id="form-h" class="text-lg font-semibold">{t('live.desks.form.titleNew')}</h2>
+    <div class="mt-4 grid gap-4 sm:grid-cols-2">
+      <div>
+        <label class="label" for="d-name">{t('live.desks.form.name')}</label>
+        <input id="d-name" class="field" maxlength="100" autocomplete="off" required />
+        <p class="mt-1 hidden text-xs text-danger" data-error="name"></p>
+      </div>
+      <div>
+        <label class="label" for="d-location">{t('live.desks.form.location')}</label>
+        <input id="d-location" class="field" maxlength="150" autocomplete="off" />
+        <p class="mt-1 hidden text-xs text-danger" data-error="location"></p>
+      </div>
+      <div>
+        <label class="label" for="d-project">{t('live.desks.form.project')}</label>
+        <select id="d-project" class="field" required>
+          <option value="">{t('live.desks.form.chooseProject')}</option>
+        </select>
+        <p class="mt-1 text-xs text-muted">{t('live.desks.form.projectHint')}</p>
+        <p class="mt-1 hidden text-xs text-danger" data-error="projectId"></p>
+      </div>
+      <div>
+        <label class="label" for="d-lang">{t('live.desks.form.defaultLang')}</label>
+        <select id="d-lang" class="field" required></select>
+        <p class="mt-1 text-xs text-muted">{t('live.desks.form.defaultLangHint')}</p>
+        <p class="mt-1 hidden text-xs text-danger" data-error="defaultLang"></p>
+      </div>
+      <div class="sm:col-span-2">
+        <label class="label" for="d-langs">{t('live.desks.form.languages')}</label>
+        <select id="d-langs" class="field h-32" multiple></select>
+        <p class="mt-1 text-xs text-muted">{t('live.desks.form.languagesHint')}</p>
+        <p class="mt-1 hidden text-xs text-danger" data-error="languages"></p>
+      </div>
+    </div>
+    <div class="mt-4 flex gap-2">
+      <button id="d-save" type="submit" class="btn-primary">{t('common.save')}</button>
+      <button id="d-cancel" type="button" class="btn-ghost">{t('common.cancel')}</button>
+    </div>
+  </form>
+
+  <p id="loading" class="mt-6 text-muted">{t('common.loading')}</p>
+  <div id="desks" class="mt-4 grid gap-4 sm:grid-cols-2"></div>
+  <p id="empty" class="card mt-4 hidden text-center text-muted">{t('live.desks.empty')}</p>
+</BaseLayout>
+
+<script>
+  import { onPage } from '../../../scripts/nav';
+  import { boot } from '../../../scripts/app-boot';
+  import { logout } from '../../../lib/auth';
+  import {
+    createLiveDesk,
+    getLanguageCatalogue,
+    getLiveDeskQr,
+    listLiveDesks,
+    listProjects,
+    liveErrorKey,
+    regenerateLiveDesk,
+    revokeLiveDesk,
+    updateLiveDesk,
+    type LiveDesk,
+  } from '../../../lib/api';
+  import { useTranslations, type Locale } from '../../../lib/i18n';
+  import { deskPatch, validateDeskForm, type DeskFormField } from '../../../scripts/live/desk-form';
+  import { isAdminRole } from '../../../scripts/live/format';
+  import { languageOptions } from '../../../scripts/live/filters';
+  import {
+    dataUrlToBlob,
+    deskFileBase,
+    downloadBlob,
+    makeDeskPdf,
+    makeDeskPng,
+    makeDeskSvg,
+  } from '../../../scripts/live/qr-assets';
+  import { deskCard } from '../../../scripts/live/render';
+  import { applyLiveNav } from '../../../scripts/live/section';
+
+  onPage('page-live-desks', async () => {
+    const ctx = await boot();
+    if (!ctx) return;
+    const lang = ctx.lang;
+    const activeOrgId = ctx.activeOrg.id;
+    const t = useTranslations(lang as Locale);
+    const rctx = { t, lang };
+    const orgId = activeOrgId;
+    const admin = isAdminRole(ctx.activeOrg.role);
+    applyLiveNav(ctx.activeOrg.role);
+
+    const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+    const list = $('desks');
+    const msg = $('msg');
+    const form = $<HTMLFormElement>('desk-form');
+    const newBtn = $<HTMLButtonElement>('new-desk');
+    const fName = $<HTMLInputElement>('d-name');
+    const fLocation = $<HTMLInputElement>('d-location');
+    const fProject = $<HTMLSelectElement>('d-project');
+    const fLang = $<HTMLSelectElement>('d-lang');
+    const fLangs = $<HTMLSelectElement>('d-langs');
+
+    function say(text: string, tone: 'ok' | 'error') {
+      msg.textContent = text;
+      msg.className = `mt-4 text-sm ${tone === 'error' ? 'text-danger' : 'text-ok'}`;
+      msg.setAttribute('role', tone === 'error' ? 'alert' : 'status');
+    }
+    const clearMsg = () => msg.classList.add('hidden');
+
+    let desks: LiveDesk[] = [];
+    let projectNames = new Map<string, string>();
+    let editing: LiveDesk | null = null;
+
+    if (admin) {
+      newBtn.classList.remove('hidden');
+    } else {
+      $('readonly-note').classList.remove('hidden');
+    }
+
+    // Project and language pickers. A failure here leaves the form unusable but the list fine.
+    const [projRes, langRes] = await Promise.all([listProjects(orgId), getLanguageCatalogue()]);
+    const projects = (projRes.data ?? []).filter((p) => !p.archived_at);
+    projectNames = new Map((projRes.data ?? []).map((p) => [p.id, p.name]));
+    for (const p of projects) fProject.append(new Option(p.name, p.id));
+    const langs = languageOptions(langRes.data?.languages, lang);
+    for (const l of langs) {
+      fLang.append(new Option(l.label, l.code));
+      fLangs.append(new Option(l.label, l.code));
+    }
+
+    async function refresh() {
+      const res = await listLiveDesks(orgId);
+      $('loading').classList.add('hidden');
+      if (res.status === 401) return logout(`/${lang}/`);
+      if (!res.ok || !res.data) {
+        say(t(liveErrorKey(res)), 'error');
+        msg.classList.remove('hidden');
+        return;
+      }
+      desks = res.data.desks;
+      $('empty').classList.toggle('hidden', desks.length > 0);
+      list.replaceChildren(
+        ...desks.map((d) =>
+          deskCard(
+            d,
+            { admin, projectName: d.project_id ? (projectNames.get(d.project_id) ?? null) : null },
+            rctx,
+          ),
+        ),
+      );
+    }
+
+    // ---- create / edit -------------------------------------------------------------
+
+    function showErrors(errors: Partial<Record<DeskFormField, string>>) {
+      form.querySelectorAll<HTMLElement>('[data-error]').forEach((p) => {
+        const key = errors[p.dataset.error as DeskFormField];
+        p.textContent = key ? t(key) : '';
+        p.classList.toggle('hidden', !key);
+      });
+    }
+
+    function openForm(desk: LiveDesk | null) {
+      editing = desk;
+      $('form-h').textContent = t(desk ? 'live.desks.form.titleEdit' : 'live.desks.form.titleNew');
+      fName.value = desk?.name ?? '';
+      fLocation.value = desk?.location_label ?? '';
+      fProject.value = desk?.project_id ?? '';
+      fLang.value = desk?.default_lang ?? (langs.find((l) => l.code === lang) ? lang : '');
+      for (const o of Array.from(fLangs.options))
+        o.selected = desk?.languages.includes(o.value) ?? false;
+      showErrors({});
+      form.classList.remove('hidden');
+      fName.focus();
+    }
+    const closeForm = () => {
+      editing = null;
+      form.classList.add('hidden');
+    };
+
+    newBtn.addEventListener('click', () => {
+      clearMsg();
+      openForm(null);
+    });
+    $('d-cancel').addEventListener('click', closeForm);
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const checked = validateDeskForm({
+        name: fName.value,
+        location: fLocation.value,
+        defaultLang: fLang.value,
+        languages: Array.from(fLangs.selectedOptions).map((o) => o.value),
+        projectId: fProject.value,
+      });
+      if (!checked.ok) return showErrors(checked.errors);
+      showErrors({});
+      const save = $<HTMLButtonElement>('d-save');
+      save.disabled = true;
+      const res = editing
+        ? await updateLiveDesk(orgId, editing.id, deskPatch(editing, checked.input))
+        : await createLiveDesk(orgId, checked.input);
+      save.disabled = false;
+      if (res.status === 401) return logout(`/${lang}/`);
+      if (!res.ok) {
+        say(t(liveErrorKey(res)), 'error');
+        msg.classList.remove('hidden');
+        return;
+      }
+      say(t(editing ? 'live.desks.saved' : 'live.desks.created'), 'ok');
+      msg.classList.remove('hidden');
+      closeForm();
+      await refresh();
+    });
+
+    // ---- per-desk actions ------------------------------------------------------------
+
+    /**
+     * Asks for the desk's printable URL, hands it to `use`, and lets go of it. It lives only
+     * inside this call: never in the page, a variable that outlives the click, or the console.
+     */
+    async function withQr(desk: LiveDesk, use: (url: string) => Promise<void>): Promise<boolean> {
+      const res = await getLiveDeskQr(orgId, desk.id);
+      if (res.status === 401) {
+        logout(`/${lang}/`);
+        return false;
+      }
+      if (!res.ok || !res.data) {
+        say(t(liveErrorKey(res)), 'error');
+        msg.classList.remove('hidden');
+        return false;
+      }
+      try {
+        await use(res.data.url);
+        return true;
+      } catch {
+        say(t('live.desks.assetFailed'), 'error');
+        msg.classList.remove('hidden');
+        return false;
+      }
+    }
+
+    async function act(action: string, desk: LiveDesk, button: HTMLButtonElement) {
+      clearMsg();
+      const base = deskFileBase(desk.name);
+      button.disabled = true;
+      try {
+        if (action === 'png') {
+          await withQr(desk, async (url) =>
+            downloadBlob(dataUrlToBlob(await makeDeskPng(url)), `${base}-qr.png`),
+          );
+        } else if (action === 'svg') {
+          await withQr(desk, async (url) =>
+            downloadBlob(
+              new Blob([await makeDeskSvg(url)], { type: 'image/svg+xml' }),
+              `${base}-qr.svg`,
+            ),
+          );
+        } else if (action === 'pdf') {
+          await withQr(desk, async (url) =>
+            downloadBlob(
+              await makeDeskPdf(url, {
+                name: desk.name,
+                location: desk.location_label ?? '',
+                instruction: t('live.desks.pdfInstruction'),
+              }),
+              `${base}-qr.pdf`,
+            ),
+          );
+        } else if (action === 'print') {
+          window.open(
+            `/${lang}/live/print/?desk=${encodeURIComponent(desk.id)}&auto=1`,
+            '_blank',
+            'noopener',
+          );
+        } else if (action === 'copy') {
+          const ok = await withQr(desk, async (url) => navigator.clipboard.writeText(url));
+          if (ok) {
+            const label = button.textContent;
+            button.textContent = t('common.copied');
+            setTimeout(() => (button.textContent = label), 2000);
+          }
+        } else if (action === 'edit') {
+          openForm(desk);
+        } else if (action === 'revoke') {
+          if (!confirm(t('live.desks.revokeConfirm', { name: desk.name }))) return;
+          const res = await revokeLiveDesk(orgId, desk.id);
+          if (res.status === 401) return logout(`/${lang}/`);
+          if (!res.ok) {
+            say(t(liveErrorKey(res)), 'error');
+          } else {
+            say(t('live.desks.revoked', { count: res.data?.waiting_closed ?? 0 }), 'ok');
+            await refresh();
+          }
+          msg.classList.remove('hidden');
+        } else if (action === 'regenerate') {
+          if (!confirm(t('live.desks.regenerateConfirm', { name: desk.name }))) return;
+          const res = await regenerateLiveDesk(orgId, desk.id);
+          if (res.status === 401) return logout(`/${lang}/`);
+          if (!res.ok) {
+            say(t(liveErrorKey(res)), 'error');
+          } else {
+            say(t('live.desks.regenerated', { count: res.data?.waiting_closed ?? 0 }), 'ok');
+            await refresh();
+          }
+          msg.classList.remove('hidden');
+        }
+      } finally {
+        button.disabled = false;
+      }
+    }
+
+    list.addEventListener('click', (e) => {
+      const button = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-action]');
+      const card = button?.closest<HTMLElement>('[data-desk-id]');
+      const desk = desks.find((d) => d.id === card?.dataset.deskId);
+      if (button && desk && admin) void act(button.dataset.action!, desk, button);
+    });
+
+    await refresh();
+  });
+</script>

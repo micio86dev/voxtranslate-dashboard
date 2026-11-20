@@ -1,0 +1,47 @@
+---
+/**
+ * Tab bar for the Live Connect section (spec 0121, S14): Sessions · Desks · Desk console ·
+ * Usage. One header entry leads here; the header's own row of links is already long enough
+ * that four more would crowd it (same reasoning as the phone section's tab bar).
+ *
+ * The Usage tab starts hidden: it is money, so only owners and admins get it, and the page
+ * un-hides it once the role is known (`applyLiveNav`). The server enforces the rule either way.
+ */
+import { localizePath, useTranslations, type Locale } from '../../lib/i18n';
+
+interface Props {
+  lang: Locale;
+  current: 'sessions' | 'desks' | 'console' | 'usage';
+}
+
+const { lang, current } = Astro.props;
+const t = useTranslations(lang);
+
+const tabs = [
+  { key: 'sessions', href: localizePath(lang, 'live'), label: t('live.tabs.sessions') },
+  { key: 'desks', href: localizePath(lang, 'live/desks'), label: t('live.tabs.desks') },
+  { key: 'console', href: localizePath(lang, 'live/console'), label: t('live.tabs.console') },
+  { key: 'usage', href: localizePath(lang, 'live/usage'), label: t('live.tabs.usage') },
+];
+---
+
+<nav class="mt-4 flex gap-1 overflow-x-auto border-b border-line" aria-label={t('live.nav')}>
+  {
+    tabs.map((tab) => (
+      <a
+        href={tab.href}
+        data-live-tab={tab.key}
+        aria-current={tab.key === current ? 'page' : undefined}
+        class:list={[
+          '-mb-px whitespace-nowrap border-b-2 px-3 py-2 text-sm',
+          tab.key === 'usage' && 'hidden',
+          tab.key === current
+            ? 'border-brand font-semibold text-ink'
+            : 'border-transparent text-muted hover:text-ink',
+        ]}
+      >
+        {tab.label}
+      </a>
+    ))
+  }
+</nav>
